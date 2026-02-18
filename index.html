@@ -210,8 +210,14 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 											</div>
 										</div>
 										<ul class="actions">
-											<li><input type="submit" value="Send Message" class="button" /></li>
+											<li><input type="submit" value="Send Message" class="button" id="contact-submit-button" /></li>
 										</ul>
+										<div id="form-progress" class="form-progress" hidden aria-live="polite">
+											<div id="form-progress-bar" class="form-progress-track" role="progressbar" aria-label="Message submission progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+												<span id="form-progress-fill" class="form-progress-fill"></span>
+											</div>
+											<p id="form-progress-label" class="form-progress-label">Preparing to send message...</p>
+										</div>
 									</form>
 								</section>
 								<section>
@@ -255,7 +261,6 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 			</footer>
 
 		<!-- Scripts -->
-			<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 			<script src="assets/js/jquery.min.js"></script>
 			<script src="assets/js/jquery.scrollex.min.js"></script>
 			<script src="assets/js/jquery.scrolly.min.js"></script>
@@ -267,30 +272,177 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 				const scriptURL =
 					"https://script.google.com/macros/s/AKfycbzx_nrsBJEch4mVMJmwyPRgOSBzQkOu5-VG1N4bOUEEz4LokTeTVDkCFM-bftuecfsN/exec";
 				const form = document.getElementById("submit-to-google-sheet");
+				const submitButton = document.getElementById("contact-submit-button");
+				const progressContainer = document.getElementById("form-progress");
+				const progressBar = document.getElementById("form-progress-bar");
+				const progressFill = document.getElementById("form-progress-fill");
+				const progressLabel = document.getElementById("form-progress-label");
+
+				let progressTimer = null;
+				let progressHideTimer = null;
+				let progressCleanupTimer = null;
+				let progressValue = 0;
+				let isSubmitting = false;
+
+				function updateProgress(value, text) {
+					if (!progressBar || !progressFill || !progressLabel) {
+						return;
+					}
+
+					const boundedValue = Math.max(0, Math.min(100, value));
+					progressValue = boundedValue;
+					progressBar.setAttribute("aria-valuenow", String(Math.round(boundedValue)));
+					progressFill.style.width = boundedValue + "%";
+					progressLabel.textContent = text || "Sending message...";
+				}
+
+				function showProgress() {
+					if (!progressContainer) {
+						return;
+					}
+
+					if (progressHideTimer) {
+						window.clearTimeout(progressHideTimer);
+						progressHideTimer = null;
+					}
+
+					if (progressCleanupTimer) {
+						window.clearTimeout(progressCleanupTimer);
+						progressCleanupTimer = null;
+					}
+
+					progressContainer.hidden = false;
+					progressContainer.classList.add("is-visible");
+					progressContainer.classList.remove("is-error");
+				}
+
+				function hideProgress() {
+					if (!progressContainer) {
+						return;
+					}
+
+					progressContainer.classList.remove("is-visible");
+					if (progressCleanupTimer) {
+						window.clearTimeout(progressCleanupTimer);
+					}
+
+					progressCleanupTimer = window.setTimeout(() => {
+						progressContainer.hidden = true;
+						progressContainer.classList.remove("is-error");
+						progressCleanupTimer = null;
+					}, 220);
+				}
+
+				function startProgress() {
+					showProgress();
+					updateProgress(8, "Connecting to server...");
+
+					if (progressTimer) {
+						window.clearInterval(progressTimer);
+					}
+
+					progressTimer = window.setInterval(() => {
+						if (progressValue >= 90) {
+							return;
+						}
+
+						const step = progressValue < 45 ? 7 : progressValue < 75 ? 3 : 1;
+						updateProgress(progressValue + step);
+					}, 300);
+				}
+
+				function finishProgress(success, customMessage) {
+					if (progressTimer) {
+						window.clearInterval(progressTimer);
+						progressTimer = null;
+					}
+
+					if (progressContainer && !success) {
+						progressContainer.classList.add("is-error");
+					}
+
+					updateProgress(100, customMessage || (success ? "Message sent successfully." : "Unable to send message."));
+					if (progressHideTimer) {
+						window.clearTimeout(progressHideTimer);
+					}
+
+					progressHideTimer = window.setTimeout(() => {
+						hideProgress();
+						progressHideTimer = null;
+					}, success ? 3600 : 2800);
+				}
+
+				function setSubmittingState(submitting) {
+					isSubmitting = submitting;
+					if (!submitButton) {
+						return;
+					}
+
+					submitButton.disabled = submitting;
+					submitButton.classList.toggle("is-loading", submitting);
+					submitButton.value = submitting ? "Sending..." : "Send Message";
+				}
 
 				if (form) {
 					form.addEventListener("submit", async (e) => {
 						e.preventDefault();
 
-						try {
-							const response = await fetch(scriptURL, {
-								method: "POST",
-								body: new FormData(form),
-							});
+						if (isSubmitting) {
+							return;
+						}
 
-							if (!response.ok) {
+						setSubmittingState(true);
+						startProgress();
+
+						try {
+							let response = null;
+							try {
+								response = await fetch(scriptURL, {
+									method: "POST",
+									headers: { Accept: "application/json" },
+									body: new FormData(form),
+								});
+							} catch (corsError) {
+								// Google Apps Script can fail CORS checks in some deployments.
+								// Fallback to no-cors request and treat opaque response as accepted.
+								response = await fetch(scriptURL, {
+									method: "POST",
+									mode: "no-cors",
+									body: new FormData(form),
+								});
+							}
+
+							const isOpaqueResponse = response && response.type === "opaque";
+
+							if (!isOpaqueResponse && !response.ok) {
 								throw new Error("Non-2xx response from Google Sheet endpoint.");
 							}
 
-							const result = await response.json();
-							if (!result || result.result !== "success") {
-								throw new Error("Google Sheet script returned an error.");
+							if (!isOpaqueResponse) {
+								const contentType = (response.headers.get("content-type") || "").toLowerCase();
+								if (contentType.indexOf("application/json") !== -1) {
+									let result = null;
+									try {
+										result = await response.json();
+									} catch (parseError) {
+										result = null;
+									}
+
+									if (result) {
+										const resultState = String(result.result || result.status || "").toLowerCase();
+										if (resultState === "error" || resultState === "failed" || resultState === "failure") {
+											throw new Error("Google Sheet script returned an error.");
+										}
+									}
+								}
 							}
 
-							swal("Done", "Submitted successfully.", "success");
+							finishProgress(true, "Thanks! Your message has been sent. Everloft will contact you soon.");
 							form.reset();
 						} catch (error) {
-							swal("Failed", "Submission failed. Please try again.", "error");
+							finishProgress(false, "Unable to send message. Please try again.");
+						} finally {
+							setSubmittingState(false);
 						}
 					});
 				}
