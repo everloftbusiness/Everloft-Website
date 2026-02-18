@@ -4084,3 +4084,106 @@ input, select, textarea {
 			}
 
 		}
+
+/* Everloft Logo Placements */
+
+	#sidebar .brand-lockup {
+		margin: 0 0 2.25em 0;
+		padding: 0.75em 0.9em;
+		border: 1px solid rgba(255, 255, 255, 0.22);
+		border-radius: 0.75em;
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	#sidebar .brand-lockup a {
+		border: 0;
+		display: flex;
+		flex-direction: row-reverse;
+		align-items: center;
+		gap: 0.7em;
+		text-align: right;
+	}
+
+	#sidebar .brand-lockup img {
+		display: block;
+		width: 2.85em;
+		height: 2.85em;
+		background: #ffffff;
+		border-radius: 100%;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+		flex: 0 0 auto;
+	}
+
+	#sidebar .brand-lockup .brand-text {
+		display: block;
+	}
+
+	#sidebar .brand-lockup strong {
+		display: block;
+		color: #ffffff;
+		font-size: 0.84em;
+		font-weight: 700;
+		letter-spacing: 0.13em;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	#sidebar .brand-lockup em {
+		display: block;
+		margin-top: 0.22em;
+		color: rgba(255, 255, 255, 0.72);
+		font-size: 0.56em;
+		font-style: normal;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	#intro .hero-brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.75em;
+		margin: 0 0 1.15em 0;
+		padding: 0.45em 0.9em;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	#intro .hero-brand img {
+		display: block;
+		width: 2.35em;
+		height: 2.35em;
+		background: #ffffff;
+		border-radius: 100%;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.32);
+	}
+
+	#intro .hero-brand span {
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.57em;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	@media screen and (max-width: 736px) {
+
+		#intro .hero-brand {
+			margin-bottom: 0.95em;
+			padding: 0.4em 0.75em;
+		}
+
+		#intro .hero-brand img {
+			width: 2em;
+			height: 2em;
+		}
+
+		#intro .hero-brand span {
+			font-size: 0.52em;
+			letter-spacing: 0.14em;
+		}
+
+	}
