@@ -4399,3 +4399,242 @@ input, select, textarea {
 		}
 
 	}
+
+/* Owner Program Page */
+
+	.everloft-owner-program .everloft-hero {
+		margin-bottom: 2.5em;
+	}
+
+	.everloft-owner-program .eyebrow {
+		color: rgba(255, 255, 255, 0.72);
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.22em;
+		margin-bottom: 1.1em;
+		text-transform: uppercase;
+	}
+
+	.everloft-owner-program .lead {
+		font-size: 1.22em;
+		font-weight: 600;
+		line-height: 1.55;
+		margin-bottom: 0.85em;
+	}
+
+	.everloft-owner-program .hero-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45em;
+		list-style: none;
+		margin: 1.3em 0 0 0;
+		padding: 0;
+	}
+
+		.everloft-owner-program .hero-tags li {
+			background: rgba(255, 255, 255, 0.1);
+			border: solid 1px rgba(255, 255, 255, 0.2);
+			border-radius: 2.1em;
+			color: #ffffff;
+			font-size: 0.58em;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			padding: 0.65em 1.05em;
+			text-transform: uppercase;
+		}
+
+	.everloft-owner-program .everloft-panel {
+		background: rgba(255, 255, 255, 0.06);
+		border: solid 1px rgba(255, 255, 255, 0.16);
+		border-radius: 0.85em;
+		margin-bottom: 1.35em;
+		padding: 1.55em 1.45em 1.15em 1.45em;
+	}
+
+		.everloft-owner-program .everloft-panel h2 {
+			font-size: 1.22em;
+			letter-spacing: 0.03em;
+			margin-bottom: 0.95em;
+		}
+
+	.everloft-owner-program .problem-list {
+		display: grid;
+		gap: 0.62em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+		.everloft-owner-program .problem-list li {
+			background: rgba(255, 255, 255, 0.05);
+			border: solid 1px rgba(255, 255, 255, 0.12);
+			border-radius: 0.5em;
+			color: rgba(255, 255, 255, 0.9);
+			font-size: 0.9em;
+			padding: 0.8em 0.85em;
+		}
+
+	.everloft-owner-program .solution-grid,
+	.everloft-owner-program .model-grid,
+	.everloft-owner-program .metric-grid {
+		display: grid;
+		gap: 0.85em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.everloft-owner-program .solution-card,
+	.everloft-owner-program .model-card,
+	.everloft-owner-program .metric-card {
+		background: rgba(255, 255, 255, 0.05);
+		border: solid 1px rgba(255, 255, 255, 0.14);
+		border-radius: 0.55em;
+		padding: 1.05em 1em;
+	}
+
+		.everloft-owner-program .solution-card h3,
+		.everloft-owner-program .model-card h3,
+		.everloft-owner-program .metric-card h3 {
+			font-size: 1em;
+			margin-bottom: 0.65em;
+		}
+
+		.everloft-owner-program .solution-card ul {
+			margin: 0;
+			padding-left: 1.15em;
+		}
+
+			.everloft-owner-program .solution-card ul li {
+				color: rgba(255, 255, 255, 0.92);
+				font-size: 0.88em;
+				margin-bottom: 0.45em;
+			}
+
+	.everloft-owner-program .model-label {
+		color: rgba(255, 255, 255, 0.65);
+		font-size: 0.58em;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		margin-bottom: 0.45em;
+		text-transform: uppercase;
+	}
+
+	.everloft-owner-program .model-note {
+		border-top: solid 1px rgba(255, 255, 255, 0.18);
+		color: rgba(255, 255, 255, 0.86);
+		font-size: 0.82em;
+		margin-top: 0.95em;
+		padding-top: 0.85em;
+	}
+
+	.everloft-owner-program .finance-list {
+		display: grid;
+		gap: 0.55em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin: 0;
+		padding-left: 1.15em;
+	}
+
+	.everloft-owner-program .step-grid {
+		counter-reset: everloft-step;
+		display: grid;
+		gap: 0.58em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+		.everloft-owner-program .step-grid li {
+			background: rgba(255, 255, 255, 0.05);
+			border: solid 1px rgba(255, 255, 255, 0.12);
+			border-radius: 0.5em;
+			font-size: 0.88em;
+			padding: 0.8em 0.85em 0.8em 2.75em;
+			position: relative;
+		}
+
+			.everloft-owner-program .step-grid li:before {
+				counter-increment: everloft-step;
+				content: counter(everloft-step);
+				background: rgba(255, 255, 255, 0.16);
+				border: solid 1px rgba(255, 255, 255, 0.22);
+				border-radius: 100%;
+				color: #ffffff;
+				font-size: 0.72em;
+				font-weight: 700;
+				height: 1.7em;
+				left: 0.85em;
+				line-height: 1.62em;
+				position: absolute;
+				text-align: center;
+				top: 0.86em;
+				width: 1.7em;
+			}
+
+	.everloft-owner-program .faq-list details {
+		background: rgba(255, 255, 255, 0.05);
+		border: solid 1px rgba(255, 255, 255, 0.14);
+		border-radius: 0.5em;
+		margin-bottom: 0.55em;
+		padding: 0.75em 0.85em;
+	}
+
+		.everloft-owner-program .faq-list summary {
+			cursor: pointer;
+			font-weight: 600;
+			letter-spacing: 0.01em;
+		}
+
+		.everloft-owner-program .faq-list p {
+			margin: 0.62em 0 0 0;
+		}
+
+	.everloft-owner-program .everloft-cta {
+		background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(167, 139, 250, 0.14) 100%);
+		border: solid 1px rgba(255, 255, 255, 0.22);
+		border-radius: 0.9em;
+		margin-top: 2em;
+		padding: 1.6em 1.45em;
+		text-align: center;
+	}
+
+		.everloft-owner-program .everloft-cta h2 {
+			font-size: 1.45em;
+			margin-bottom: 0.45em;
+		}
+
+		.everloft-owner-program .everloft-cta p {
+			margin-bottom: 1.1em;
+		}
+
+		.everloft-owner-program .everloft-cta .actions {
+			justify-content: center;
+			margin-bottom: 0;
+		}
+
+	@media screen and (max-width: 980px) {
+
+		.everloft-owner-program .problem-list,
+		.everloft-owner-program .solution-grid,
+		.everloft-owner-program .model-grid,
+		.everloft-owner-program .metric-grid,
+		.everloft-owner-program .finance-list,
+		.everloft-owner-program .step-grid {
+			grid-template-columns: 1fr;
+		}
+
+	}
+
+	@media screen and (max-width: 736px) {
+
+		.everloft-owner-program .lead {
+			font-size: 1.08em;
+		}
+
+		.everloft-owner-program .everloft-panel,
+		.everloft-owner-program .everloft-cta {
+			padding: 1.15em 1em;
+		}
+
+	}
