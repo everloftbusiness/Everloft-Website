@@ -48,6 +48,7 @@
 							<li><a href="#intro">Welcome</a></li>
 							<li><a href="#one">What We Offer</a></li>
 							<li><a href="#two">What Makes Everloft</a></li>
+							<li><a href="#certifications">Certification & Accreditation</a></li>
 							<li><a href="#three">Get in touch</a></li>
 						</ul>
 					</nav>
@@ -200,6 +201,40 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 						</div>
 					</section>
 
+				<!-- Certifications -->
+					<section id="certifications" class="wrapper style2-alt fade-up">
+						<div class="inner">
+							<h2>Our Certifications & Accreditations</h2>
+							<p>Everloft maintains verified certifications and official documentation that support our operational credibility and compliance standards.</p>
+							<div id="cert-carousel" class="cert-carousel">
+								<div class="cert-track">
+									<article class="cert-card">
+										<div class="cert-preview">
+											<img src="certificates/dpiit-certificate-preview-rotated.png" alt="DPIIT certificate preview for Everloft" loading="lazy" />
+										</div>
+										<div class="cert-content">
+											<h3>Startup India</h3>
+											<p>DPIIT Recognition Certified</p>
+										</div>
+									</article>
+									<article class="cert-card">
+										<div class="cert-preview">
+											<img src="certificates/company-document-preview.png" alt="Kerala Startup Mission certificate preview for Everloft" loading="lazy" />
+										</div>
+										<div class="cert-content">
+											<h3>Kerala Startup Mission</h3>
+											<p>Accredited Startup Certificate</p>
+										</div>
+									</article>
+								</div>
+								<div class="cert-dots" aria-label="Certificate slides">
+									<button type="button" data-slide="0" class="is-active" aria-label="Show certificate one"></button>
+									<button type="button" data-slide="1" aria-label="Show certificate two"></button>
+								</div>
+							</div>
+						</div>
+					</section>
+
 				<!-- Three -->
 					<section id="three" class="wrapper style1 fade-up">
 						<div class="inner">
@@ -267,6 +302,10 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 					</section>
 
 			</div>
+
+		<div id="cert-fullscreen" class="cert-fullscreen" hidden aria-hidden="true">
+			<img id="cert-fullscreen-image" src="" alt="" />
+		</div>
 
 		<!-- Footer -->
 			<footer id="footer" class="wrapper style1-alt">
@@ -460,6 +499,114 @@ Experience comfort, privacy, and seamless hospitality with Everloft - curated ho
 							finishProgress(false, "Unable to send message. Please try again.");
 						} finally {
 							setSubmittingState(false);
+						}
+					});
+				}
+
+				const certCarousel = document.getElementById("cert-carousel");
+				if (certCarousel) {
+					const track = certCarousel.querySelector(".cert-track");
+					const cards = Array.from(certCarousel.querySelectorAll(".cert-card"));
+					const dots = Array.from(certCarousel.querySelectorAll(".cert-dots button"));
+					const mobileMedia = window.matchMedia("(max-width: 736px)");
+					let currentSlide = 0;
+					let autoSwipeTimer = null;
+
+					const applySlide = (index) => {
+						if (!track || cards.length === 0) {
+							return;
+						}
+
+						currentSlide = (index + cards.length) % cards.length;
+						if (mobileMedia.matches) {
+							track.style.transform = "translateX(-" + (currentSlide * 100) + "%)";
+						} else {
+							track.style.transform = "";
+						}
+
+						dots.forEach((dot, dotIndex) => {
+							dot.classList.toggle("is-active", dotIndex === currentSlide);
+						});
+					};
+
+					const stopAutoSwipe = () => {
+						if (autoSwipeTimer) {
+							window.clearInterval(autoSwipeTimer);
+							autoSwipeTimer = null;
+						}
+					};
+
+					const startAutoSwipe = () => {
+						stopAutoSwipe();
+						if (!mobileMedia.matches || cards.length < 2) {
+							return;
+						}
+
+						autoSwipeTimer = window.setInterval(() => {
+							applySlide(currentSlide + 1);
+						}, 3300);
+					};
+
+					dots.forEach((dot, index) => {
+						dot.addEventListener("click", () => {
+							applySlide(index);
+							startAutoSwipe();
+						});
+					});
+
+					certCarousel.addEventListener("mouseenter", stopAutoSwipe);
+					certCarousel.addEventListener("mouseleave", startAutoSwipe);
+					certCarousel.addEventListener("touchstart", stopAutoSwipe, { passive: true });
+					certCarousel.addEventListener("touchend", startAutoSwipe, { passive: true });
+
+					const handleViewportChange = () => {
+						applySlide(0);
+						startAutoSwipe();
+					};
+
+					if (typeof mobileMedia.addEventListener === "function") {
+						mobileMedia.addEventListener("change", handleViewportChange);
+					} else if (typeof mobileMedia.addListener === "function") {
+						mobileMedia.addListener(handleViewportChange);
+					}
+
+					applySlide(0);
+					startAutoSwipe();
+				}
+
+				const certFullscreen = document.getElementById("cert-fullscreen");
+				const certFullscreenImage = document.getElementById("cert-fullscreen-image");
+				const certPreviewImages = Array.from(document.querySelectorAll("#certifications .cert-preview img"));
+				if (certFullscreen && certFullscreenImage && certPreviewImages.length > 0) {
+					const closeCertFullscreen = () => {
+						certFullscreen.hidden = true;
+						certFullscreen.setAttribute("aria-hidden", "true");
+						certFullscreenImage.src = "";
+						certFullscreenImage.alt = "";
+						document.body.classList.remove("is-cert-fullscreen-open");
+					};
+
+					const openCertFullscreen = (image) => {
+						certFullscreenImage.src = image.src;
+						certFullscreenImage.alt = image.alt || "Certificate full view";
+						certFullscreen.hidden = false;
+						certFullscreen.setAttribute("aria-hidden", "false");
+						document.body.classList.add("is-cert-fullscreen-open");
+					};
+
+					certPreviewImages.forEach((image) => {
+						image.addEventListener("click", () => {
+							openCertFullscreen(image);
+						});
+					});
+
+					certFullscreen.addEventListener("click", () => {
+						closeCertFullscreen();
+					});
+
+					document.addEventListener("keydown", (event) => {
+						if (event.key === "Escape" && !certFullscreen.hidden) {
+							closeCertFullscreen();
 						}
 					});
 				}
