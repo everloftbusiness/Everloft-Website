@@ -4097,9 +4097,21 @@ input, select, textarea {
 		background-size: 100% 100%;
 	}
 
+		#intro > .inner {
+			padding-top: 3.5em;
+		}
+
 		#intro p {
 			font-size: 1.25em;
 		}
+
+			@media screen and (max-width: 1680px) {
+
+				#intro > .inner {
+					padding-top: 3em;
+				}
+
+			}
 
 			@media screen and (max-width: 980px) {
 
@@ -4110,6 +4122,14 @@ input, select, textarea {
 			}
 
 			@media screen and (max-width: 736px) {
+
+				#intro.wrapper.fullscreen {
+					justify-content: flex-start;
+				}
+
+				#intro > .inner {
+					padding-top: 1.05em;
+				}
 
 				#intro p {
 					font-size: 1em;
@@ -4126,6 +4146,73 @@ input, select, textarea {
 		}
 
 /* Everloft Logo Placements */
+
+	#header > .home-title-lockup {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.62em;
+	}
+
+	#header > .home-title-lockup img {
+		display: block;
+		width: 2.15em;
+		height: 2.15em;
+		background: #ffffff;
+		border-radius: 100%;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28);
+		flex: 0 0 auto;
+	}
+
+	#header > .home-title-lockup .home-title-copy {
+		display: block;
+		line-height: 1.15;
+	}
+
+	#header > .home-title-lockup strong {
+		display: block;
+		color: #ffffff;
+		font-size: 0.84em;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	#header > .home-title-lockup em {
+		display: block;
+		margin-top: 0.16em;
+		color: rgba(255, 255, 255, 0.74);
+		font-size: 0.5em;
+		font-style: normal;
+		font-weight: 600;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+
+	@media screen and (max-width: 736px) {
+
+		#header > .home-title-lockup img {
+			width: 1.95em;
+			height: 1.95em;
+		}
+
+		#header > .home-title-lockup strong {
+			font-size: 0.74em;
+			letter-spacing: 0.1em;
+		}
+
+		#header > .home-title-lockup em {
+			font-size: 0.47em;
+		}
+
+	}
+
+	@media screen and (max-width: 480px) {
+
+		#header > .home-title-lockup em {
+			display: none;
+		}
+
+	}
 
 	#sidebar .brand-lockup {
 		margin: 0 0 2.25em 0;

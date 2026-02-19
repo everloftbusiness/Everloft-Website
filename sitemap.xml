@@ -4,4 +4,12 @@
     <loc>https://everloft.co.in/</loc>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://everloft.co.in/owner-program.html</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://everloft.co.in/investor-program.html</loc>
+    <priority>0.8</priority>
+  </url>
 </urlset>
