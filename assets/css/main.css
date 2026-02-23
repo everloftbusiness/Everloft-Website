@@ -4209,7 +4209,9 @@ input, select, textarea {
 	@media screen and (max-width: 480px) {
 
 		#header > .home-title-lockup em {
-			display: none;
+			display: block;
+			font-size: 0.42em;
+			letter-spacing: 0.1em;
 		}
 
 	}
