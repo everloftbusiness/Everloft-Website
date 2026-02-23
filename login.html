@@ -1,0 +1,145 @@
+<!DOCTYPE HTML>
+<!--
+	Hyperspace by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Everloft Login | Dashboard Access</title>
+		<meta name="description" content="Secure login for Everloft dashboard access." />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="favicon.ico" sizes="any" />
+		<link rel="icon" type="image/png" sizes="48x48" href="images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png" />
+		<link rel="manifest" href="site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload login-page">
+
+		<!-- Header -->
+			<header id="header">
+				<a href="index.html" class="title home-title-lockup">
+					<img src="images/everloft-logo-mark.png" alt="Everloft logo icon" />
+					<span class="home-title-copy">
+						<strong>Everloft</strong>
+						<em>Handled with Purpose.</em>
+					</span>
+				</a>
+				<nav>
+					<ul>
+						<li><a href="index.html"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+						<li><a href="owner-program.html"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+						<li><a href="investor-program.html"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+						<li><a href="login.html" class="active"><span class="icon solid fa-sign-in-alt" aria-hidden="true"></span> Login</a></li>
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+				<section id="main" class="wrapper style2-alt">
+					<div class="inner">
+						<div class="everloft-login-shell">
+							<section class="login-card">
+								<div class="login-card-brand" aria-hidden="true">
+									<img src="images/everloft-logo-mark.png" alt="" />
+									<span>
+										<strong>Everloft</strong>
+										<em>Handled with Purpose.</em>
+									</span>
+								</div>
+								<div class="login-card-grid">
+									<div class="login-context">
+										<h1 class="major">Dashboard Login</h1>
+										<p>Enter your username and password to continue to the Everloft dashboard.</p>
+										<ul class="login-benefits">
+											<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Role-based session access</li>
+											<li><span class="icon solid fa-chart-line" aria-hidden="true"></span> Performance and asset visibility</li>
+											<li><span class="icon solid fa-file-alt" aria-hidden="true"></span> Reports, payouts, and document access</li>
+										</ul>
+									</div>
+									<div class="login-form-panel">
+										<form id="everloft-login-form" novalidate>
+											<div class="fields">
+												<div class="field">
+													<label for="login-username">Username</label>
+													<input type="text" name="username" id="login-username" autocomplete="username" required />
+												</div>
+												<div class="field">
+													<label for="login-password">Password</label>
+													<input type="password" name="password" id="login-password" autocomplete="current-password" required />
+												</div>
+											</div>
+											<p id="login-error" class="login-error" hidden></p>
+											<ul class="actions">
+												<li><button type="submit" class="button primary">Login to Dashboard</button></li>
+												<li><a href="index.html" class="button">Back to Home</a></li>
+											</ul>
+										</form>
+									</div>
+								</div>
+							</section>
+						</div>
+					</div>
+				</section>
+			</div>
+
+		<!-- Footer -->
+			<footer id="footer" class="wrapper style1-alt">
+				<div class="inner">
+					<ul class="menu">
+						<li>&copy; Everloft. All rights reserved. Design adapted</li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+			<script>
+				(function () {
+					if (sessionStorage.getItem("everloftAuth") === "1") {
+						window.location.href = "dashboard.html";
+						return;
+					}
+
+					const form = document.getElementById("everloft-login-form");
+					const usernameInput = document.getElementById("login-username");
+					const passwordInput = document.getElementById("login-password");
+					const errorNode = document.getElementById("login-error");
+
+					if (!form || !usernameInput || !passwordInput || !errorNode) {
+						return;
+					}
+
+					form.addEventListener("submit", function (event) {
+						event.preventDefault();
+
+						const username = usernameInput.value.trim();
+						const password = passwordInput.value;
+
+						if (username.length < 3 || password.length < 4) {
+							errorNode.hidden = false;
+							errorNode.textContent = "Please enter a valid username and password.";
+							return;
+						}
+
+						errorNode.hidden = true;
+						sessionStorage.setItem("everloftAuth", "1");
+						sessionStorage.setItem("everloftUserName", username);
+						window.location.href = "dashboard.html";
+					});
+				})();
+			</script>
+
+	</body>
+</html>

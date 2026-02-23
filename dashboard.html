@@ -1,0 +1,595 @@
+<!DOCTYPE HTML>
+<!--
+	Hyperspace by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Everloft Dashboard | Portfolio & Performance</title>
+		<meta name="description" content="Secure Everloft dashboard with portfolio visibility, occupancy trends, revenue insights, and report access." />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="favicon.ico" sizes="any" />
+		<link rel="icon" type="image/png" sizes="48x48" href="images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png" />
+		<link rel="manifest" href="site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload investor-dashboard-page dashboard-page">
+
+		<!-- Header -->
+			<header id="header">
+				<a href="index.html" class="title">Everloft</a>
+				<nav>
+					<ul>
+						<li><a href="index.html"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+						<li><a href="owner-program.html"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+						<li><a href="investor-program.html"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+						<li><a href="dashboard.html" class="active"><span class="icon solid fa-th-large" aria-hidden="true"></span> Dashboard</a></li>
+						<li><a href="login.html" id="dashboard-logout"><span class="icon solid fa-sign-out-alt" aria-hidden="true"></span> Logout</a></li>
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+				<section id="main" class="wrapper">
+					<div class="inner">
+						<div class="everloft-dashboard">
+							<header class="dashboard-hero">
+								<p class="eyebrow">Secure Portfolio Console</p>
+								<h1>Welcome, <span id="dashboard-user-name">User</span></h1>
+								<p>Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
+							</header>
+
+							<section class="dashboard-section">
+								<h2>Overview</h2>
+								<div class="summary-grid">
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-map-marker-alt" aria-hidden="true"></span> Active Asset(s)</p>
+										<p class="summary-value">3</p>
+										<p class="summary-note">2 live, 1 under development</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-hotel" aria-hidden="true"></span> Occupancy Status</p>
+										<p class="summary-value">78%</p>
+										<p class="summary-note">Current month blended occupancy</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-chart-bar" aria-hidden="true"></span> Month Performance</p>
+										<p class="summary-value">INR 8.42L</p>
+										<p class="summary-note">Gross revenue, current cycle</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-file-alt" aria-hidden="true"></span> Latest Report</p>
+										<p class="summary-value">Jan 2026</p>
+										<p class="summary-note">Published 03 Feb 2026</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Asset Portfolio</h2>
+								<div class="asset-list">
+									<article class="asset-card">
+										<img src="images/pic01.jpg" alt="Everloft Marari Cove property preview" />
+										<div class="asset-details">
+											<h3>Everloft Marari Cove</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Mararikulam, Kerala</p>
+												<p><strong>Asset Type:</strong> Developed</p>
+												<p><strong>Status:</strong> <span class="status-badge is-active">Active</span></p>
+												<p><strong>Date of Start:</strong> 15 Mar 2025</p>
+											</div>
+										</div>
+									</article>
+									<article class="asset-card">
+										<img src="images/pic02.jpg" alt="Everloft Kadavanthra Suites property preview" />
+										<div class="asset-details">
+											<h3>Everloft Kadavanthra Suites</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Kochi, Kerala</p>
+												<p><strong>Asset Type:</strong> Leased</p>
+												<p><strong>Status:</strong> <span class="status-badge is-active">Active</span></p>
+												<p><strong>Date of Start:</strong> 10 Jul 2025</p>
+											</div>
+										</div>
+									</article>
+									<article class="asset-card">
+										<img src="images/pic03.jpg" alt="Everloft Wayanad Ridge property preview" />
+										<div class="asset-details">
+											<h3>Everloft Wayanad Ridge</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Wayanad, Kerala</p>
+												<p><strong>Asset Type:</strong> Managed</p>
+												<p><strong>Status:</strong> <span class="status-badge is-dev">Under Development</span></p>
+												<p><strong>Date of Start:</strong> 20 Jan 2026</p>
+											</div>
+										</div>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Performance Overview</h2>
+								<div class="chart-toolbar">
+									<button type="button" class="chart-range-btn is-active" data-range="monthly">Monthly</button>
+									<button type="button" class="chart-range-btn" data-range="quarterly">Quarterly</button>
+									<button type="button" class="chart-range-btn" data-range="yearly">Yearly</button>
+								</div>
+								<div class="kpi-row">
+									<article class="kpi-card">
+										<p>Nights Booked</p>
+										<strong id="kpi-nights">127</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Average Daily Rate</p>
+										<strong id="kpi-adr">INR 7,420</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Occupancy Rate</p>
+										<strong id="kpi-occupancy">78%</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Gross Revenue</p>
+										<strong id="kpi-revenue">INR 8.42L</strong>
+									</article>
+								</div>
+
+								<div class="chart-grid">
+									<article class="chart-card">
+										<h3>Revenue Trend</h3>
+										<div class="chart-canvas-wrap">
+											<canvas id="revenue-chart" aria-label="Revenue trend chart"></canvas>
+										</div>
+										<p class="chart-note" id="chart-note">Steady growth with stronger booking velocity in the recent cycle.</p>
+									</article>
+									<article class="chart-card">
+										<h3>Occupancy &amp; ADR Mix</h3>
+										<div class="chart-canvas-wrap">
+											<canvas id="mix-chart" aria-label="Occupancy and ADR chart"></canvas>
+										</div>
+										<div class="ytd-grid" id="period-summary">
+											<p><strong>Total Revenue:</strong> INR 88.0L</p>
+											<p><strong>Average Occupancy:</strong> 74%</p>
+											<p><strong>Seasonal Comparison:</strong> +11% vs last year</p>
+										</div>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Revenue Breakdown</h2>
+								<div class="revenue-stack">
+									<p><span>Revenue Generated</span><strong>INR 8,42,000</strong></p>
+									<p><span>Operational Expenses</span><strong class="is-minus">- INR 2,18,000</strong></p>
+									<p><span>Maintenance Reserve</span><strong class="is-minus">- INR 58,000</strong></p>
+									<p class="net-row"><span>Net Performance</span><strong>INR 5,66,000</strong></p>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Payout / Distribution</h2>
+								<div class="payout-grid">
+									<article class="status-panel">
+										<p class="status-title">Distribution Status</p>
+										<p class="status-chip is-done"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Processed</p>
+										<p><strong>Next reporting cycle:</strong> 05 Mar 2026</p>
+									</article>
+									<article class="history-panel">
+										<h3>Distribution History</h3>
+										<div class="table-wrap">
+											<table class="dashboard-table">
+												<thead>
+													<tr>
+														<th>Period</th>
+														<th>Net Amount</th>
+														<th>Status</th>
+														<th>Statement</th>
+													</tr>
+												</thead>
+												<tbody>
+													<tr>
+														<td>Jan 2026</td>
+														<td>INR 5,66,000</td>
+														<td>Processed</td>
+														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+													</tr>
+													<tr>
+														<td>Dec 2025</td>
+														<td>INR 5,12,400</td>
+														<td>Processed</td>
+														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+													</tr>
+													<tr>
+														<td>Nov 2025</td>
+														<td>INR 4,88,100</td>
+														<td>Processed</td>
+														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Asset Value</h2>
+								<div class="asset-value-grid">
+									<article class="chart-card">
+										<h3>Estimated Asset Value Trend</h3>
+										<svg viewBox="0 0 520 220" role="img" aria-label="Asset value trend line chart">
+											<polyline points="20,180 110,168 200,152 290,131 380,108 470,86 500,76" />
+											<line x1="20" y1="190" x2="500" y2="190" />
+										</svg>
+									</article>
+									<article class="value-note">
+										<p><strong>Appreciation Overview:</strong> +14.2% from initial acquisition baseline.</p>
+										<p><strong>Market Positioning:</strong> Premium short-stay segment with strong weekend demand and repeat direct bookings.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Operational Insights</h2>
+								<div class="insight-grid">
+									<article>
+										<h3><span class="icon solid fa-calendar-week" aria-hidden="true"></span> Peak Demand</h3>
+										<p>Friday to Sunday continues to drive the highest conversion and ADR performance.</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-share-alt" aria-hidden="true"></span> Booking Sources</h3>
+										<p>Direct: 34% | Airbnb: 41% | Booking Platforms: 25%</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-star" aria-hidden="true"></span> Guest Satisfaction</h3>
+										<p>Average rating: 4.7 / 5 across active listings.</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-tools" aria-hidden="true"></span> Maintenance Status</h3>
+										<p>All preventive tasks closed for current month. No critical incidents open.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Document Vault</h2>
+								<div class="vault-grid">
+									<article>
+										<h3>Agreement Copy</h3>
+										<p>Signed investor agreement with version history.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+									<article>
+										<h3>Monthly Performance Reports</h3>
+										<p>Cycle-wise reports with occupancy, ADR, and revenue summary.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download ZIP</a>
+									</article>
+									<article>
+										<h3>Annual Summary</h3>
+										<p>Consolidated yearly performance and trend comparison.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+									<article>
+										<h3>Compliance Documents</h3>
+										<p>Licensing and compliance records for investor review.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>Communication</h2>
+								<div class="comm-grid">
+									<a href="#" class="dash-action"><span class="icon solid fa-comment-dots" aria-hidden="true"></span> Message Everloft</a>
+									<a href="#" class="dash-action"><span class="icon solid fa-phone-alt" aria-hidden="true"></span> Schedule Call</a>
+									<a href="index.html#three" class="dash-action"><span class="icon solid fa-headset" aria-hidden="true"></span> Support Contact</a>
+								</div>
+							</section>
+
+							<section class="dashboard-section">
+								<h2>New Asset Opportunities</h2>
+								<div class="opportunity-grid">
+									<article>
+										<h3>Kovalam Coastal Villas</h3>
+										<p>Upcoming acquisition target with high demand potential in premium leisure segment.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-hand-point-right" aria-hidden="true"></span> Mark Interest</a>
+									</article>
+									<article>
+										<h3>Fort Kochi Heritage Suites</h3>
+										<p>Early-stage structured participation window for selected investors.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-hand-point-right" aria-hidden="true"></span> Mark Interest</a>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section security-panel">
+								<h2>Security & Access Controls</h2>
+								<ul>
+									<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Two-factor authentication enabled.</li>
+									<li><span class="icon solid fa-history" aria-hidden="true"></span> Download logs and document access history.</li>
+									<li><span class="icon solid fa-file-pdf" aria-hidden="true"></span> Secure PDF statements with traceable issue IDs.</li>
+									<li><span class="icon solid fa-user-lock" aria-hidden="true"></span> Role-based access controls for investor accounts.</li>
+								</ul>
+							</section>
+						</div>
+					</div>
+				</section>
+			</div>
+
+		<!-- Footer -->
+			<footer id="footer" class="wrapper style1-alt">
+				<div class="inner">
+					<ul class="menu">
+						<li>&copy; Everloft. All rights reserved. Design adapted</li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+			<script>
+				(function () {
+					const authFlag = sessionStorage.getItem("everloftAuth");
+					if (authFlag !== "1") {
+						window.location.href = "login.html";
+						return;
+					}
+
+					const userName = sessionStorage.getItem("everloftUserName") || "User";
+					const userNameNode = document.getElementById("dashboard-user-name");
+					if (userNameNode) {
+						userNameNode.textContent = userName;
+					}
+
+					const logoutNode = document.getElementById("dashboard-logout");
+					if (logoutNode) {
+						logoutNode.addEventListener("click", function () {
+							sessionStorage.removeItem("everloftAuth");
+							sessionStorage.removeItem("everloftUserName");
+						});
+					}
+
+					if (!window.Chart) {
+						return;
+					}
+
+					const formatInr = function (value) {
+						return "INR " + Number(value).toLocaleString("en-IN");
+					};
+
+					const chartData = {
+						monthly: {
+							labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+							revenue: [168000, 184000, 207000, 241000],
+							occupancy: [69, 73, 79, 86],
+							adr: [6820, 7150, 7480, 7810],
+							summary: {
+								nights: "127",
+								adr: "INR 7,420",
+								occupancy: "78%",
+								revenue: "INR 8.42L",
+								total: "INR 8.42L",
+								avgOcc: "78%",
+								season: "+8% vs previous month",
+								note: "Steady growth with stronger booking velocity in the recent cycle."
+							}
+						},
+						quarterly: {
+							labels: ["Q1", "Q2", "Q3", "Q4"],
+							revenue: [1720000, 1980000, 2240000, 2460000],
+							occupancy: [68, 72, 77, 81],
+							adr: [6940, 7320, 7610, 8040],
+							summary: {
+								nights: "362",
+								adr: "INR 7,478",
+								occupancy: "74%",
+								revenue: "INR 84.0L",
+								total: "INR 84.0L",
+								avgOcc: "74%",
+								season: "+11% vs last year",
+								note: "Quarterly momentum is supported by direct bookings and peak-weekend premiums."
+							}
+						},
+						yearly: {
+							labels: ["2022", "2023", "2024", "2025", "2026"],
+							revenue: [4980000, 6150000, 7420000, 8840000, 10100000],
+							occupancy: [62, 67, 71, 75, 79],
+							adr: [6120, 6610, 7010, 7480, 8120],
+							summary: {
+								nights: "1,548",
+								adr: "INR 7,068",
+								occupancy: "71%",
+								revenue: "INR 4.06Cr",
+								total: "INR 4.06Cr",
+								avgOcc: "71%",
+								season: "+18% CAGR",
+								note: "Yearly trend shows healthy scale-up with disciplined pricing and occupancy control."
+							}
+						}
+					};
+
+					const revenueCtx = document.getElementById("revenue-chart");
+					const mixCtx = document.getElementById("mix-chart");
+					if (!revenueCtx || !mixCtx) {
+						return;
+					}
+
+					const gradient = revenueCtx.getContext("2d").createLinearGradient(0, 0, 0, 260);
+					gradient.addColorStop(0, "rgba(94, 66, 166, 0.36)");
+					gradient.addColorStop(1, "rgba(94, 66, 166, 0.03)");
+
+					const revenueChart = new Chart(revenueCtx, {
+						type: "line",
+						data: {
+							labels: chartData.monthly.labels,
+							datasets: [{
+								label: "Revenue",
+								data: chartData.monthly.revenue,
+								borderColor: "#5e42a6",
+								backgroundColor: gradient,
+								fill: true,
+								tension: 0.35,
+								borderWidth: 3,
+								pointRadius: 4,
+								pointBackgroundColor: "#4c338f"
+							}]
+						},
+						options: {
+							responsive: true,
+							maintainAspectRatio: false,
+							plugins: {
+								legend: { display: false },
+								tooltip: {
+									callbacks: {
+										label: function (context) {
+											return " " + formatInr(context.raw);
+										}
+									}
+								}
+							},
+							scales: {
+								x: {
+									grid: { display: false },
+									ticks: { color: "#696492" }
+								},
+								y: {
+									grid: { color: "rgba(121, 105, 179, 0.2)" },
+									title: { display: true, text: "Revenue (INR)", color: "#5d5789" },
+									ticks: {
+										color: "#696492",
+										callback: function (value) {
+											return "INR " + Number(value / 1000).toFixed(0) + "k";
+										}
+									}
+								}
+							}
+						}
+					});
+
+					const mixChart = new Chart(mixCtx, {
+						type: "bar",
+						data: {
+							labels: chartData.monthly.labels,
+							datasets: [
+								{
+									type: "bar",
+									label: "Occupancy %",
+									data: chartData.monthly.occupancy,
+									backgroundColor: "rgba(79, 168, 207, 0.78)",
+									borderRadius: 6,
+									yAxisID: "y"
+								},
+								{
+									type: "line",
+									label: "ADR (INR)",
+									data: chartData.monthly.adr,
+									borderColor: "#f39f4c",
+									backgroundColor: "rgba(243, 159, 76, 0.24)",
+									borderWidth: 3,
+									pointRadius: 3,
+									tension: 0.3,
+									yAxisID: "y1"
+								}
+							]
+						},
+						options: {
+							responsive: true,
+							maintainAspectRatio: false,
+							plugins: {
+								legend: {
+									position: "bottom",
+									labels: {
+										boxWidth: 12,
+										color: "#5f5a86",
+										usePointStyle: true,
+										pointStyle: "circle"
+									}
+								}
+							},
+							scales: {
+								y: {
+									beginAtZero: true,
+									max: 100,
+									grid: { color: "rgba(121, 105, 179, 0.2)" },
+									title: { display: true, text: "Occupancy %", color: "#5d5789" },
+									ticks: { color: "#696492" }
+								},
+								y1: {
+									position: "right",
+									grid: { drawOnChartArea: false },
+									title: { display: true, text: "ADR (INR)", color: "#5d5789" },
+									ticks: {
+										color: "#696492",
+										callback: function (value) {
+											return (Number(value) / 1000).toFixed(1) + "k";
+										}
+									}
+								},
+								x: {
+									ticks: { color: "#696492" }
+								}
+							}
+						}
+					});
+
+					const summaryNode = document.getElementById("period-summary");
+					const noteNode = document.getElementById("chart-note");
+					const kpiNights = document.getElementById("kpi-nights");
+					const kpiAdr = document.getElementById("kpi-adr");
+					const kpiOcc = document.getElementById("kpi-occupancy");
+					const kpiRev = document.getElementById("kpi-revenue");
+
+					const applyRange = function (rangeKey) {
+						const payload = chartData[rangeKey];
+						if (!payload) {
+							return;
+						}
+
+						revenueChart.data.labels = payload.labels;
+						revenueChart.data.datasets[0].data = payload.revenue;
+						revenueChart.update();
+
+						mixChart.data.labels = payload.labels;
+						mixChart.data.datasets[0].data = payload.occupancy;
+						mixChart.data.datasets[1].data = payload.adr;
+						mixChart.update();
+
+						if (kpiNights) kpiNights.textContent = payload.summary.nights;
+						if (kpiAdr) kpiAdr.textContent = payload.summary.adr;
+						if (kpiOcc) kpiOcc.textContent = payload.summary.occupancy;
+						if (kpiRev) kpiRev.textContent = payload.summary.revenue;
+						if (noteNode) noteNode.textContent = payload.summary.note;
+
+						if (summaryNode) {
+							summaryNode.innerHTML =
+								"<p><strong>Total Revenue:</strong> " + payload.summary.total + "</p>" +
+								"<p><strong>Average Occupancy:</strong> " + payload.summary.avgOcc + "</p>" +
+								"<p><strong>Seasonal Comparison:</strong> " + payload.summary.season + "</p>";
+						}
+					};
+
+					const rangeButtons = Array.prototype.slice.call(document.querySelectorAll(".chart-range-btn"));
+					rangeButtons.forEach(function (button) {
+						button.addEventListener("click", function () {
+							rangeButtons.forEach(function (node) { node.classList.remove("is-active"); });
+							button.classList.add("is-active");
+							applyRange(button.getAttribute("data-range"));
+						});
+					});
+				})();
+			</script>
+
+	</body>
+</html>
