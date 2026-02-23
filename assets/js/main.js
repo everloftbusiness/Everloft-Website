@@ -47,7 +47,121 @@
 	// Sidebar.
 		if ($sidebar.length > 0) {
 
-			var $sidebar_a = $sidebar.find('nav a[href^="#"]');
+			var $sidebar_a = $sidebar.find('nav a[href^="#"]'),
+				$sidebarTitleIndicatorLayer = null,
+				$sidebarTitleIndicator = null,
+				$sidebarTitleIndicatorItems = $();
+
+			function refreshSidebarTitleIndicatorLayout() {
+
+				var indicatorElement, wasFullWidth, fitsFullWidth;
+
+				if (!$sidebarTitleIndicator || $sidebarTitleIndicator.length < 1)
+					return;
+
+				indicatorElement = $sidebarTitleIndicator[0];
+				wasFullWidth = $sidebarTitleIndicator.hasClass('is-full');
+
+				if (wasFullWidth)
+					$sidebarTitleIndicator.removeClass('is-full');
+
+				fitsFullWidth = indicatorElement.scrollWidth <= (indicatorElement.clientWidth + 2);
+
+				if (fitsFullWidth)
+					$sidebarTitleIndicator.addClass('is-full');
+
+			}
+
+			function updateSidebarTitleIndicator() {
+
+				var $activeSidebarLink, activeIndex, $activeIndicatorItem;
+
+				if ($sidebarTitleIndicatorItems.length < 1)
+					return;
+
+				$activeSidebarLink = $sidebar_a.filter('.active').first();
+
+				if ($activeSidebarLink.length < 1)
+					$activeSidebarLink = $sidebar_a.first();
+
+				activeIndex = $sidebar_a.index($activeSidebarLink);
+
+				if (activeIndex < 0)
+					activeIndex = 0;
+
+				$sidebarTitleIndicatorItems.removeClass('is-active');
+				$activeIndicatorItem = $sidebarTitleIndicatorItems.eq(activeIndex).addClass('is-active');
+				refreshSidebarTitleIndicatorLayout();
+
+				if (!$sidebar.is(':visible') && $activeIndicatorItem.length > 0) {
+					$sidebarTitleIndicator.addClass('is-visible');
+
+					if (!$sidebarTitleIndicator.hasClass('is-full')
+					&&	$activeIndicatorItem.length > 0
+					&&	$activeIndicatorItem[0].scrollIntoView)
+						$activeIndicatorItem[0].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+				}
+				else
+					$sidebarTitleIndicator.removeClass('is-visible');
+
+			}
+
+			if ($sidebar_a.length > 0
+			&&	($body.hasClass('home-page') || $body.hasClass('program-page'))) {
+
+				var $indicatorList = $('<ul class="sidebar-title-indicator-list"></ul>');
+
+				$sidebar_a.each(function(index) {
+
+					var $sourceLink = $(this),
+						linkText = $.trim($sourceLink.text()),
+						linkHref = $sourceLink.attr('href') || '#';
+
+					$indicatorList.append(
+						$('<li></li>').append(
+							$('<a class="sidebar-title-indicator-item scrolly"></a>')
+								.attr('href', linkHref)
+								.attr('data-sidebar-indicator-index', index)
+								.text(linkText)
+						)
+					);
+
+				});
+
+				$sidebarTitleIndicatorLayer = $(
+					'<div class="sidebar-title-indicator-layer">' +
+						'<nav class="sidebar-title-indicator" aria-label="Section navigation"></nav>' +
+					'</div>'
+				);
+				$sidebarTitleIndicator = $sidebarTitleIndicatorLayer.find('.sidebar-title-indicator');
+				$sidebarTitleIndicator.append($indicatorList);
+				$sidebarTitleIndicatorItems = $sidebarTitleIndicatorLayer.find('.sidebar-title-indicator-item');
+				$body.append($sidebarTitleIndicatorLayer);
+
+				$sidebarTitleIndicatorItems.on('click', function() {
+
+					var indicatorIndex = parseInt($(this).attr('data-sidebar-indicator-index'), 10),
+						$linkedSidebarItem = $sidebar_a.eq(indicatorIndex);
+
+					if ($linkedSidebarItem.length < 1)
+						return;
+
+					$sidebar_a.removeClass('active');
+					$linkedSidebarItem
+						.addClass('active')
+						.addClass('active-locked');
+
+					updateSidebarTitleIndicator();
+
+				});
+
+				$window.on('resize.sidebarTitleIndicator orientationchange.sidebarTitleIndicator', function() {
+					updateSidebarTitleIndicator();
+				});
+
+				updateSidebarTitleIndicator();
+
+			}
 
 			$sidebar_a
 				.addClass('scrolly')
@@ -66,6 +180,8 @@
 						$this
 							.addClass('active')
 							.addClass('active-locked');
+
+					updateSidebarTitleIndicator();
 
 				})
 				.each(function() {
@@ -106,10 +222,14 @@
 									else if ($this.hasClass('active-locked'))
 										$this.removeClass('active-locked');
 
+								updateSidebarTitleIndicator();
+
 							}
 						});
 
 				});
+
+			updateSidebarTitleIndicator();
 
 		}
 
