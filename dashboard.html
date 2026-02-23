@@ -194,22 +194,22 @@
 												</thead>
 												<tbody>
 													<tr>
-														<td>Jan 2026</td>
-														<td>INR 5,66,000</td>
-														<td>Processed</td>
-														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+														<td data-label="Period">Jan 2026</td>
+														<td data-label="Net Amount">INR 5,66,000</td>
+														<td data-label="Status">Processed</td>
+														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
 													</tr>
 													<tr>
-														<td>Dec 2025</td>
-														<td>INR 5,12,400</td>
-														<td>Processed</td>
-														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+														<td data-label="Period">Dec 2025</td>
+														<td data-label="Net Amount">INR 5,12,400</td>
+														<td data-label="Status">Processed</td>
+														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
 													</tr>
 													<tr>
-														<td>Nov 2025</td>
-														<td>INR 4,88,100</td>
-														<td>Processed</td>
-														<td><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+														<td data-label="Period">Nov 2025</td>
+														<td data-label="Net Amount">INR 4,88,100</td>
+														<td data-label="Status">Processed</td>
+														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
 													</tr>
 												</tbody>
 											</table>
@@ -286,8 +286,8 @@
 							<section class="dashboard-section">
 								<h2>Communication</h2>
 								<div class="comm-grid">
-									<a href="#" class="dash-action"><span class="icon solid fa-comment-dots" aria-hidden="true"></span> Message Everloft</a>
-									<a href="#" class="dash-action"><span class="icon solid fa-phone-alt" aria-hidden="true"></span> Schedule Call</a>
+									<a href="mailto:everloft.business@gmail.com" class="dash-action"><span class="icon solid fa-comment-dots" aria-hidden="true"></span> Message Everloft</a>
+									<a href="tel:+917483270264" class="dash-action"><span class="icon solid fa-phone-alt" aria-hidden="true"></span> Schedule Call</a>
 									<a href="index.html#three" class="dash-action"><span class="icon solid fa-headset" aria-hidden="true"></span> Support Contact</a>
 								</div>
 							</section>
@@ -426,6 +426,7 @@
 					if (!revenueCtx || !mixCtx) {
 						return;
 					}
+					const isCompactScreen = window.matchMedia("(max-width: 736px)").matches;
 
 					const gradient = revenueCtx.getContext("2d").createLinearGradient(0, 0, 0, 260);
 					gradient.addColorStop(0, "rgba(94, 66, 166, 0.36)");
@@ -443,7 +444,7 @@
 								fill: true,
 								tension: 0.35,
 								borderWidth: 3,
-								pointRadius: 4,
+								pointRadius: isCompactScreen ? 2.4 : 4,
 								pointBackgroundColor: "#4c338f"
 							}]
 						},
@@ -463,13 +464,19 @@
 							scales: {
 								x: {
 									grid: { display: false },
-									ticks: { color: "#696492" }
+									ticks: {
+										color: "#696492",
+										maxRotation: 0,
+										autoSkip: true,
+										maxTicksLimit: isCompactScreen ? 4 : 7
+									}
 								},
 								y: {
 									grid: { color: "rgba(121, 105, 179, 0.2)" },
-									title: { display: true, text: "Revenue (INR)", color: "#5d5789" },
+									title: { display: !isCompactScreen, text: "Revenue (INR)", color: "#5d5789" },
 									ticks: {
 										color: "#696492",
+										maxTicksLimit: isCompactScreen ? 4 : 6,
 										callback: function (value) {
 											return "INR " + Number(value / 1000).toFixed(0) + "k";
 										}
@@ -489,7 +496,7 @@
 									label: "Occupancy %",
 									data: chartData.monthly.occupancy,
 									backgroundColor: "rgba(79, 168, 207, 0.78)",
-									borderRadius: 6,
+									borderRadius: isCompactScreen ? 4 : 6,
 									yAxisID: "y"
 								},
 								{
@@ -499,7 +506,7 @@
 									borderColor: "#f39f4c",
 									backgroundColor: "rgba(243, 159, 76, 0.24)",
 									borderWidth: 3,
-									pointRadius: 3,
+									pointRadius: isCompactScreen ? 2.2 : 3,
 									tension: 0.3,
 									yAxisID: "y1"
 								}
@@ -510,12 +517,13 @@
 							maintainAspectRatio: false,
 							plugins: {
 								legend: {
-									position: "bottom",
+									position: isCompactScreen ? "top" : "bottom",
 									labels: {
-										boxWidth: 12,
+										boxWidth: isCompactScreen ? 10 : 12,
 										color: "#5f5a86",
 										usePointStyle: true,
-										pointStyle: "circle"
+										pointStyle: "circle",
+										font: { size: isCompactScreen ? 10 : 12 }
 									}
 								}
 							},
@@ -524,22 +532,28 @@
 									beginAtZero: true,
 									max: 100,
 									grid: { color: "rgba(121, 105, 179, 0.2)" },
-									title: { display: true, text: "Occupancy %", color: "#5d5789" },
-									ticks: { color: "#696492" }
+									title: { display: !isCompactScreen, text: "Occupancy %", color: "#5d5789" },
+									ticks: { color: "#696492", maxTicksLimit: isCompactScreen ? 4 : 6 }
 								},
 								y1: {
 									position: "right",
 									grid: { drawOnChartArea: false },
-									title: { display: true, text: "ADR (INR)", color: "#5d5789" },
+									title: { display: !isCompactScreen, text: "ADR (INR)", color: "#5d5789" },
 									ticks: {
 										color: "#696492",
+										maxTicksLimit: isCompactScreen ? 4 : 6,
 										callback: function (value) {
 											return (Number(value) / 1000).toFixed(1) + "k";
 										}
 									}
 								},
 								x: {
-									ticks: { color: "#696492" }
+									ticks: {
+										color: "#696492",
+										maxRotation: 0,
+										autoSkip: true,
+										maxTicksLimit: isCompactScreen ? 4 : 7
+									}
 								}
 							}
 						}
