@@ -196,8 +196,9 @@
 			var installAction = null;
 			var deferredInstallPrompt = null;
 			var fallbackTimer = null;
-			var DISMISS_KEY = 'everloft-install-dismissed-at';
-			var DISMISS_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+			var INSTALLED_KEY = 'everloft-install-complete';
+			var LAST_SHOWN_KEY = 'everloft-install-last-shown-at';
+			var PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 			function isMobileDevice() {
 				return /android|iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
@@ -216,35 +217,59 @@
 				return standaloneMatch || window.navigator.standalone === true;
 			}
 
-			function wasDismissedRecently() {
+			function setInstalledFlag() {
 				try {
-					var rawValue = window.localStorage.getItem(DISMISS_KEY);
-
-					if (!rawValue)
-						return false;
-
-					return (Date.now() - parseInt(rawValue, 10)) < DISMISS_WINDOW_MS;
-				}
-				catch (error) {
-					return false;
-				}
-			}
-
-			function markDismissed() {
-				try {
-					window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+					window.localStorage.setItem(INSTALLED_KEY, '1');
 				}
 				catch (error) {
 					// Ignore localStorage restrictions.
 				}
 			}
 
-			function hideInstallBanner(rememberDismissal) {
+			function isInstallFlagSet() {
+				try {
+					return window.localStorage.getItem(INSTALLED_KEY) === '1';
+				}
+				catch (error) {
+					return false;
+				}
+			}
+
+			function isInstalledExperience() {
+				var standalone = isStandaloneMode();
+
+				if (standalone)
+					setInstalledFlag();
+
+				return standalone || isInstallFlagSet();
+			}
+
+			function wasPromptShownRecently() {
+				try {
+					var rawValue = window.localStorage.getItem(LAST_SHOWN_KEY);
+
+					if (!rawValue)
+						return false;
+
+					return (Date.now() - parseInt(rawValue, 10)) < PROMPT_COOLDOWN_MS;
+				}
+				catch (error) {
+					return false;
+				}
+			}
+
+			function markPromptShown() {
+				try {
+					window.localStorage.setItem(LAST_SHOWN_KEY, String(Date.now()));
+				}
+				catch (error) {
+					// Ignore localStorage restrictions.
+				}
+			}
+
+			function hideInstallBanner() {
 				if (!installBanner)
 					return;
-
-				if (rememberDismissal)
-					markDismissed();
 
 				installBanner.classList.remove('is-visible');
 			}
@@ -255,22 +280,25 @@
 				if (mode === 'android' && deferredInstallPrompt) {
 					deferredInstallPrompt.prompt();
 					deferredInstallPrompt.userChoice.then(function(choice) {
+						if (choice && choice.outcome === 'accepted')
+							setInstalledFlag();
+
 						deferredInstallPrompt = null;
-						hideInstallBanner(choice && choice.outcome !== 'accepted');
+						hideInstallBanner();
 					})['catch'](function() {
-						hideInstallBanner(false);
+						hideInstallBanner();
 					});
 					return;
 				}
 
 				if (mode === 'ios') {
 					window.alert('To install Everloft on iPhone: open in Safari, tap Share, then tap Add to Home Screen.');
-					hideInstallBanner(true);
+					hideInstallBanner();
 					return;
 				}
 
 				window.alert('To install Everloft: open your browser menu and choose Install app or Add to Home screen.');
-				hideInstallBanner(true);
+				hideInstallBanner();
 			}
 
 			function createInstallBanner() {
@@ -298,12 +326,12 @@
 
 				installAction.addEventListener('click', handleInstallAction);
 				installBanner.querySelector('.install-dismiss').addEventListener('click', function() {
-					hideInstallBanner(true);
+					hideInstallBanner();
 				});
 			}
 
 			function showInstallBanner(mode) {
-				if (!isMobileDevice() || isStandaloneMode() || wasDismissedRecently())
+				if (!isMobileDevice() || isInstalledExperience() || wasPromptShownRecently())
 					return;
 
 				createInstallBanner();
@@ -323,6 +351,7 @@
 				}
 
 				installBanner.classList.add('is-visible');
+				markPromptShown();
 			}
 
 			function registerServiceWorker() {
@@ -338,7 +367,7 @@
 			}
 
 			function showFallbackPrompt() {
-				if (!isMobileDevice() || isStandaloneMode() || wasDismissedRecently())
+				if (!isMobileDevice() || isInstalledExperience() || wasPromptShownRecently())
 					return;
 
 				if (isIOSDevice()) {
@@ -367,12 +396,13 @@
 			});
 
 			window.addEventListener('appinstalled', function() {
+				setInstalledFlag();
 				deferredInstallPrompt = null;
-				hideInstallBanner(false);
+				hideInstallBanner();
 			});
 
 			$window.on('load', function() {
-				if (!isMobileDevice() || isStandaloneMode())
+				if (!isMobileDevice() || isInstalledExperience())
 					return;
 
 				fallbackTimer = window.setTimeout(showFallbackPrompt, 1400);

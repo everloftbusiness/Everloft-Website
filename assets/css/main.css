@@ -2209,13 +2209,46 @@ input, select, textarea {
 		@media screen and (max-width: 480px) {
 
 			.features section {
-				padding: 2em 1.5em 0.1em 1.5em ;
+				padding: 1.85em 1.5em 0.15em 1.5em ;
+				display: grid;
+				grid-template-columns: 2.2em minmax(0, 1fr);
+				column-gap: 0.55em;
+				row-gap: 0.35em;
+				align-items: center;
 			}
 
 				.features section .icon {
 					left: 0;
 					position: relative;
 					top: 0;
+					grid-column: 1;
+					grid-row: 1;
+				}
+
+				.features section .icon.major {
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					width: 2.2em;
+					height: 2.2em;
+					line-height: 2.2em;
+					margin: 0;
+				}
+
+				.features section h3 {
+					display: block;
+					grid-column: 2;
+					grid-row: 1;
+					align-self: center;
+					margin: 0;
+					line-height: 1.35;
+					min-width: 0;
+				}
+
+				.features section p,
+				.features section ul {
+					grid-column: 1 / -1;
+					margin-top: 0.05em;
 				}
 
 		}
@@ -6257,8 +6290,9 @@ input, select, textarea {
 		height: 2.6em;
 		padding: 0 1.12em !important;
 		border-radius: 999px;
-		background: #ffffff;
-		color: #3d2f70;
+		background: #ffffff !important;
+		border: 1px solid rgba(61, 47, 112, 0.22) !important;
+		color: #2f2359 !important;
 		font-size: 0.62em;
 		font-weight: 700;
 		letter-spacing: 0.14em;
@@ -6268,7 +6302,8 @@ input, select, textarea {
 	}
 
 	.everloft-install-banner .install-action:hover {
-		background: #f4f1ff;
+		background: #f4f1ff !important;
+		color: #2b214f !important;
 	}
 
 	.everloft-install-banner .install-dismiss {
