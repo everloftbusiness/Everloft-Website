@@ -47,7 +47,7 @@
 	// Sidebar.
 		if ($sidebar.length > 0) {
 
-			var $sidebar_a = $sidebar.find('a');
+			var $sidebar_a = $sidebar.find('nav a[href^="#"]');
 
 			$sidebar_a
 				.addClass('scrolly')
@@ -118,11 +118,12 @@
 			speed: 1000,
 			offset: function() {
 
-				// If <=large, >small, and sidebar is present, use its height as the offset.
+				// If <=large, >small, and visible sidebar is present, use its height as the offset.
 					if (breakpoints.active('<=large')
 					&&	!breakpoints.active('<=small')
-					&&	$sidebar.length > 0)
-						return $sidebar.height();
+					&&	$sidebar.length > 0
+					&&	$sidebar.is(':visible'))
+						return $sidebar.outerHeight();
 
 				return 0;
 
