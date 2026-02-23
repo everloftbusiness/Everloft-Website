@@ -52,6 +52,70 @@
 				$sidebarTitleIndicator = null,
 				$sidebarTitleIndicatorItems = $();
 
+			function getSidebarTitleIndicatorHeight() {
+
+				var indicatorNode, computedStyle;
+
+				if (!$sidebarTitleIndicatorLayer || $sidebarTitleIndicatorLayer.length < 1)
+					return 0;
+
+				indicatorNode = $sidebarTitleIndicatorLayer[0];
+
+				if (!indicatorNode)
+					return 0;
+
+				computedStyle = window.getComputedStyle(indicatorNode);
+
+				if (!computedStyle || computedStyle.display === 'none')
+					return 0;
+
+				return Math.max(0, Math.round(indicatorNode.getBoundingClientRect().height));
+
+			}
+
+			function syncSidebarTitleIndicatorOffset() {
+
+				var offsetHeight = getSidebarTitleIndicatorHeight();
+
+				document.documentElement.style.setProperty('--sidebar-title-indicator-offset', offsetHeight + 'px');
+
+			}
+
+			function shouldUseTopSectionHeaderScroll($link) {
+
+				var linkHref = '',
+					firstSectionHref = '';
+
+				if (!$link || $link.length < 1 || $sidebar_a.length < 1)
+					return false;
+
+				linkHref = ($link.attr('href') || '');
+				firstSectionHref = ($sidebar_a.first().attr('href') || '');
+
+				return ($body.hasClass('home-page') || $body.hasClass('program-page'))
+					&& !$sidebar.is(':visible')
+					&& linkHref === firstSectionHref;
+
+			}
+
+			function scrollTopSectionToHeader() {
+
+				var $header = $('#header'),
+					headerTop = 0,
+					indicatorHeight = getSidebarTitleIndicatorHeight(),
+					targetTop = 0;
+
+				if ($header.length > 0)
+					headerTop = Math.max(0, Math.round($header.offset().top || 0));
+
+				targetTop = Math.max(0, headerTop - indicatorHeight);
+
+				$('html, body').stop().animate({
+					scrollTop: targetTop
+				}, 1000);
+
+			}
+
 			function refreshSidebarTitleIndicatorLayout() {
 
 				var indicatorElement, wasFullWidth, fitsFullWidth;
@@ -104,6 +168,8 @@
 				else
 					$sidebarTitleIndicator.removeClass('is-visible');
 
+				syncSidebarTitleIndicatorOffset();
+
 			}
 
 			if ($sidebar_a.length > 0
@@ -138,10 +204,11 @@
 				$sidebarTitleIndicatorItems = $sidebarTitleIndicatorLayer.find('.sidebar-title-indicator-item');
 				$body.append($sidebarTitleIndicatorLayer);
 
-				$sidebarTitleIndicatorItems.on('click', function() {
+				$sidebarTitleIndicatorItems.on('click', function(event) {
 
 					var indicatorIndex = parseInt($(this).attr('data-sidebar-indicator-index'), 10),
-						$linkedSidebarItem = $sidebar_a.eq(indicatorIndex);
+						$linkedSidebarItem = $sidebar_a.eq(indicatorIndex),
+						$thisIndicator = $(this);
 
 					if ($linkedSidebarItem.length < 1)
 						return;
@@ -153,6 +220,13 @@
 
 					updateSidebarTitleIndicator();
 
+					if (shouldUseTopSectionHeaderScroll($thisIndicator)) {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						scrollTopSectionToHeader();
+						return false;
+					}
+
 				});
 
 				$window.on('resize.sidebarTitleIndicator orientationchange.sidebarTitleIndicator', function() {
@@ -160,12 +234,13 @@
 				});
 
 				updateSidebarTitleIndicator();
+				window.setTimeout(updateSidebarTitleIndicator, 140);
 
 			}
 
 			$sidebar_a
 				.addClass('scrolly')
-				.on('click', function() {
+				.on('click', function(event) {
 
 					var $this = $(this);
 
@@ -182,6 +257,13 @@
 							.addClass('active-locked');
 
 					updateSidebarTitleIndicator();
+
+					if (shouldUseTopSectionHeaderScroll($this)) {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						scrollTopSectionToHeader();
+						return false;
+					}
 
 				})
 				.each(function() {
@@ -230,6 +312,7 @@
 				});
 
 			updateSidebarTitleIndicator();
+			syncSidebarTitleIndicatorOffset();
 
 		}
 

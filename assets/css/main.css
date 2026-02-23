@@ -4792,25 +4792,12 @@ input, select, textarea {
 
 		body.home-page #header,
 		body.program-page #header {
-			margin-top: 2.35em;
+			margin-top: 0;
 		}
 
-	}
-
-	@media screen and (max-width: 736px) {
-
-		body.home-page #header,
-		body.program-page #header {
-			margin-top: 2.2em;
-		}
-
-	}
-
-	@media screen and (max-width: 480px) {
-
-		body.home-page #header,
-		body.program-page #header {
-			margin-top: 2.05em;
+		body.home-page,
+		body.program-page {
+			padding-top: var(--sidebar-title-indicator-offset, 0px);
 		}
 
 	}
