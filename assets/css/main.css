@@ -5958,3 +5958,150 @@ input, select, textarea {
 		background: linear-gradient(140deg, #f7f4ff 0%, #f1edff 100%);
 		border-color: #ddd4fb;
 	}
+
+/* Everloft Install Banner */
+
+	.everloft-install-banner {
+		position: fixed;
+		left: 0.8em;
+		right: 0.8em;
+		bottom: 0.8em;
+		z-index: 10050;
+		display: flex;
+		align-items: center;
+		gap: 0.7em;
+		padding: 0.72em 0.75em;
+		border: 1px solid rgba(255, 255, 255, 0.26);
+		border-radius: 0.9em;
+		background: linear-gradient(132deg, rgba(76, 54, 149, 0.95) 0%, rgba(96, 67, 181, 0.95) 54%, rgba(113, 82, 198, 0.95) 100%);
+		box-shadow: 0 0.8em 2.1em rgba(23, 12, 59, 0.28);
+		color: #ffffff;
+		transform: translateY(120%);
+		opacity: 0;
+		pointer-events: none;
+		transition: transform 0.28s ease, opacity 0.28s ease;
+	}
+
+	.everloft-install-banner.is-visible {
+		transform: translateY(0);
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.everloft-install-banner img {
+		width: 2.2em;
+		height: 2.2em;
+		border-radius: 50%;
+		background: #ffffff;
+		flex: 0 0 auto;
+	}
+
+	.everloft-install-banner .install-copy {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.everloft-install-banner .install-copy strong {
+		display: block;
+		margin: 0;
+		color: #ffffff;
+		font-size: 0.72em;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+
+	.everloft-install-banner .install-copy p {
+		margin: 0.2em 0 0;
+		color: rgba(255, 255, 255, 0.94);
+		font-size: 0.78em;
+		line-height: 1.33;
+	}
+
+	.everloft-install-banner .install-action,
+	.everloft-install-banner .install-dismiss {
+		-moz-appearance: none;
+		-webkit-appearance: none;
+		-ms-appearance: none;
+		appearance: none;
+		border: 0 !important;
+		margin: 0;
+		padding: 0;
+		outline: 0;
+		line-height: 1;
+		text-decoration: none;
+	}
+
+	.everloft-install-banner .install-action:after,
+	.everloft-install-banner .install-dismiss:after {
+		display: none !important;
+	}
+
+	.everloft-install-banner .install-action {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 8.35em;
+		height: 2.6em;
+		padding: 0 1.12em !important;
+		border-radius: 999px;
+		background: #ffffff;
+		color: #3d2f70;
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.everloft-install-banner .install-action:hover {
+		background: #f4f1ff;
+	}
+
+	.everloft-install-banner .install-dismiss {
+		display: inline-flex;
+		flex: 0 0 auto;
+		align-items: center;
+		justify-content: center;
+		width: 2em;
+		height: 2em;
+		padding: 0 !important;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.12);
+		color: rgba(255, 255, 255, 0.92);
+		cursor: pointer;
+	}
+
+	.everloft-install-banner .install-dismiss:hover {
+		background: rgba(255, 255, 255, 0.2);
+	}
+
+	@media screen and (min-width: 737px) {
+
+		.everloft-install-banner {
+			left: auto;
+			right: 1.1em;
+			width: min(31em, calc(100vw - 2.2em));
+		}
+
+	}
+
+	@media screen and (max-width: 480px) {
+
+		.everloft-install-banner {
+			padding: 0.66em 0.62em;
+			gap: 0.55em;
+		}
+
+		.everloft-install-banner .install-copy p {
+			font-size: 0.73em;
+		}
+
+		.everloft-install-banner .install-action {
+			padding: 0 0.92em;
+			font-size: 0.57em;
+			letter-spacing: 0.12em;
+		}
+
+	}

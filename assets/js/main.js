@@ -188,4 +188,196 @@
 				}
 			});
 
+	// PWA install prompt.
+		(function() {
+
+			var installBanner = null;
+			var installMessage = null;
+			var installAction = null;
+			var deferredInstallPrompt = null;
+			var fallbackTimer = null;
+			var DISMISS_KEY = 'everloft-install-dismissed-at';
+			var DISMISS_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+			function isMobileDevice() {
+				return /android|iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+			}
+
+			function isIOSDevice() {
+				return /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+			}
+
+			function isStandaloneMode() {
+				var standaloneMatch = false;
+
+				if (window.matchMedia)
+					standaloneMatch = window.matchMedia('(display-mode: standalone)').matches;
+
+				return standaloneMatch || window.navigator.standalone === true;
+			}
+
+			function wasDismissedRecently() {
+				try {
+					var rawValue = window.localStorage.getItem(DISMISS_KEY);
+
+					if (!rawValue)
+						return false;
+
+					return (Date.now() - parseInt(rawValue, 10)) < DISMISS_WINDOW_MS;
+				}
+				catch (error) {
+					return false;
+				}
+			}
+
+			function markDismissed() {
+				try {
+					window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+				}
+				catch (error) {
+					// Ignore localStorage restrictions.
+				}
+			}
+
+			function hideInstallBanner(rememberDismissal) {
+				if (!installBanner)
+					return;
+
+				if (rememberDismissal)
+					markDismissed();
+
+				installBanner.classList.remove('is-visible');
+			}
+
+			function handleInstallAction() {
+				var mode = installBanner ? installBanner.getAttribute('data-install-mode') : '';
+
+				if (mode === 'android' && deferredInstallPrompt) {
+					deferredInstallPrompt.prompt();
+					deferredInstallPrompt.userChoice.then(function(choice) {
+						deferredInstallPrompt = null;
+						hideInstallBanner(choice && choice.outcome !== 'accepted');
+					})['catch'](function() {
+						hideInstallBanner(false);
+					});
+					return;
+				}
+
+				if (mode === 'ios') {
+					window.alert('To install Everloft on iPhone: open in Safari, tap Share, then tap Add to Home Screen.');
+					hideInstallBanner(true);
+					return;
+				}
+
+				window.alert('To install Everloft: open your browser menu and choose Install app or Add to Home screen.');
+				hideInstallBanner(true);
+			}
+
+			function createInstallBanner() {
+				if (installBanner)
+					return;
+
+				installBanner = document.createElement('aside');
+				installBanner.className = 'everloft-install-banner';
+				installBanner.setAttribute('aria-live', 'polite');
+				installBanner.innerHTML =
+					'<img src="/images/everloft-logo-mark.png" alt="Everloft logo">' +
+					'<div class="install-copy">' +
+						'<strong>Install Everloft</strong>' +
+						'<p></p>' +
+					'</div>' +
+					'<button type="button" class="install-action">Install</button>' +
+					'<button type="button" class="install-dismiss" aria-label="Dismiss install prompt">' +
+						'<span class="icon solid fa-times" aria-hidden="true"></span>' +
+					'</button>';
+
+				document.body.appendChild(installBanner);
+
+				installMessage = installBanner.querySelector('p');
+				installAction = installBanner.querySelector('.install-action');
+
+				installAction.addEventListener('click', handleInstallAction);
+				installBanner.querySelector('.install-dismiss').addEventListener('click', function() {
+					hideInstallBanner(true);
+				});
+			}
+
+			function showInstallBanner(mode) {
+				if (!isMobileDevice() || isStandaloneMode() || wasDismissedRecently())
+					return;
+
+				createInstallBanner();
+				installBanner.setAttribute('data-install-mode', mode);
+
+				if (mode === 'ios') {
+					installMessage.textContent = 'Add Everloft to your home screen for one-tap access.';
+					installAction.textContent = 'How to Install';
+				}
+				else if (mode === 'android') {
+					installMessage.textContent = 'Install Everloft for faster access and a full-screen app experience.';
+					installAction.textContent = 'Install App';
+				}
+				else {
+					installMessage.textContent = 'Add Everloft from your browser menu to keep it on your home screen.';
+					installAction.textContent = 'Show Steps';
+				}
+
+				installBanner.classList.add('is-visible');
+			}
+
+			function registerServiceWorker() {
+				var canRegister = 'serviceWorker' in navigator;
+				var secureContext = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+				if (!canRegister || !secureContext)
+					return;
+
+				navigator.serviceWorker.register('/sw.js')['catch'](function() {
+					// Ignore registration failures.
+				});
+			}
+
+			function showFallbackPrompt() {
+				if (!isMobileDevice() || isStandaloneMode() || wasDismissedRecently())
+					return;
+
+				if (isIOSDevice()) {
+					showInstallBanner('ios');
+					return;
+				}
+
+				if (deferredInstallPrompt)
+					showInstallBanner('android');
+				else
+					showInstallBanner('fallback');
+			}
+
+			registerServiceWorker();
+
+			window.addEventListener('beforeinstallprompt', function(event) {
+				event.preventDefault();
+				deferredInstallPrompt = event;
+
+				if (fallbackTimer) {
+					window.clearTimeout(fallbackTimer);
+					fallbackTimer = null;
+				}
+
+				showInstallBanner('android');
+			});
+
+			window.addEventListener('appinstalled', function() {
+				deferredInstallPrompt = null;
+				hideInstallBanner(false);
+			});
+
+			$window.on('load', function() {
+				if (!isMobileDevice() || isStandaloneMode())
+					return;
+
+				fallbackTimer = window.setTimeout(showFallbackPrompt, 1400);
+			});
+
+		})();
+
 })(jQuery);
