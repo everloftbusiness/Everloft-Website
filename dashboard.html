@@ -43,7 +43,7 @@
 							<header class="dashboard-hero">
 								<p class="eyebrow">Secure Portfolio Console</p>
 								<h1>Welcome, <span id="dashboard-user-name">User</span></h1>
-								<p>Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
+								<p id="dashboard-hero-description">Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
 							</header>
 
 							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
@@ -56,7 +56,53 @@
 								</ul>
 							</section>
 
-							<section class="dashboard-section dashboard-controls">
+							<section class="dashboard-section role-access-section" id="role-access-section">
+								<h2 id="role-workspace-title">Role Workspace</h2>
+								<p class="dashboard-meta"><span id="role-level-text">Level --</span><span id="role-permission-count">Permissions: --</span></p>
+								<p class="role-workspace-note" id="role-workspace-note">Loading role-specific dashboard data...</p>
+								<ul class="role-permission-chips" id="role-permission-chips">
+									<li class="permission-chip">Loading permissions...</li>
+								</ul>
+								<div class="summary-grid role-summary-grid" id="role-summary-grid">
+									<article class="summary-card">
+										<p class="summary-label">Metric A</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Metric B</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Metric C</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+								</div>
+								<div class="table-wrap">
+									<table class="dashboard-table role-activity-table">
+										<thead>
+											<tr id="role-activity-head">
+												<th>Item</th>
+												<th>Owner</th>
+												<th>Status</th>
+												<th>Next Action</th>
+											</tr>
+										</thead>
+										<tbody id="role-activity-body">
+											<tr>
+												<td data-label="Item">Loading...</td>
+												<td data-label="Owner">-</td>
+												<td data-label="Status">-</td>
+												<td data-label="Next Action">-</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section dashboard-controls" data-permissions="view_property">
 								<h2>Global Filters</h2>
 								<div class="dashboard-filter-grid">
 									<div class="filter-field">
@@ -79,7 +125,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_property">
 								<h2>Overview</h2>
 								<p class="dashboard-meta"><span id="overview-freshness">Last updated: --</span><span id="overview-source">Source: Portfolio Ops DB</span></p>
 								<div class="summary-grid">
@@ -106,7 +152,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_property">
 								<h2>Asset Portfolio</h2>
 								<div class="asset-list">
 									<article class="asset-card" data-asset-key="marari">
@@ -148,7 +194,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_financials">
 								<h2>Performance Overview</h2>
 								<p class="dashboard-meta"><span id="performance-freshness">Last updated: --</span><span id="performance-source">Source: Booking + Payment Consolidation</span></p>
 								<div class="chart-toolbar">
@@ -228,7 +274,7 @@
 								</article>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_financials">
 								<h2>Revenue Breakdown</h2>
 								<div class="revenue-stack">
 									<p><span>Revenue Generated</span><strong id="revenue-generated">INR 8,42,000</strong></p>
@@ -238,7 +284,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_financials">
 								<h2>Payout / Distribution</h2>
 								<p class="dashboard-meta"><span id="distribution-freshness">Last updated: --</span><span id="distribution-source">Source: Settlement Ledger</span></p>
 								<div class="payout-grid">
@@ -273,7 +319,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_property">
 								<h2>Asset Value</h2>
 								<p class="dashboard-meta"><span id="asset-value-freshness">Last updated: --</span><span id="asset-value-source">Source: Valuation Model v3.2</span></p>
 								<div class="asset-value-grid">
@@ -291,7 +337,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="assign_task|view_property">
 								<h2>Operational Insights</h2>
 								<div class="insight-grid">
 									<article>
@@ -313,7 +359,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_only_own_data|view_financials">
 								<h2>Document Vault</h2>
 								<div class="vault-grid">
 									<article>
@@ -339,7 +385,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_only_own_data|assign_task|view_property">
 								<h2>Communication</h2>
 								<div class="comm-grid">
 									<a href="mailto:everloft.business@gmail.com" class="dash-action"><span class="icon solid fa-comment-dots" aria-hidden="true"></span> Message Everloft</a>
@@ -348,7 +394,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section">
+							<section class="dashboard-section" data-permissions="view_financials">
 								<h2>New Asset Opportunities</h2>
 								<div class="opportunity-grid">
 									<article>
@@ -364,7 +410,7 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section security-panel">
+							<section class="dashboard-section security-panel" data-permissions="manage_users|manage_system">
 								<h2>Security & Access Controls</h2>
 								<ul>
 									<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Two-factor authentication enabled.</li>
@@ -373,7 +419,7 @@
 									<li><span class="icon solid fa-exclamation-triangle" aria-hidden="true"></span> Failed logins (this device): <strong id="security-failed-count">0</strong> | Last failed: <strong id="security-last-failed">None</strong></li>
 									<li><span class="icon solid fa-history" aria-hidden="true"></span> Download logs and document access history.</li>
 									<li><span class="icon solid fa-file-pdf" aria-hidden="true"></span> Secure PDF statements with traceable issue IDs.</li>
-									<li><span class="icon solid fa-user-lock" aria-hidden="true"></span> Role-based access controls for investor accounts.</li>
+									<li id="security-role-line"><span class="icon solid fa-user-lock" aria-hidden="true"></span> Role-based access controls active for this session.</li>
 								</ul>
 							</section>
 						</div>
@@ -398,8 +444,10 @@
 			<script src="assets/js/breakpoints.min.js"></script>
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
+			<script src="assets/js/mvp/core/namespace.js"></script>
 			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 			<script src="assets/js/dashboard-enhancements.js"></script>
+			<script src="assets/js/mvp/app.js"></script>
 
 	</body>
 </html>
