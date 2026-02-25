@@ -13,7 +13,7 @@
 		var self = this;
 
 		if (sessionStorage.getItem("everloftAuth") === "1") {
-			self.view.redirect("dashboard.html");
+			self.view.redirect("/dashboard/");
 			return;
 		}
 
@@ -59,7 +59,7 @@
 				sessionStorage.setItem("everloftSessionLoginAt", successfulAt);
 				localStorage.setItem("everloftLastResolvedRole", resolvedRole || "");
 
-				self.view.redirect("dashboard.html");
+				self.view.redirect("/dashboard/");
 			} catch (error) {
 				var failedCount = Number(localStorage.getItem("everloftFailedLogins") || "0") + 1;
 				localStorage.setItem("everloftFailedLogins", String(failedCount));

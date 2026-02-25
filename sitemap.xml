@@ -5,23 +5,19 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://everloft.co.in/owner-program.html</loc>
+    <loc>https://everloft.co.in/owner-program/</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://everloft.co.in/investor-program.html</loc>
+    <loc>https://everloft.co.in/investor-program/</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://everloft.co.in/login.html</loc>
+    <loc>https://everloft.co.in/login/</loc>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://everloft.co.in/dashboard.html</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://everloft.co.in/investor-dashboard.html</loc>
+    <loc>https://everloft.co.in/dashboard/</loc>
     <priority>0.8</priority>
   </url>
 </urlset>

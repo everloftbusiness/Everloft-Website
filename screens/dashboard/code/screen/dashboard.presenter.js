@@ -8,7 +8,7 @@
 	app.Presenters.dashboard.prototype.init = function () {
 	const authFlag = sessionStorage.getItem("everloftAuth");
 	if (authFlag !== "1") {
-		window.location.href = "login.html";
+		window.location.href = "/login/";
 		return;
 	}
 
