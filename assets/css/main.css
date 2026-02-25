@@ -5261,6 +5261,44 @@ input, select, textarea {
 		margin: -0.15em 0 0.85em 0;
 	}
 
+	.everloft-dashboard .role-workspace-note {
+		color: #5a6f8e;
+		font-size: 0.9em;
+		margin-bottom: 0.75em;
+	}
+
+	.everloft-dashboard .role-permission-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45em;
+		list-style: none;
+		margin: 0 0 0.8em 0;
+		padding: 0;
+	}
+
+	.everloft-dashboard .role-permission-chips .permission-chip {
+		background: #eef3ff;
+		border: solid 1px #d7e0f6;
+		border-radius: 999px;
+		color: #456089;
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		margin: 0;
+		padding: 0.42em 0.78em;
+		text-transform: lowercase;
+	}
+
+	.everloft-dashboard .role-summary-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-bottom: 0.8em;
+	}
+
+	.everloft-dashboard .role-activity-table td,
+	.everloft-dashboard .role-activity-table th {
+		font-size: 0.82em;
+	}
+
 	.everloft-dashboard .chart-meta {
 		color: #637892;
 		display: flex;
@@ -5813,6 +5851,10 @@ input, select, textarea {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 
+		.everloft-dashboard .role-summary-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
 		.everloft-dashboard .asset-meta,
 		.everloft-dashboard .chart-grid,
 		.everloft-dashboard .payout-grid,
@@ -5957,6 +5999,7 @@ input, select, textarea {
 		}
 
 		.everloft-dashboard .summary-grid,
+		.everloft-dashboard .role-summary-grid,
 		.everloft-dashboard .asset-meta,
 		.everloft-dashboard .comm-grid,
 		.everloft-dashboard .insight-grid,
@@ -6430,6 +6473,16 @@ input, select, textarea {
 	.everloft-dashboard .chart-meta,
 	.everloft-dashboard .drilldown-help {
 		color: var(--dash-muted);
+	}
+
+	.everloft-dashboard .role-workspace-note {
+		color: var(--dash-muted);
+	}
+
+	.everloft-dashboard .role-permission-chips .permission-chip {
+		background: #f1ecff;
+		border-color: #ded5fb;
+		color: #5a4d93;
 	}
 
 	.everloft-dashboard .dashboard-section {

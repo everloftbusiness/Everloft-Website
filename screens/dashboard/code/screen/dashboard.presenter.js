@@ -12,26 +12,37 @@
 		return;
 	}
 
-	const userName = sessionStorage.getItem("everloftUserName") || "User";
-	const userNameNode = document.getElementById("dashboard-user-name");
-	if (userNameNode) {
-		userNameNode.textContent = userName;
-	}
+	const shellWidget = app.Widgets && app.Widgets.dashboard && app.Widgets.dashboard.DashboardShellWidget
+		? new app.Widgets.dashboard.DashboardShellWidget()
+		: null;
 
-	const logoutNode = document.getElementById("dashboard-logout");
-	if (logoutNode) {
-		logoutNode.addEventListener("click", function () {
-			[
-				"everloftAuth",
-				"everloftUserName",
-				"everloftUserRole",
-				"everloftUserRoleLabel",
-				"everloftUserId",
-				"everloftSessionLoginAt"
-			].forEach(function (key) {
-				sessionStorage.removeItem(key);
-			});
+	const userName = sessionStorage.getItem("everloftUserName") || "User";
+	if (shellWidget) {
+		shellWidget.applyUserName(userName);
+		shellWidget.bindLogout(function () {
+			shellWidget.clearSession();
 		});
+	} else {
+		const userNameNode = document.getElementById("dashboard-user-name");
+		if (userNameNode) {
+			userNameNode.textContent = userName;
+		}
+
+		const logoutNode = document.getElementById("dashboard-logout");
+		if (logoutNode) {
+			logoutNode.addEventListener("click", function () {
+				[
+					"everloftAuth",
+					"everloftUserName",
+					"everloftUserRole",
+					"everloftUserRoleLabel",
+					"everloftUserId",
+					"everloftSessionLoginAt"
+				].forEach(function (key) {
+					sessionStorage.removeItem(key);
+				});
+			});
+		}
 	}
 
 	const formatInr = function (value) {

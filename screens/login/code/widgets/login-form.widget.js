@@ -1,10 +1,10 @@
 (function (global) {
 	var app = global.EverloftMVP;
-	if (!app) {
+	if (!app || !app.Widgets || !app.Widgets.login) {
 		return;
 	}
 
-	var LoginView = function () {
+	var LoginFormWidget = function () {
 		this.form = document.getElementById("everloft-login-form");
 		this.usernameInput = document.getElementById("login-username");
 		this.passwordInput = document.getElementById("login-password");
@@ -12,18 +12,18 @@
 		this.submitButton = this.form ? this.form.querySelector('button[type="submit"]') : null;
 	};
 
-	LoginView.prototype.hasForm = function () {
+	LoginFormWidget.prototype.exists = function () {
 		return Boolean(this.form && this.usernameInput && this.passwordInput && this.errorNode);
 	};
 
-	LoginView.prototype.getCredentials = function () {
+	LoginFormWidget.prototype.getCredentials = function () {
 		return {
 			username: this.usernameInput ? this.usernameInput.value.trim() : "",
 			password: this.passwordInput ? this.passwordInput.value : ""
 		};
 	};
 
-	LoginView.prototype.bindSubmit = function (handler) {
+	LoginFormWidget.prototype.bindSubmit = function (handler) {
 		if (!this.form) {
 			return;
 		}
@@ -31,7 +31,7 @@
 		this.form.addEventListener("submit", handler);
 	};
 
-	LoginView.prototype.showError = function (message) {
+	LoginFormWidget.prototype.showError = function (message) {
 		if (!this.errorNode) {
 			return;
 		}
@@ -40,7 +40,7 @@
 		this.errorNode.textContent = message;
 	};
 
-	LoginView.prototype.clearError = function () {
+	LoginFormWidget.prototype.clearError = function () {
 		if (!this.errorNode) {
 			return;
 		}
@@ -49,7 +49,7 @@
 		this.errorNode.textContent = "";
 	};
 
-	LoginView.prototype.setSubmitting = function (submitting) {
+	LoginFormWidget.prototype.setSubmitting = function (submitting) {
 		if (!this.submitButton) {
 			return;
 		}
@@ -58,9 +58,5 @@
 		this.submitButton.textContent = submitting ? "Logging in..." : "Login to Dashboard";
 	};
 
-	LoginView.prototype.redirect = function (url) {
-		window.location.href = url;
-	};
-
-	app.Views.login = LoginView;
+	app.Widgets.login.LoginFormWidget = LoginFormWidget;
 })(window);
