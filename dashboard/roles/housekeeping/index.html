@@ -1,0 +1,631 @@
+<!DOCTYPE HTML>
+<!--
+	Hyperspace by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Everloft Dashboard | Housekeeping</title>
+		<meta name="description" content="Housekeeping dashboard for cleaning schedules and turnover task execution." />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="/assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="/assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload investor-dashboard-page dashboard-page role-dashboard-page role-housekeeping-page" data-force-role="housekeeping">
+
+		<!-- Header -->
+			<header id="header">
+				<a href="/" class="title">Everloft</a>
+				<nav>
+					<ul>
+						<li><a href="/"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+						<li><a href="/owner-program/"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+						<li><a href="/investor-program/"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+						<li><a href="/dashboard/" class="active"><span class="icon solid fa-th-large" aria-hidden="true"></span> Dashboard</a></li>
+						<li><a href="/login/" id="dashboard-logout"><span class="icon solid fa-sign-out-alt" aria-hidden="true"></span> Logout</a></li>
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+				<section id="main" class="wrapper">
+					<div class="inner">
+						<div class="everloft-dashboard">
+							<header class="dashboard-hero">
+								<p class="eyebrow">Secure Portfolio Console</p>
+								<h1>Welcome, <span id="dashboard-user-name">User</span></h1>
+								<p id="dashboard-hero-description">Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
+							</header>
+
+							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
+								<div class="alert-strip-head">
+									<h2>Alerts &amp; Risk Signals</h2>
+									<p id="alert-context">All Assets | Monthly</p>
+								</div>
+								<ul class="alert-strip-list" id="dashboard-alert-list">
+									<li class="alert-item is-info"><span class="icon solid fa-info-circle" aria-hidden="true"></span>Loading latest alerts...</li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section role-access-section" id="role-access-section" data-hide-for-role="maintenance">
+								<h2 id="role-workspace-title">Role Workspace</h2>
+								<p class="dashboard-meta"><span id="role-level-text">Level --</span><span id="role-permission-count">Permissions: --</span></p>
+								<p class="role-workspace-note" id="role-workspace-note">Loading role-specific dashboard data...</p>
+								<ul class="role-permission-chips" id="role-permission-chips">
+									<li class="permission-chip">Loading permissions...</li>
+								</ul>
+								<div class="summary-grid role-summary-grid" id="role-summary-grid">
+									<article class="summary-card">
+										<p class="summary-label">Metric A</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Metric B</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Metric C</p>
+										<p class="summary-value">--</p>
+										<p class="summary-note">Loading...</p>
+									</article>
+								</div>
+								<div class="table-wrap">
+									<table class="dashboard-table role-activity-table">
+										<thead>
+											<tr id="role-activity-head">
+												<th>Item</th>
+												<th>Owner</th>
+												<th>Status</th>
+												<th>Next Action</th>
+											</tr>
+										</thead>
+										<tbody id="role-activity-body">
+											<tr>
+												<td data-label="Item">Loading...</td>
+												<td data-label="Owner">-</td>
+												<td data-label="Status">-</td>
+												<td data-label="Next Action">-</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-overview-section" data-role-only="maintenance" hidden>
+								<h2>Maintenance Dashboard Overview</h2>
+								<div class="summary-grid maintenance-summary-grid">
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-tools" aria-hidden="true"></span> Total Assigned Tasks</p>
+										<p class="summary-value" id="maintenance-total-tasks">0</p>
+										<p class="summary-note">Current active queue</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-hourglass-half" aria-hidden="true"></span> Pending Tasks</p>
+										<p class="summary-value" id="maintenance-pending-tasks">0</p>
+										<p class="summary-note">Awaiting start</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-sync-alt" aria-hidden="true"></span> In Progress Tasks</p>
+										<p class="summary-value" id="maintenance-inprogress-tasks">0</p>
+										<p class="summary-note">Work currently underway</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Completed This Month</p>
+										<p class="summary-value" id="maintenance-completed-month">0</p>
+										<p class="summary-note">Closed task count this month</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-assigned-section" data-role-only="maintenance" hidden>
+								<h2>My Assigned Tasks</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table maintenance-task-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>Issue Type</th>
+												<th>Priority</th>
+												<th>Status</th>
+												<th>Due Date</th>
+												<th>Action</th>
+											</tr>
+										</thead>
+										<tbody id="maintenance-task-body">
+											<tr>
+												<td data-label="Property">Loading tasks...</td>
+												<td data-label="Issue Type">-</td>
+												<td data-label="Priority">-</td>
+												<td data-label="Status">-</td>
+												<td data-label="Due Date">-</td>
+												<td data-label="Action">-</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-task-detail-section" data-role-only="maintenance" hidden>
+								<div class="maintenance-detail-head">
+									<h2>Task Detail</h2>
+									<p id="maintenance-task-reference">Select a task to view details.</p>
+								</div>
+								<div class="maintenance-detail-grid">
+									<p><strong>Property Address:</strong> <span id="maintenance-task-address">--</span></p>
+									<p><strong>Contact Person (Operations Admin):</strong> <span id="maintenance-task-contact">--</span></p>
+									<p><strong>Issue Description:</strong> <span id="maintenance-task-description">--</span></p>
+									<p><strong>Reported By:</strong> <span id="maintenance-task-reported-by">--</span></p>
+									<p><strong>Reported Date:</strong> <span id="maintenance-task-reported-date">--</span></p>
+									<p><strong>Required Materials:</strong> <span id="maintenance-task-materials">--</span></p>
+								</div>
+								<p class="maintenance-detail-notes"><strong>Notes:</strong> <span id="maintenance-task-notes">Select a task to load notes.</span></p>
+								<div class="maintenance-images-wrap">
+									<p class="maintenance-label">Images (if any)</p>
+									<ul class="maintenance-image-list" id="maintenance-task-image-list">
+										<li>No task images available yet.</li>
+									</ul>
+								</div>
+								<div class="maintenance-detail-upload-grid">
+									<div class="filter-field">
+										<label for="maintenance-task-before-image">Upload Before Photo</label>
+										<input type="file" id="maintenance-task-before-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-task-after-image">Upload After Photo</label>
+										<input type="file" id="maintenance-task-after-image" accept="image/*" />
+									</div>
+								</div>
+								<div class="maintenance-status-controls">
+									<div class="filter-field">
+										<label for="maintenance-task-status">Update Status</label>
+										<select id="maintenance-task-status" aria-label="Update task status">
+											<option value="Pending">Pending</option>
+											<option value="In Progress">In Progress</option>
+											<option value="Waiting for Parts">Waiting for Parts</option>
+											<option value="Completed">Completed</option>
+										</select>
+									</div>
+									<button type="button" class="button small primary" id="maintenance-update-status-btn">Update Status</button>
+								</div>
+								<p class="maintenance-status-feedback" id="maintenance-status-feedback">Choose a task and update status when work progresses.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-property-section" data-role-only="maintenance" hidden>
+								<h2>Property Details</h2>
+								<ul class="maintenance-property-list">
+									<li><strong>Property Name:</strong> <span id="maintenance-property-name">--</span></li>
+									<li><strong>Location:</strong> <span id="maintenance-property-location">--</span></li>
+									<li><strong>Access Instructions:</strong> <span id="maintenance-property-access">--</span></li>
+									<li><strong>Emergency Contact Number:</strong> <span id="maintenance-property-emergency">--</span></li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-schedule-section" data-role-only="maintenance" hidden>
+								<h2>Today's Schedule View</h2>
+								<ul class="maintenance-schedule-list" id="maintenance-schedule-list">
+									<li>Loading schedule...</li>
+								</ul>
+								<p class="maintenance-route-note"><span class="icon solid fa-route" aria-hidden="true"></span> Route order is arranged by time to help plan travel efficiently.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-image-upload-section" data-role-only="maintenance" hidden>
+								<h2>Image Upload Section</h2>
+								<p class="maintenance-section-note">Before and after media proof is required for Everloft quality control accountability.</p>
+								<div class="maintenance-upload-grid">
+									<div class="filter-field">
+										<label for="maintenance-before-image">Before Repair Image</label>
+										<input type="file" id="maintenance-before-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-after-image">After Repair Image</label>
+										<input type="file" id="maintenance-after-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-video-upload">Optional Video Upload</label>
+										<input type="file" id="maintenance-video-upload" accept="video/*" />
+									</div>
+								</div>
+								<button type="button" class="button small primary" id="maintenance-upload-proof-btn">Upload Repair Proof</button>
+								<p class="maintenance-status-feedback" id="maintenance-upload-feedback">Upload before and after images for task verification.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-expense-section" data-role-only="maintenance" hidden>
+								<h2>Expense Entry (Optional - Controlled)</h2>
+								<p class="maintenance-section-note">Expense submissions remain pending until approved by operations_admin.</p>
+								<label class="maintenance-expense-toggle" for="maintenance-expense-toggle">
+									<input type="checkbox" id="maintenance-expense-toggle" />
+									Add material expense for selected task
+								</label>
+								<div class="maintenance-expense-fields" id="maintenance-expense-fields" hidden>
+									<div class="maintenance-upload-grid">
+										<div class="filter-field">
+											<label for="maintenance-material-cost">Material Cost</label>
+											<input type="number" id="maintenance-material-cost" min="0" step="0.01" placeholder="Enter amount" />
+										</div>
+										<div class="filter-field">
+											<label for="maintenance-expense-description">Description</label>
+											<textarea id="maintenance-expense-description" rows="3" placeholder="What was purchased and why?"></textarea>
+										</div>
+										<div class="filter-field">
+											<label for="maintenance-bill-image">Upload Bill Image</label>
+											<input type="file" id="maintenance-bill-image" accept="image/*" />
+										</div>
+									</div>
+									<button type="button" class="button small primary" id="maintenance-expense-submit">Submit Expense For Approval</button>
+								</div>
+								<p class="maintenance-status-feedback" id="maintenance-expense-status">No expense request submitted.</p>
+							</section>
+
+							<section class="dashboard-section dashboard-controls" data-permissions="view_property" data-hide-for-role="maintenance">
+								<h2>Global Filters</h2>
+								<div class="dashboard-filter-grid">
+									<div class="filter-field">
+										<label for="global-range-filter">Date Range</label>
+										<select id="global-range-filter" aria-label="Select date range">
+											<option value="monthly" selected>Monthly</option>
+											<option value="quarterly">Quarterly</option>
+											<option value="yearly">Yearly</option>
+										</select>
+									</div>
+									<div class="filter-field">
+										<label for="global-asset-filter">Asset</label>
+										<select id="global-asset-filter" aria-label="Select asset">
+											<option value="all" selected>All Assets</option>
+											<option value="marari">Everloft Marari Cove</option>
+											<option value="kadavanthra">Everloft Kadavanthra Suites</option>
+											<option value="wayanad">Everloft Wayanad Ridge</option>
+										</select>
+									</div>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
+								<h2>Overview</h2>
+								<p class="dashboard-meta"><span id="overview-freshness">Last updated: --</span><span id="overview-source">Source: Portfolio Ops DB</span></p>
+								<div class="summary-grid">
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-map-marker-alt" aria-hidden="true"></span> Active Asset(s)</p>
+										<p class="summary-value" id="overview-active-assets">3</p>
+										<p class="summary-note" id="overview-active-note">2 live, 1 under development</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-hotel" aria-hidden="true"></span> Occupancy Status</p>
+										<p class="summary-value" id="overview-occupancy-status">78%</p>
+										<p class="summary-note" id="overview-occupancy-note">Current month blended occupancy</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-chart-bar" aria-hidden="true"></span> Month Performance</p>
+										<p class="summary-value" id="overview-month-performance">INR 8.42L</p>
+										<p class="summary-note" id="overview-performance-note">Gross revenue, current cycle</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-file-alt" aria-hidden="true"></span> Latest Report</p>
+										<p class="summary-value" id="overview-latest-report">Jan 2026</p>
+										<p class="summary-note" id="overview-report-note">Published 03 Feb 2026</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
+								<h2>Asset Portfolio</h2>
+								<div class="asset-list">
+									<article class="asset-card" data-asset-key="marari">
+										<img src="/images/pic01.jpg" alt="Everloft Marari Cove property preview" />
+										<div class="asset-details">
+											<h3>Everloft Marari Cove</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Mararikulam, Kerala</p>
+												<p><strong>Asset Type:</strong> Developed</p>
+												<p><strong>Status:</strong> <span class="status-badge is-active">Active</span></p>
+												<p><strong>Date of Start:</strong> 15 Mar 2025</p>
+											</div>
+										</div>
+									</article>
+									<article class="asset-card" data-asset-key="kadavanthra">
+										<img src="/images/pic02.jpg" alt="Everloft Kadavanthra Suites property preview" />
+										<div class="asset-details">
+											<h3>Everloft Kadavanthra Suites</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Kochi, Kerala</p>
+												<p><strong>Asset Type:</strong> Leased</p>
+												<p><strong>Status:</strong> <span class="status-badge is-active">Active</span></p>
+												<p><strong>Date of Start:</strong> 10 Jul 2025</p>
+											</div>
+										</div>
+									</article>
+									<article class="asset-card" data-asset-key="wayanad">
+										<img src="/images/pic03.jpg" alt="Everloft Wayanad Ridge property preview" />
+										<div class="asset-details">
+											<h3>Everloft Wayanad Ridge</h3>
+											<div class="asset-meta">
+												<p><strong>Location:</strong> Wayanad, Kerala</p>
+												<p><strong>Asset Type:</strong> Managed</p>
+												<p><strong>Status:</strong> <span class="status-badge is-dev">Under Development</span></p>
+												<p><strong>Date of Start:</strong> 20 Jan 2026</p>
+											</div>
+										</div>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_financials">
+								<h2>Performance Overview</h2>
+								<p class="dashboard-meta"><span id="performance-freshness">Last updated: --</span><span id="performance-source">Source: Booking + Payment Consolidation</span></p>
+								<div class="chart-toolbar">
+									<button type="button" class="chart-range-btn is-active" data-range="monthly">Monthly</button>
+									<button type="button" class="chart-range-btn" data-range="quarterly">Quarterly</button>
+									<button type="button" class="chart-range-btn" data-range="yearly">Yearly</button>
+								</div>
+								<div class="kpi-row">
+									<article class="kpi-card">
+										<p>Nights Booked</p>
+										<strong id="kpi-nights">127</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Average Daily Rate</p>
+										<strong id="kpi-adr">INR 7,420</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Occupancy Rate</p>
+										<strong id="kpi-occupancy">78%</strong>
+									</article>
+									<article class="kpi-card">
+										<p>Gross Revenue</p>
+										<strong id="kpi-revenue">INR 8.42L</strong>
+									</article>
+								</div>
+
+								<div class="chart-grid">
+									<article class="chart-card">
+										<h3>Revenue Trend</h3>
+										<p class="chart-meta"><span id="revenue-chart-freshness">Last updated: --</span><span>Source: Finance Ledger</span></p>
+										<div class="chart-canvas-wrap">
+											<canvas id="revenue-chart" aria-label="Revenue trend chart"></canvas>
+										</div>
+										<p class="chart-note" id="chart-note">Steady growth with stronger booking velocity in the recent cycle.</p>
+									</article>
+									<article class="chart-card">
+										<h3>Occupancy &amp; ADR Mix</h3>
+										<p class="chart-meta"><span id="mix-chart-freshness">Last updated: --</span><span>Source: Channel Booking Reports</span></p>
+										<div class="chart-canvas-wrap">
+											<canvas id="mix-chart" aria-label="Occupancy and ADR chart"></canvas>
+										</div>
+										<div class="ytd-grid" id="period-summary">
+											<p><strong>Total Revenue:</strong> INR 88.0L</p>
+											<p><strong>Average Occupancy:</strong> 74%</p>
+											<p><strong>Seasonal Comparison:</strong> +11% vs last year</p>
+										</div>
+									</article>
+								</div>
+								<article class="drilldown-panel">
+									<div class="drilldown-head">
+										<h3>Transaction Drilldown</h3>
+										<p id="drilldown-context">Monthly | All Assets | Week 4</p>
+									</div>
+									<p class="drilldown-help">Tip: click a chart point or bar above to switch period-level transactions.</p>
+									<div class="table-wrap">
+										<table class="dashboard-table drilldown-table">
+											<thead>
+												<tr>
+													<th>Period</th>
+													<th>Channel</th>
+													<th>Nights</th>
+													<th>Revenue</th>
+													<th>Status</th>
+												</tr>
+											</thead>
+											<tbody id="drilldown-table-body">
+												<tr>
+													<td data-label="Period">-</td>
+													<td data-label="Channel">-</td>
+													<td data-label="Nights">-</td>
+													<td data-label="Revenue">-</td>
+													<td data-label="Status">-</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</article>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_financials">
+								<h2>Revenue Breakdown</h2>
+								<div class="revenue-stack">
+									<p><span>Revenue Generated</span><strong id="revenue-generated">INR 8,42,000</strong></p>
+									<p><span>Operational Expenses</span><strong class="is-minus" id="revenue-expenses">- INR 2,18,000</strong></p>
+									<p><span>Maintenance Reserve</span><strong class="is-minus" id="revenue-maintenance">- INR 58,000</strong></p>
+									<p class="net-row"><span>Net Performance</span><strong id="revenue-net">INR 5,66,000</strong></p>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_financials">
+								<h2>Payout / Distribution</h2>
+								<p class="dashboard-meta"><span id="distribution-freshness">Last updated: --</span><span id="distribution-source">Source: Settlement Ledger</span></p>
+								<div class="payout-grid">
+									<article class="status-panel">
+										<p class="status-title">Distribution Status</p>
+										<p class="status-chip is-done" id="payout-status-chip"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Processed</p>
+										<p><strong>Next reporting cycle:</strong> <span id="payout-next-cycle">05 Mar 2026</span></p>
+									</article>
+									<article class="history-panel">
+										<h3>Distribution History</h3>
+										<div class="table-wrap">
+											<table class="dashboard-table">
+												<thead>
+													<tr>
+														<th>Period</th>
+														<th>Net Amount</th>
+														<th>Status</th>
+														<th>Statement</th>
+													</tr>
+												</thead>
+												<tbody id="distribution-history-body">
+													<tr>
+														<td data-label="Period">Jan 2026</td>
+														<td data-label="Net Amount">INR 5,66,000</td>
+														<td data-label="Status">Processed</td>
+														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
+								<h2>Asset Value</h2>
+								<p class="dashboard-meta"><span id="asset-value-freshness">Last updated: --</span><span id="asset-value-source">Source: Valuation Model v3.2</span></p>
+								<div class="asset-value-grid">
+									<article class="chart-card">
+										<h3>Estimated Asset Value Trend</h3>
+										<svg viewBox="0 0 520 220" role="img" aria-label="Asset value trend line chart">
+											<polyline points="20,180 110,168 200,152 290,131 380,108 470,86 500,76" />
+											<line x1="20" y1="190" x2="500" y2="190" />
+										</svg>
+									</article>
+									<article class="value-note">
+										<p><strong>Appreciation Overview:</strong> +14.2% from initial acquisition baseline.</p>
+										<p><strong>Market Positioning:</strong> Premium short-stay segment with strong weekend demand and repeat direct bookings.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="assign_task|view_property" data-hide-for-role="maintenance">
+								<h2>Operational Insights</h2>
+								<div class="insight-grid">
+									<article>
+										<h3><span class="icon solid fa-calendar-week" aria-hidden="true"></span> Peak Demand</h3>
+										<p>Friday to Sunday continues to drive the highest conversion and ADR performance.</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-share-alt" aria-hidden="true"></span> Booking Sources</h3>
+										<p>Direct: 34% | Airbnb: 41% | Booking Platforms: 25%</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-star" aria-hidden="true"></span> Guest Satisfaction</h3>
+										<p>Average rating: 4.7 / 5 across active listings.</p>
+									</article>
+									<article>
+										<h3><span class="icon solid fa-tools" aria-hidden="true"></span> Maintenance Status</h3>
+										<p>All preventive tasks closed for current month. No critical incidents open.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_only_own_data|view_financials">
+								<h2>Document Vault</h2>
+								<div class="vault-grid">
+									<article>
+										<h3>Agreement Copy</h3>
+										<p>Signed investor agreement with version history.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+									<article>
+										<h3>Monthly Performance Reports</h3>
+										<p>Cycle-wise reports with occupancy, ADR, and revenue summary.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download ZIP</a>
+									</article>
+									<article>
+										<h3>Annual Summary</h3>
+										<p>Consolidated yearly performance and trend comparison.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+									<article>
+										<h3>Compliance Documents</h3>
+										<p>Licensing and compliance records for investor review.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> Download PDF</a>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_only_own_data|assign_task|view_property" data-hide-for-role="maintenance">
+								<h2>Communication</h2>
+								<div class="comm-grid">
+									<a href="mailto:everloft.business@gmail.com" class="dash-action"><span class="icon solid fa-comment-dots" aria-hidden="true"></span> Message Everloft</a>
+									<a href="tel:+917483270264" class="dash-action"><span class="icon solid fa-phone-alt" aria-hidden="true"></span> Schedule Call</a>
+									<a href="/#three" class="dash-action"><span class="icon solid fa-headset" aria-hidden="true"></span> Support Contact</a>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_financials">
+								<h2>New Asset Opportunities</h2>
+								<div class="opportunity-grid">
+									<article>
+										<h3>Kovalam Coastal Villas</h3>
+										<p>Upcoming acquisition target with high demand potential in premium leisure segment.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-hand-point-right" aria-hidden="true"></span> Mark Interest</a>
+									</article>
+									<article>
+										<h3>Fort Kochi Heritage Suites</h3>
+										<p>Early-stage structured participation window for selected investors.</p>
+										<a href="#" class="dash-link"><span class="icon solid fa-hand-point-right" aria-hidden="true"></span> Mark Interest</a>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section security-panel" data-permissions="manage_users|manage_system">
+								<h2>Security & Access Controls</h2>
+								<ul>
+									<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Two-factor authentication enabled.</li>
+									<li><span class="icon solid fa-user-clock" aria-hidden="true"></span> Last successful login (this device): <strong id="security-last-login">Not available</strong></li>
+									<li><span class="icon solid fa-sign-in-alt" aria-hidden="true"></span> Current session started: <strong id="security-session-start">Not available</strong></li>
+									<li><span class="icon solid fa-exclamation-triangle" aria-hidden="true"></span> Failed logins (this device): <strong id="security-failed-count">0</strong> | Last failed: <strong id="security-last-failed">None</strong></li>
+									<li><span class="icon solid fa-history" aria-hidden="true"></span> Download logs and document access history.</li>
+									<li><span class="icon solid fa-file-pdf" aria-hidden="true"></span> Secure PDF statements with traceable issue IDs.</li>
+									<li id="security-role-line"><span class="icon solid fa-user-lock" aria-hidden="true"></span> Role-based access controls active for this session.</li>
+								</ul>
+							</section>
+						</div>
+					</div>
+				</section>
+			</div>
+
+		<!-- Footer -->
+			<footer id="footer" class="wrapper style1-alt">
+				<div class="inner">
+					<ul class="menu">
+						<li>&copy; Everloft. All rights reserved. Design adapted</li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="/assets/js/jquery.min.js"></script>
+			<script src="/assets/js/jquery.scrollex.min.js"></script>
+			<script src="/assets/js/jquery.scrolly.min.js"></script>
+			<script src="/assets/js/browser.min.js"></script>
+			<script src="/assets/js/breakpoints.min.js"></script>
+			<script src="/assets/js/util.js"></script>
+			<script src="/assets/js/main.js"></script>
+			<script src="/screens/core/code/namespace.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+			<script src="/screens/dashboard/code/widgets/dashboard-shell.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/super-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/finance-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/operations-manager.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/tech-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/property-manager.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/housekeeping.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/maintenance.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/guest-support.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/property-owner.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/guest.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/investor.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/screen/dashboard.presenter.js?v=20260226"></script>
+			<script src="/screens/core/code/app.js"></script>
+
+	</body>
+</html>
+

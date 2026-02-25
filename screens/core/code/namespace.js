@@ -8,6 +8,7 @@
 	app.Widgets.home = app.Widgets.home || {};
 	app.Widgets.login = app.Widgets.login || {};
 	app.Widgets.dashboard = app.Widgets.dashboard || {};
+	app.Widgets.dashboard.roles = app.Widgets.dashboard.roles || {};
 
 	global.EverloftMVP = app;
 })(window);

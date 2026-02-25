@@ -1,0 +1,251 @@
+<!DOCTYPE HTML>
+<!--
+	Hyperspace by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Everloft Dashboard | Maintenance</title>
+		<meta name="description" content="Maintenance dashboard for assigned repair tasks, status updates, and QC uploads." />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="/assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="/assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload investor-dashboard-page dashboard-page role-dashboard-page role-maintenance-page" data-force-role="maintenance">
+
+		<!-- Header -->
+			<header id="header">
+				<a href="/" class="title">Everloft</a>
+				<nav>
+					<ul>
+						<li><a href="/"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+						<li><a href="/owner-program/"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+						<li><a href="/investor-program/"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+						<li><a href="/dashboard/" class="active"><span class="icon solid fa-th-large" aria-hidden="true"></span> Dashboard</a></li>
+						<li><a href="/login/" id="dashboard-logout"><span class="icon solid fa-sign-out-alt" aria-hidden="true"></span> Logout</a></li>
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+				<section id="main" class="wrapper">
+					<div class="inner">
+						<div class="everloft-dashboard maintenance-console">
+							<header class="dashboard-hero">
+								<p class="eyebrow">Maintenance Task Console</p>
+								<h1>Welcome, <span id="dashboard-user-name">User</span></h1>
+								<p id="dashboard-hero-description">Manage assigned repairs, track completion progress, and submit before/after proof for quality control.</p>
+							</header>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-overview-section" data-role-only="maintenance">
+								<h2>Maintenance Dashboard Overview</h2>
+								<div class="summary-grid maintenance-summary-grid">
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-tools" aria-hidden="true"></span> Total Assigned Tasks</p>
+										<p class="summary-value" id="maintenance-total-tasks">0</p>
+										<p class="summary-note">Current active queue</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-hourglass-half" aria-hidden="true"></span> Pending Tasks</p>
+										<p class="summary-value" id="maintenance-pending-tasks">0</p>
+										<p class="summary-note">Awaiting start</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-sync-alt" aria-hidden="true"></span> In Progress Tasks</p>
+										<p class="summary-value" id="maintenance-inprogress-tasks">0</p>
+										<p class="summary-note">Work currently underway</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Completed This Month</p>
+										<p class="summary-value" id="maintenance-completed-month">0</p>
+										<p class="summary-note">Closed this month</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-assigned-section" data-role-only="maintenance">
+								<h2>My Assigned Tasks</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table maintenance-task-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>Issue Type</th>
+												<th>Priority</th>
+												<th>Status</th>
+												<th>Due Date</th>
+												<th>Action</th>
+											</tr>
+										</thead>
+										<tbody id="maintenance-task-body">
+											<tr>
+												<td data-label="Property">Loading tasks...</td>
+												<td data-label="Issue Type">-</td>
+												<td data-label="Priority">-</td>
+												<td data-label="Status">-</td>
+												<td data-label="Due Date">-</td>
+												<td data-label="Action">-</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-task-detail-section" data-role-only="maintenance">
+								<div class="maintenance-detail-head">
+									<h2>Task Detail</h2>
+									<p id="maintenance-task-reference">Select a task to view details.</p>
+								</div>
+								<div class="maintenance-detail-grid">
+									<p><strong>Property Address:</strong> <span id="maintenance-task-address">--</span></p>
+									<p><strong>Contact Person (Operations Admin):</strong> <span id="maintenance-task-contact">--</span></p>
+									<p><strong>Issue Description:</strong> <span id="maintenance-task-description">--</span></p>
+									<p><strong>Reported By:</strong> <span id="maintenance-task-reported-by">--</span></p>
+									<p><strong>Reported Date:</strong> <span id="maintenance-task-reported-date">--</span></p>
+									<p><strong>Required Materials:</strong> <span id="maintenance-task-materials">--</span></p>
+								</div>
+								<p class="maintenance-detail-notes"><strong>Notes:</strong> <span id="maintenance-task-notes">Select a task to load notes.</span></p>
+								<div class="maintenance-images-wrap">
+									<p class="maintenance-label">Images (if any)</p>
+									<ul class="maintenance-image-list" id="maintenance-task-image-list">
+										<li>No task images available yet.</li>
+									</ul>
+								</div>
+								<div class="maintenance-detail-upload-grid">
+									<div class="filter-field">
+										<label for="maintenance-task-before-image">Upload Before Photo</label>
+										<input type="file" id="maintenance-task-before-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-task-after-image">Upload After Photo</label>
+										<input type="file" id="maintenance-task-after-image" accept="image/*" />
+									</div>
+								</div>
+								<div class="maintenance-status-controls">
+									<div class="filter-field">
+										<label for="maintenance-task-status">Update Status</label>
+										<select id="maintenance-task-status" aria-label="Update task status">
+											<option value="Pending">Pending</option>
+											<option value="In Progress">In Progress</option>
+											<option value="Waiting for Parts">Waiting for Parts</option>
+											<option value="Completed">Completed</option>
+										</select>
+									</div>
+									<button type="button" class="button small primary" id="maintenance-update-status-btn">Update Status</button>
+								</div>
+								<p class="maintenance-status-feedback" id="maintenance-status-feedback">Choose a task and update status when work progresses.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-property-section" data-role-only="maintenance">
+								<h2>Property Details</h2>
+								<ul class="maintenance-property-list">
+									<li><strong>Property Name:</strong> <span id="maintenance-property-name">--</span></li>
+									<li><strong>Location:</strong> <span id="maintenance-property-location">--</span></li>
+									<li><strong>Access Instructions:</strong> <span id="maintenance-property-access">--</span></li>
+									<li><strong>Emergency Contact Number:</strong> <span id="maintenance-property-emergency">--</span></li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-schedule-section" data-role-only="maintenance">
+								<h2>Today's Schedule View</h2>
+								<ul class="maintenance-schedule-list" id="maintenance-schedule-list">
+									<li>Loading schedule...</li>
+								</ul>
+								<p class="maintenance-route-note"><span class="icon solid fa-route" aria-hidden="true"></span> Route order is arranged by time to help plan travel efficiently.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-upload-section" data-role-only="maintenance">
+								<h2>Image Upload Section</h2>
+								<p class="maintenance-section-note">Upload before and after repair images for Everloft quality control. Video upload is optional.</p>
+								<div class="maintenance-upload-grid">
+									<div class="filter-field">
+										<label for="maintenance-before-image">Before Repair Image</label>
+										<input type="file" id="maintenance-before-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-after-image">After Repair Image</label>
+										<input type="file" id="maintenance-after-image" accept="image/*" />
+									</div>
+									<div class="filter-field">
+										<label for="maintenance-video-upload">Optional Video Upload</label>
+										<input type="file" id="maintenance-video-upload" accept="video/*" />
+									</div>
+								</div>
+								<button type="button" class="button primary" id="maintenance-upload-proof-btn">Upload QC Proof</button>
+								<p class="maintenance-status-feedback" id="maintenance-upload-feedback">Upload before and after images to maintain accountability.</p>
+							</section>
+
+							<section class="dashboard-section maintenance-dashboard-section" id="maintenance-expense-section" data-role-only="maintenance">
+								<h2>Expense Entry (Optional - Controlled)</h2>
+								<p class="maintenance-section-note">Material expenses must be submitted as approval requests to operations_admin.</p>
+								<div class="filter-field">
+									<label><input type="checkbox" id="maintenance-expense-toggle" /> Enable expense request</label>
+								</div>
+								<div id="maintenance-expense-fields" class="maintenance-expense-fields" hidden>
+									<div class="maintenance-upload-grid">
+										<div class="filter-field">
+											<label for="maintenance-material-cost">Material Cost</label>
+											<input type="number" id="maintenance-material-cost" min="0" step="0.01" placeholder="Enter amount" />
+										</div>
+										<div class="filter-field">
+											<label for="maintenance-expense-description">Description</label>
+											<textarea id="maintenance-expense-description" rows="3" placeholder="Describe the material or work"></textarea>
+										</div>
+										<div class="filter-field">
+											<label for="maintenance-bill-image">Upload Bill Image</label>
+											<input type="file" id="maintenance-bill-image" accept="image/*" />
+										</div>
+									</div>
+									<button type="button" class="button" id="maintenance-expense-submit">Submit Approval Request</button>
+								</div>
+								<p class="maintenance-status-feedback" id="maintenance-expense-status">Expense requests stay pending until operations_admin approval.</p>
+							</section>
+						</div>
+					</div>
+				</section>
+			</div>
+
+		<!-- Footer -->
+			<footer id="footer" class="wrapper style1-alt">
+				<div class="inner">
+					<ul class="menu">
+						<li>&copy; Everloft. All rights reserved. Design adapted</li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="/assets/js/jquery.min.js"></script>
+			<script src="/assets/js/jquery.scrollex.min.js"></script>
+			<script src="/assets/js/jquery.scrolly.min.js"></script>
+			<script src="/assets/js/browser.min.js"></script>
+			<script src="/assets/js/breakpoints.min.js"></script>
+			<script src="/assets/js/util.js"></script>
+			<script src="/assets/js/main.js"></script>
+			<script src="/screens/core/code/namespace.js"></script>
+			<script src="/screens/dashboard/code/widgets/dashboard-shell.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/super-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/finance-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/operations-manager.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/tech-admin.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/property-manager.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/housekeeping.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/maintenance.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/guest-support.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/property-owner.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/guest.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/widgets/roles/investor.widget.js?v=20260226"></script>
+			<script src="/screens/dashboard/code/screen/dashboard.presenter.js?v=20260226"></script>
+			<script src="/screens/core/code/app.js"></script>
+
+	</body>
+</html>

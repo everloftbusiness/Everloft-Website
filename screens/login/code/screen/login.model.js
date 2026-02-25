@@ -17,6 +17,99 @@
 			.replace(/^_+|_+$/g, "");
 	};
 
+	LoginModel.prototype.resolveRole = function (candidates) {
+		var self = this;
+		var roleAliases = {
+			super_admin: "super_admin",
+			superadmin: "super_admin",
+			opsadmin: "operations_manager",
+			finance_admin: "finance_admin",
+			financeadmin: "finance_admin",
+			operations_manager: "operations_manager",
+			operationsmanager: "operations_manager",
+			operations_admin: "operations_manager",
+			operationsadmin: "operations_manager",
+			tech_admin: "tech_admin",
+			techadmin: "tech_admin",
+			property_manager: "property_manager",
+			propertymanager: "property_manager",
+			housekeeping: "housekeeping",
+			housekeeping_staff: "housekeeping",
+			housekeepingstaff: "housekeeping",
+			maintenance: "maintenance",
+			maintenance_staff: "maintenance",
+			maintenancestaff: "maintenance",
+			guest_support: "guest_support",
+			guestsupport: "guest_support",
+			investor: "investor",
+			investor01: "investor",
+			property_owner: "property_owner",
+			propertyowner: "property_owner",
+			owner: "property_owner",
+			owner01: "property_owner",
+			guest: "guest",
+			customer: "guest",
+			guest01: "guest",
+			housekeep01: "housekeeping",
+			maint01: "maintenance"
+		};
+
+		var list = Array.isArray(candidates) ? candidates : [candidates];
+		var resolved = "";
+		var fallback = "";
+		list.forEach(function (candidate) {
+			if (resolved) {
+				return;
+			}
+
+			var normalized = self.normalizeRole(candidate);
+			if (!normalized) {
+				return;
+			}
+			if (!fallback) {
+				fallback = normalized;
+			}
+
+			if (roleAliases[normalized]) {
+				resolved = roleAliases[normalized];
+				return;
+			}
+
+			var compact = normalized.replace(/_/g, "");
+			if (roleAliases[compact]) {
+				resolved = roleAliases[compact];
+				return;
+			}
+
+			if (normalized.indexOf("maintenance") !== -1 || normalized.indexOf("maint") !== -1 || normalized.indexOf("mnt") !== -1) {
+				resolved = "maintenance";
+				return;
+			}
+			if (normalized.indexOf("housekeeping") !== -1 || normalized.indexOf("housekeep") !== -1 || normalized.indexOf("hkp") !== -1) {
+				resolved = "housekeeping";
+				return;
+			}
+			if (normalized.indexOf("operations") !== -1 || normalized.indexOf("ops") !== -1) {
+				resolved = "operations_manager";
+				return;
+			}
+			if (normalized.indexOf("finance") !== -1) {
+				resolved = "finance_admin";
+				return;
+			}
+			if (normalized.indexOf("tech") !== -1) {
+				resolved = "tech_admin";
+				return;
+			}
+			if (normalized.indexOf("support") !== -1) {
+				resolved = "guest_support";
+				return;
+			}
+		});
+
+		return resolved || fallback;
+	};
+
 	LoginModel.prototype.authenticate = async function (username, password) {
 		var requestedAt = new Date().toISOString();
 		var body = new URLSearchParams({

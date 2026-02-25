@@ -115,7 +115,7 @@ input, select, textarea {
 /* Type */
 
 	body, input, select, textarea {
-		color: rgba(255, 255, 255, 0.55);
+		color: rgba(255, 255, 255, 0.72);
 		font-family: Arial, Helvetica, sans-serif;
 		font-size: 16.5pt;
 		font-weight: normal;
@@ -5841,6 +5841,299 @@ input, select, textarea {
 		margin-bottom: 0.45em;
 	}
 
+	.everloft-dashboard .maintenance-summary-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .maintenance-task-row.is-selected {
+		background: #f3f8ff;
+	}
+
+	.everloft-dashboard .maintenance-table-subline {
+		color: #5c708e;
+		display: block;
+		font-size: 0.84em;
+		line-height: 1.35;
+		margin-top: 0.2em;
+	}
+
+	.everloft-dashboard .maintenance-view-task-btn {
+		min-width: 7.6em;
+	}
+
+	.everloft-dashboard .maintenance-priority-pill,
+	.everloft-dashboard .maintenance-status-pill {
+		border-radius: 999px;
+		display: inline-block;
+		font-size: 0.74em;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		padding: 0.28em 0.62em;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .maintenance-priority-pill.is-low {
+		background: #edf8f1;
+		color: #1e7347;
+	}
+
+	.everloft-dashboard .maintenance-priority-pill.is-medium {
+		background: #e9f2ff;
+		color: #2a5f95;
+	}
+
+	.everloft-dashboard .maintenance-priority-pill.is-high {
+		background: #fff0d9;
+		color: #945f00;
+	}
+
+	.everloft-dashboard .maintenance-priority-pill.is-urgent {
+		background: #fce9e8;
+		color: #a12f2f;
+	}
+
+	.everloft-dashboard .maintenance-status-pill.is-pending {
+		background: #fff3df;
+		color: #8e5c09;
+	}
+
+	.everloft-dashboard .maintenance-status-pill.is-in-progress {
+		background: #eaf1ff;
+		color: #2a5f99;
+	}
+
+	.everloft-dashboard .maintenance-status-pill.is-waiting {
+		background: #f3edf9;
+		color: #5e4a87;
+	}
+
+	.everloft-dashboard .maintenance-status-pill.is-completed {
+		background: #e8f7ef;
+		color: #166a44;
+	}
+
+	.everloft-dashboard .maintenance-detail-head {
+		align-items: baseline;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35em 0.95em;
+		justify-content: space-between;
+		margin-bottom: 0.62em;
+	}
+
+	.everloft-dashboard .maintenance-detail-head h2 {
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .maintenance-detail-head p {
+		color: #5a6f8d;
+		font-size: 0.82em;
+		font-weight: 700;
+		letter-spacing: 0.07em;
+		margin-bottom: 0;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .maintenance-detail-grid {
+		display: grid;
+		gap: 0.55em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-bottom: 0.7em;
+	}
+
+	.everloft-dashboard .maintenance-detail-grid p {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #4f627c;
+		font-size: 0.84em;
+		margin-bottom: 0;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-detail-notes {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #4f627c;
+		font-size: 0.84em;
+		margin-bottom: 0.72em;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-detail-upload-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-label {
+		color: #5a6f8e;
+		font-size: 0.7em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		margin-bottom: 0.48em;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .maintenance-images-wrap {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		margin-bottom: 0.72em;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-image-list {
+		color: #556a87;
+		font-size: 0.84em;
+		list-style: disc;
+		margin: 0 0 0 1.2em;
+		padding: 0;
+	}
+
+	.everloft-dashboard .maintenance-image-list li {
+		margin-bottom: 0.3em;
+	}
+
+	.everloft-dashboard .maintenance-status-controls {
+		align-items: end;
+		display: grid;
+		gap: 0.7em;
+		grid-template-columns: minmax(0, 1fr) auto;
+		margin-bottom: 0.6em;
+	}
+
+	.everloft-dashboard .maintenance-status-feedback {
+		color: #576d8a;
+		font-size: 0.83em;
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .maintenance-status-feedback.is-success {
+		color: #196b45;
+	}
+
+	.everloft-dashboard .maintenance-status-feedback.is-error {
+		color: #a43333;
+	}
+
+	.everloft-dashboard .maintenance-property-list {
+		display: grid;
+		gap: 0.5em;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.everloft-dashboard .maintenance-property-list li {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #51637e;
+		font-size: 0.85em;
+		margin-bottom: 0;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-schedule-list {
+		display: grid;
+		gap: 0.55em;
+		list-style: none;
+		margin: 0 0 0.72em 0;
+		padding: 0;
+	}
+
+	.everloft-dashboard .maintenance-schedule-item {
+		align-items: center;
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		display: grid;
+		gap: 0.6em;
+		grid-template-columns: 4.25em 1fr;
+		padding: 0.58em 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-schedule-item.is-active {
+		background: #eef5ff;
+		border-color: #cddcf2;
+	}
+
+	.everloft-dashboard .maintenance-schedule-item .schedule-time {
+		color: #2d609f;
+		font-size: 0.78em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .maintenance-schedule-item .schedule-text {
+		color: #4f627d;
+		font-size: 0.86em;
+	}
+
+	.everloft-dashboard .maintenance-route-note {
+		color: #5a6f8d;
+		font-size: 0.83em;
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .maintenance-route-note .icon {
+		color: #2f63ae;
+		margin-right: 0.35em;
+	}
+
+	.everloft-dashboard .maintenance-section-note {
+		color: #5c708d;
+		font-size: 0.86em;
+		margin-bottom: 0.7em;
+	}
+
+	.everloft-dashboard .maintenance-upload-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-upload-grid input[type="file"],
+	.everloft-dashboard .maintenance-detail-upload-grid input[type="file"],
+	.everloft-dashboard .maintenance-upload-grid input[type="number"],
+	.everloft-dashboard .maintenance-upload-grid textarea,
+	.everloft-dashboard .maintenance-status-controls select {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #354764;
+		font-size: 0.85em;
+		min-height: 2.65em;
+		padding: 0.5em 0.65em;
+		width: 100%;
+	}
+
+	.everloft-dashboard .maintenance-upload-grid textarea {
+		min-height: 5.6em;
+		resize: vertical;
+	}
+
+	.everloft-dashboard .maintenance-expense-toggle {
+		align-items: center;
+		color: #4d617d;
+		cursor: pointer;
+		display: inline-flex;
+		font-size: 0.84em;
+		font-weight: 600;
+		gap: 0.45em;
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .maintenance-expense-fields {
+		border-top: solid 1px #dce4f1;
+		padding-top: 0.75em;
+	}
+
 	@media screen and (max-width: 1280px) {
 
 		body.investor-dashboard-page #main.wrapper > .inner {
@@ -5865,6 +6158,10 @@ input, select, textarea {
 		.everloft-dashboard .asset-meta,
 		.everloft-dashboard .kpi-row,
 		.everloft-dashboard .comm-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.everloft-dashboard .maintenance-upload-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 
@@ -6004,7 +6301,10 @@ input, select, textarea {
 		.everloft-dashboard .comm-grid,
 		.everloft-dashboard .insight-grid,
 		.everloft-dashboard .vault-grid,
-		.everloft-dashboard .opportunity-grid {
+		.everloft-dashboard .opportunity-grid,
+		.everloft-dashboard .maintenance-detail-grid,
+		.everloft-dashboard .maintenance-detail-upload-grid,
+		.everloft-dashboard .maintenance-upload-grid {
 			grid-template-columns: 1fr;
 		}
 
@@ -6044,6 +6344,14 @@ input, select, textarea {
 			align-items: flex-start;
 			flex-direction: column;
 			gap: 0.3em;
+		}
+
+		.everloft-dashboard .maintenance-status-controls {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .maintenance-schedule-item {
+			grid-template-columns: 1fr;
 		}
 
 	}
@@ -6206,7 +6514,7 @@ input, select, textarea {
 	}
 
 	.login-page .login-card-brand em {
-		color: rgba(255, 255, 255, 0.76);
+		color: rgba(255, 255, 255, 0.86);
 		display: block;
 		font-size: 0.5em;
 		font-style: normal;
@@ -6227,7 +6535,7 @@ input, select, textarea {
 	}
 
 	.login-page .login-context .eyebrow {
-		color: rgba(255, 255, 255, 0.72);
+		color: rgba(255, 255, 255, 0.88);
 		font-size: 0.62em;
 		font-weight: 700;
 		letter-spacing: 0.22em;
@@ -6242,7 +6550,7 @@ input, select, textarea {
 	}
 
 	.login-page .login-context p {
-		color: rgba(255, 255, 255, 0.8);
+		color: rgba(255, 255, 255, 0.9);
 		margin-bottom: 0.8em;
 	}
 
@@ -6258,7 +6566,7 @@ input, select, textarea {
 		background: rgba(255, 255, 255, 0.09);
 		border: solid 1px rgba(255, 255, 255, 0.18);
 		border-radius: 0.6em;
-		color: rgba(255, 255, 255, 0.87);
+		color: rgba(255, 255, 255, 0.95);
 		font-size: 0.84em;
 		margin-bottom: 0;
 		padding: 0.55em 0.68em;
@@ -6277,7 +6585,7 @@ input, select, textarea {
 	}
 
 	.login-page .login-form-panel label {
-		color: rgba(255, 255, 255, 0.82);
+		color: rgba(255, 255, 255, 0.9);
 		font-size: 0.72em;
 		font-weight: 700;
 		letter-spacing: 0.08em;
@@ -6394,14 +6702,15 @@ input, select, textarea {
 
 /* Dashboard Theme Refresh */
 
-	body.investor-dashboard-page {
+	body.investor-dashboard-page,
+	body.role-dashboard-page {
 		--dash-primary: #5e42a6;
 		--dash-primary-deep: #4c338f;
 		--dash-secondary: #4fa8cf;
 		--dash-warm: #f39f4c;
-		--dash-ink: #251f4b;
-		--dash-text: #55507d;
-		--dash-muted: #78749f;
+		--dash-ink: #1f1741;
+		--dash-text: #3f3768;
+		--dash-muted: #5e588a;
 		--dash-surface: #ffffff;
 		--dash-surface-soft: #f8f5ff;
 		--dash-border: #e2dcf7;
@@ -6415,7 +6724,11 @@ input, select, textarea {
 	body.investor-dashboard-page,
 	body.investor-dashboard-page input,
 	body.investor-dashboard-page select,
-	body.investor-dashboard-page textarea {
+	body.investor-dashboard-page textarea,
+	body.role-dashboard-page,
+	body.role-dashboard-page input,
+	body.role-dashboard-page select,
+	body.role-dashboard-page textarea {
 		color: var(--dash-text);
 	}
 
@@ -6426,23 +6739,36 @@ input, select, textarea {
 	body.investor-dashboard-page h5,
 	body.investor-dashboard-page h6,
 	body.investor-dashboard-page strong,
-	body.investor-dashboard-page b {
+	body.investor-dashboard-page b,
+	body.role-dashboard-page h1,
+	body.role-dashboard-page h2,
+	body.role-dashboard-page h3,
+	body.role-dashboard-page h4,
+	body.role-dashboard-page h5,
+	body.role-dashboard-page h6,
+	body.role-dashboard-page strong,
+	body.role-dashboard-page b {
 		color: var(--dash-ink);
 	}
 
-	body.investor-dashboard-page #header {
+	body.investor-dashboard-page #header,
+	body.role-dashboard-page #header {
 		background: linear-gradient(115deg, #4d3798 0%, #5e42a6 54%, #7556ca 100%);
 		border-bottom: solid 1px rgba(255, 255, 255, 0.22);
 		box-shadow: 0 0.7em 1.6em rgba(48, 33, 102, 0.2);
 	}
 
 	body.investor-dashboard-page #header > .title,
-	body.investor-dashboard-page #header > nav > ul > li a {
-		color: rgba(255, 255, 255, 0.82);
+	body.investor-dashboard-page #header > nav > ul > li a,
+	body.role-dashboard-page #header > .title,
+	body.role-dashboard-page #header > nav > ul > li a {
+		color: rgba(255, 255, 255, 0.9);
 	}
 
 	body.investor-dashboard-page #header > nav > ul > li a:hover,
-	body.investor-dashboard-page #header > nav > ul > li a.active {
+	body.investor-dashboard-page #header > nav > ul > li a.active,
+	body.role-dashboard-page #header > nav > ul > li a:hover,
+	body.role-dashboard-page #header > nav > ul > li a.active {
 		color: #ffffff;
 	}
 
@@ -6515,7 +6841,7 @@ input, select, textarea {
 	.everloft-dashboard .summary-label,
 	.everloft-dashboard .kpi-card p,
 	.everloft-dashboard .status-title {
-		color: #665f93;
+		color: #50487f;
 	}
 
 	.everloft-dashboard .summary-value,
@@ -6539,7 +6865,7 @@ input, select, textarea {
 	.everloft-dashboard .chart-range-btn {
 		background: #f3efff;
 		border-color: #ddd4fb;
-		color: #5a4b95;
+		color: #473b79;
 	}
 
 	.everloft-dashboard .chart-range-btn.is-active {
@@ -6549,13 +6875,13 @@ input, select, textarea {
 	}
 
 	.everloft-dashboard .filter-field label {
-		color: #665f93;
+		color: #4f477e;
 	}
 
 	.everloft-dashboard .filter-field select {
 		background: #fcfbff;
 		border-color: #ddd4fb;
-		color: #4c4576;
+		color: #332b5b;
 	}
 
 	.everloft-dashboard .chart-card svg polyline {
@@ -6628,7 +6954,7 @@ input, select, textarea {
 	}
 
 	.everloft-dashboard .dashboard-table th {
-		color: #3a3566;
+		color: #2e2958;
 	}
 
 	.everloft-dashboard .dashboard-table th,
@@ -6639,6 +6965,52 @@ input, select, textarea {
 	.everloft-dashboard .security-panel {
 		background: linear-gradient(140deg, #f7f4ff 0%, #f1edff 100%);
 		border-color: #ddd4fb;
+	}
+
+	.everloft-dashboard .maintenance-task-row.is-selected {
+		background: #f1ecff;
+	}
+
+	.everloft-dashboard .maintenance-detail-grid p,
+	.everloft-dashboard .maintenance-detail-notes,
+	.everloft-dashboard .maintenance-images-wrap,
+	.everloft-dashboard .maintenance-property-list li,
+	.everloft-dashboard .maintenance-schedule-item {
+		background: #fcfbff;
+		border-color: #e5dff8;
+	}
+
+	.everloft-dashboard .maintenance-table-subline,
+	.everloft-dashboard .maintenance-detail-head p,
+	.everloft-dashboard .maintenance-label,
+	.everloft-dashboard .maintenance-route-note,
+	.everloft-dashboard .maintenance-section-note,
+	.everloft-dashboard .maintenance-status-feedback,
+	.everloft-dashboard .maintenance-image-list li,
+	.everloft-dashboard .maintenance-schedule-item .schedule-text {
+		color: var(--dash-muted);
+	}
+
+	.everloft-dashboard .maintenance-upload-grid input[type="file"],
+	.everloft-dashboard .maintenance-detail-upload-grid input[type="file"],
+	.everloft-dashboard .maintenance-upload-grid input[type="number"],
+	.everloft-dashboard .maintenance-upload-grid textarea,
+	.everloft-dashboard .maintenance-status-controls select {
+		background: #fcfbff;
+		border-color: #ddd4fb;
+		color: #4c4576;
+	}
+
+	.everloft-dashboard .maintenance-status-feedback.is-success {
+		color: #1f6c4a;
+	}
+
+	.everloft-dashboard .maintenance-status-feedback.is-error {
+		color: #a43636;
+	}
+
+	.everloft-dashboard .maintenance-expense-fields {
+		border-top-color: #e3ddf7;
 	}
 
 /* Everloft Install Banner */

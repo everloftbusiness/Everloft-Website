@@ -27,6 +27,7 @@
 		[
 			"everloftAuth",
 			"everloftUserName",
+			"everloftLoginUsername",
 			"everloftUserRole",
 			"everloftUserRoleLabel",
 			"everloftUserId",

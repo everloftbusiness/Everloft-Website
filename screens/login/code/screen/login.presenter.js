@@ -9,12 +9,40 @@
 		this.view = new app.Views.login();
 	};
 
+	var roleToDashboardPath = function (roleKey) {
+		var map = {
+			super_admin: "super-admin",
+			finance_admin: "finance-admin",
+			operations_manager: "operations-manager",
+			tech_admin: "tech-admin",
+			property_manager: "property-manager",
+			housekeeping: "housekeeping",
+			maintenance: "maintenance",
+			guest_support: "guest-support",
+			property_owner: "property-owner",
+			guest: "guest",
+			investor: "investor"
+		};
+
+		var slug = map[String(roleKey || "").trim()] || "investor";
+		return "/dashboard/roles/" + slug + "/";
+	};
+
 	LoginPresenter.prototype.init = function () {
 		var self = this;
 
 		if (sessionStorage.getItem("everloftAuth") === "1") {
-			self.view.redirect("/dashboard/");
-			return;
+			[
+				"everloftAuth",
+				"everloftUserName",
+				"everloftLoginUsername",
+				"everloftUserRole",
+				"everloftUserRoleLabel",
+				"everloftUserId",
+				"everloftSessionLoginAt"
+			].forEach(function (key) {
+				sessionStorage.removeItem(key);
+			});
 		}
 
 		if (!self.view.hasForm()) {
@@ -43,9 +71,22 @@
 				}
 				localStorage.setItem("everloftLastSuccessfulLoginAt", successfulAt);
 
-				var resolvedRole = self.model.normalizeRole(
-					data.role || data.user_role || data.access_role || data.profile_role || data.account_type
-				);
+				var resolvedRole = self.model.resolveRole([
+					credentials.username,
+					data.role,
+					data.user_role,
+					data.access_role,
+					data.profile_role,
+					data.account_type,
+					data.role_key,
+					data.roleKey,
+					data.userType,
+					data.user_type,
+					data.userrole,
+					data.userRole,
+					data.role_label,
+					data.roleName
+				]);
 				var roleLabel = String(
 					data.role_label || data.roleName || data.role || data.user_role || data.access_role || ""
 				).trim();
@@ -53,13 +94,14 @@
 
 				sessionStorage.setItem("everloftAuth", "1");
 				sessionStorage.setItem("everloftUserName", data.name || data.display_name || credentials.username);
+				sessionStorage.setItem("everloftLoginUsername", credentials.username);
 				sessionStorage.setItem("everloftUserRole", resolvedRole || "");
 				sessionStorage.setItem("everloftUserRoleLabel", roleLabel || "");
 				sessionStorage.setItem("everloftUserId", resolvedUserId || "");
 				sessionStorage.setItem("everloftSessionLoginAt", successfulAt);
 				localStorage.setItem("everloftLastResolvedRole", resolvedRole || "");
 
-				self.view.redirect("/dashboard/");
+				self.view.redirect(roleToDashboardPath(resolvedRole));
 			} catch (error) {
 				var failedCount = Number(localStorage.getItem("everloftFailedLogins") || "0") + 1;
 				localStorage.setItem("everloftFailedLogins", String(failedCount));

@@ -34,6 +34,7 @@
 				[
 					"everloftAuth",
 					"everloftUserName",
+					"everloftLoginUsername",
 					"everloftUserRole",
 					"everloftUserRoleLabel",
 					"everloftUserId",
@@ -99,6 +100,7 @@
 	const roleAliases = {
 		super_admin: "super_admin",
 		superadmin: "super_admin",
+		opsadmin: "operations_manager",
 		finance_admin: "finance_admin",
 		financeadmin: "finance_admin",
 		operations_manager: "operations_manager",
@@ -118,11 +120,16 @@
 		guest_support: "guest_support",
 		guestsupport: "guest_support",
 		investor: "investor",
+		investor01: "investor",
 		property_owner: "property_owner",
 		propertyowner: "property_owner",
 		owner: "property_owner",
+		owner01: "property_owner",
 		guest: "guest",
-		customer: "guest"
+		customer: "guest",
+		guest01: "guest",
+		housekeep01: "housekeeping",
+		maint01: "maintenance"
 	};
 
 	const resolveRole = function (value) {
@@ -136,6 +143,15 @@
 		const compact = normalized.replace(/_/g, "");
 		if (roleAliases[compact]) {
 			return roleAliases[compact];
+		}
+		if (normalized.indexOf("maintenance") !== -1 || normalized.indexOf("maint") !== -1 || normalized.indexOf("mnt") !== -1) {
+			return "maintenance";
+		}
+		if (normalized.indexOf("housekeeping") !== -1 || normalized.indexOf("housekeep") !== -1 || normalized.indexOf("hkp") !== -1) {
+			return "housekeeping";
+		}
+		if (normalized.indexOf("operations") !== -1 || normalized.indexOf("ops") !== -1) {
+			return "operations_manager";
 		}
 		return normalized;
 	};
@@ -277,9 +293,30 @@
 		manage_bookings: "manage_bookings"
 	};
 
-	const resolvedRoleCandidate = resolveRole(sessionStorage.getItem("everloftUserRole") || localStorage.getItem("everloftLastResolvedRole"));
-	const activeRoleKey = roleProfiles[resolvedRoleCandidate] ? resolvedRoleCandidate : "investor";
+	const forcedRoleFromPage = document.body ? document.body.getAttribute("data-force-role") : "";
+	const roleCandidates = [
+		forcedRoleFromPage,
+		sessionStorage.getItem("everloftUserRole"),
+		sessionStorage.getItem("everloftUserRoleLabel"),
+		localStorage.getItem("everloftLastResolvedRole"),
+		sessionStorage.getItem("everloftLoginUsername")
+	];
+	let activeRoleKey = "investor";
+	roleCandidates.some(function (candidate) {
+		const resolvedCandidate = resolveRole(candidate);
+		if (roleProfiles[resolvedCandidate]) {
+			activeRoleKey = resolvedCandidate;
+			return true;
+		}
+		return false;
+	});
 	const activeRole = roleProfiles[activeRoleKey];
+	const roleWidgetRegistry =
+		app.Widgets && app.Widgets.dashboard && app.Widgets.dashboard.roles
+			? app.Widgets.dashboard.roles
+			: {};
+	const activeRoleWidget = roleWidgetRegistry[activeRoleKey] || roleWidgetRegistry.investor || null;
+	const maintenanceRoleWidget = roleWidgetRegistry.maintenance || null;
 	const activePermissions = activeRole.permissions.reduce(function (acc, permission) {
 		acc[permission] = true;
 		return acc;
@@ -556,6 +593,73 @@
 	const roleSummaryGridNode = document.getElementById("role-summary-grid");
 	const roleActivityHeadNode = document.getElementById("role-activity-head");
 	const roleActivityBodyNode = document.getElementById("role-activity-body");
+	const maintenanceTotalTasksNode = document.getElementById("maintenance-total-tasks");
+	const maintenancePendingTasksNode = document.getElementById("maintenance-pending-tasks");
+	const maintenanceInProgressTasksNode = document.getElementById("maintenance-inprogress-tasks");
+	const maintenanceCompletedMonthNode = document.getElementById("maintenance-completed-month");
+	const maintenanceTaskBodyNode = document.getElementById("maintenance-task-body");
+	const maintenanceTaskReferenceNode = document.getElementById("maintenance-task-reference");
+	const maintenanceTaskAddressNode = document.getElementById("maintenance-task-address");
+	const maintenanceTaskContactNode = document.getElementById("maintenance-task-contact");
+	const maintenanceTaskDescriptionNode = document.getElementById("maintenance-task-description");
+	const maintenanceTaskReportedByNode = document.getElementById("maintenance-task-reported-by");
+	const maintenanceTaskReportedDateNode = document.getElementById("maintenance-task-reported-date");
+	const maintenanceTaskMaterialsNode = document.getElementById("maintenance-task-materials");
+	const maintenanceTaskNotesNode = document.getElementById("maintenance-task-notes");
+	const maintenanceTaskImageListNode = document.getElementById("maintenance-task-image-list");
+	const maintenanceTaskBeforeImageNode = document.getElementById("maintenance-task-before-image");
+	const maintenanceTaskAfterImageNode = document.getElementById("maintenance-task-after-image");
+	const maintenanceTaskStatusNode = document.getElementById("maintenance-task-status");
+	const maintenanceUpdateStatusButton = document.getElementById("maintenance-update-status-btn");
+	const maintenanceStatusFeedbackNode = document.getElementById("maintenance-status-feedback");
+	const maintenancePropertyNameNode = document.getElementById("maintenance-property-name");
+	const maintenancePropertyLocationNode = document.getElementById("maintenance-property-location");
+	const maintenancePropertyAccessNode = document.getElementById("maintenance-property-access");
+	const maintenancePropertyEmergencyNode = document.getElementById("maintenance-property-emergency");
+	const maintenanceScheduleListNode = document.getElementById("maintenance-schedule-list");
+	const maintenanceBeforeImageNode = document.getElementById("maintenance-before-image");
+	const maintenanceAfterImageNode = document.getElementById("maintenance-after-image");
+	const maintenanceVideoUploadNode = document.getElementById("maintenance-video-upload");
+	const maintenanceUploadProofButton = document.getElementById("maintenance-upload-proof-btn");
+	const maintenanceUploadFeedbackNode = document.getElementById("maintenance-upload-feedback");
+	const maintenanceExpenseToggleNode = document.getElementById("maintenance-expense-toggle");
+	const maintenanceExpenseFieldsNode = document.getElementById("maintenance-expense-fields");
+	const maintenanceMaterialCostNode = document.getElementById("maintenance-material-cost");
+	const maintenanceExpenseDescriptionNode = document.getElementById("maintenance-expense-description");
+	const maintenanceBillImageNode = document.getElementById("maintenance-bill-image");
+	const maintenanceExpenseSubmitNode = document.getElementById("maintenance-expense-submit");
+	const maintenanceExpenseStatusNode = document.getElementById("maintenance-expense-status");
+
+	const maintenanceExpenseStorageKey =
+		maintenanceRoleWidget && typeof maintenanceRoleWidget.getExpenseStorageKey === "function"
+			? maintenanceRoleWidget.getExpenseStorageKey()
+			: "everloftMaintenanceExpenseClaims";
+	const maintenanceProperties =
+		maintenanceRoleWidget && typeof maintenanceRoleWidget.getProperties === "function"
+			? maintenanceRoleWidget.getProperties()
+			: {};
+	const maintenanceScheduleTemplate =
+		maintenanceRoleWidget && typeof maintenanceRoleWidget.getScheduleTemplate === "function"
+			? maintenanceRoleWidget.getScheduleTemplate()
+			: [];
+	const maintenanceTaskTemplate =
+		maintenanceRoleWidget && typeof maintenanceRoleWidget.getTaskTemplate === "function"
+			? maintenanceRoleWidget.getTaskTemplate()
+			: [];
+
+	const maintenanceTaskStatusType = {
+		"Pending": "pending",
+		"In Progress": "in-progress",
+		"Waiting for Parts": "waiting",
+		"Completed": "completed"
+	};
+
+	const maintenancePriorityType = {
+		Low: "low",
+		Medium: "medium",
+		High: "high",
+		Urgent: "urgent"
+	};
 
 	const filterKeys = function (rawKeys, fallbackKeys) {
 		const source = Array.isArray(rawKeys) && rawKeys.length ? rawKeys : fallbackKeys;
@@ -581,7 +685,80 @@
 		});
 	};
 
+	const parseRoleKeys = function (expression) {
+		return String(expression || "")
+			.split("|")
+			.map(function (part) { return part.trim(); })
+			.filter(function (part) { return part.length > 0; });
+	};
+
+	const applyRoleVisibility = function () {
+		const roleScopedNodes = Array.prototype.slice.call(document.querySelectorAll("[data-role-only]"));
+		roleScopedNodes.forEach(function (node) {
+			const roles = parseRoleKeys(node.getAttribute("data-role-only"));
+			const isVisibleRole = roles.indexOf(activeRoleKey) !== -1;
+			const permissionExpression = node.getAttribute("data-permissions");
+			node.hidden = !(isVisibleRole && hasAnyPermission(permissionExpression));
+		});
+
+		const roleHiddenNodes = Array.prototype.slice.call(document.querySelectorAll("[data-hide-for-role]"));
+		roleHiddenNodes.forEach(function (node) {
+			const roles = parseRoleKeys(node.getAttribute("data-hide-for-role"));
+			if (roles.indexOf(activeRoleKey) !== -1) {
+				node.hidden = true;
+			}
+		});
+
+		if (activeRoleWidget && activeRoleWidget.isolatedView) {
+			const dashboardRoot = document.querySelector(".everloft-dashboard");
+			if (dashboardRoot) {
+				Array.prototype.slice.call(dashboardRoot.querySelectorAll(".dashboard-section")).forEach(function (sectionNode) {
+					const roles = parseRoleKeys(sectionNode.getAttribute("data-role-only"));
+					const isRoleSection = roles.indexOf(activeRoleKey) !== -1;
+					if (!isRoleSection) {
+						sectionNode.hidden = true;
+					}
+				});
+
+				const alertStripNode = dashboardRoot.querySelector(".dashboard-alert-strip");
+				if (alertStripNode) {
+					alertStripNode.hidden = true;
+				}
+			}
+		}
+	};
+
+	const escapeHtml = function (value) {
+		return String(value || "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+	};
+
+	const readExpenseClaims = function () {
+		try {
+			const rawValue = localStorage.getItem(maintenanceExpenseStorageKey);
+			const parsed = rawValue ? JSON.parse(rawValue) : [];
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (_error) {
+			return [];
+		}
+	};
+
+	const writeExpenseClaims = function (claims) {
+		localStorage.setItem(maintenanceExpenseStorageKey, JSON.stringify(claims));
+	};
+
 	const buildRoleWorkspace = function (payload) {
+		if (activeRoleWidget && typeof activeRoleWidget.buildWorkspace === "function") {
+			const widgetWorkspace = activeRoleWidget.buildWorkspace(payload);
+			if (widgetWorkspace) {
+				return widgetWorkspace;
+			}
+		}
+
 		switch (activeRoleKey) {
 		case "super_admin":
 			return {
@@ -914,6 +1091,238 @@
 		}
 	};
 
+	const cloneMaintenanceTasks = function () {
+		return maintenanceTaskTemplate.map(function (task) {
+			return Object.assign({}, task);
+		});
+	};
+
+	const isCurrentMonthDate = function (rawValue) {
+		const parsedDate = new Date(rawValue);
+		if (Number.isNaN(parsedDate.getTime())) {
+			return false;
+		}
+		const now = new Date();
+		return parsedDate.getMonth() === now.getMonth() && parsedDate.getFullYear() === now.getFullYear();
+	};
+
+	const setFeedback = function (node, message, tone) {
+		if (!node) {
+			return;
+		}
+		node.textContent = message;
+		node.classList.remove("is-success", "is-error");
+		if (tone === "success") {
+			node.classList.add("is-success");
+		}
+		if (tone === "error") {
+			node.classList.add("is-error");
+		}
+	};
+
+	const getMaintenanceTaskById = function (taskId, state) {
+		if (!state || !Array.isArray(state.maintenanceTasks)) {
+			return null;
+		}
+		for (let index = 0; index < state.maintenanceTasks.length; index += 1) {
+			const task = state.maintenanceTasks[index];
+			if (task.id === taskId) {
+				return task;
+			}
+		}
+		return null;
+	};
+
+	const renderMaintenanceSummaryCards = function (state) {
+		if (!Array.isArray(state.maintenanceTasks)) {
+			return;
+		}
+
+		const totals = state.maintenanceTasks.reduce(function (acc, task) {
+			acc.total += 1;
+			if (task.status === "Pending") {
+				acc.pending += 1;
+			}
+			if (task.status === "In Progress") {
+				acc.inProgress += 1;
+			}
+			if (task.status === "Completed" && isCurrentMonthDate(task.completionDate)) {
+				acc.completedMonth += 1;
+			}
+			return acc;
+		}, {
+			total: 0,
+			pending: 0,
+			inProgress: 0,
+			completedMonth: 0
+		});
+
+		if (maintenanceTotalTasksNode) {
+			maintenanceTotalTasksNode.textContent = String(totals.total);
+		}
+		if (maintenancePendingTasksNode) {
+			maintenancePendingTasksNode.textContent = String(totals.pending);
+		}
+		if (maintenanceInProgressTasksNode) {
+			maintenanceInProgressTasksNode.textContent = String(totals.inProgress);
+		}
+		if (maintenanceCompletedMonthNode) {
+			maintenanceCompletedMonthNode.textContent = String(totals.completedMonth);
+		}
+	};
+
+	const renderMaintenanceTaskList = function (state) {
+		if (!maintenanceTaskBodyNode || !Array.isArray(state.maintenanceTasks)) {
+			return;
+		}
+
+		maintenanceTaskBodyNode.innerHTML = state.maintenanceTasks.map(function (task) {
+			const property = maintenanceProperties[task.propertyKey] || {};
+			const priorityClass = maintenancePriorityType[task.priority] || "medium";
+			const statusClass = maintenanceTaskStatusType[task.status] || "pending";
+			const isSelected = task.id === state.selectedMaintenanceTaskId;
+			return "<tr class=\"maintenance-task-row" + (isSelected ? " is-selected" : "") + "\">" +
+				"<td data-label=\"Property\">" +
+					"<strong>" + escapeHtml(property.name || "Unknown Property") + "</strong>" +
+					"<span class=\"maintenance-table-subline\">Unit: " + escapeHtml(task.unit) + "</span>" +
+				"</td>" +
+				"<td data-label=\"Issue Type\">" +
+					"<strong>" + escapeHtml(task.issueType) + "</strong>" +
+					"<span class=\"maintenance-table-subline\">" + escapeHtml(task.category) + " | " + escapeHtml(task.description) + "</span>" +
+					"<span class=\"maintenance-table-subline\">Assigned: " + escapeHtml(task.assignedDate) + "</span>" +
+				"</td>" +
+				"<td data-label=\"Priority\"><span class=\"maintenance-priority-pill is-" + priorityClass + "\">" + escapeHtml(task.priority) + "</span></td>" +
+				"<td data-label=\"Status\"><span class=\"maintenance-status-pill is-" + statusClass + "\">" + escapeHtml(task.status) + "</span></td>" +
+				"<td data-label=\"Due Date\">" + escapeHtml(task.dueDate) + "</td>" +
+				"<td data-label=\"Action\"><button type=\"button\" class=\"button small maintenance-view-task-btn\" data-maintenance-task-id=\"" + escapeHtml(task.id) + "\">View Task</button></td>" +
+			"</tr>";
+		}).join("");
+	};
+
+	const renderMaintenanceTaskDetail = function (task) {
+		if (!task) {
+			setText("maintenance-task-reference", "Select a task to view details.");
+			setText("maintenance-task-address", "--");
+			setText("maintenance-task-contact", "--");
+			setText("maintenance-task-description", "--");
+			setText("maintenance-task-reported-by", "--");
+			setText("maintenance-task-reported-date", "--");
+			setText("maintenance-task-materials", "--");
+			setText("maintenance-task-notes", "Select a task to load notes.");
+			if (maintenanceTaskImageListNode) {
+				maintenanceTaskImageListNode.innerHTML = "<li>No task images available yet.</li>";
+			}
+			return;
+		}
+
+		const property = maintenanceProperties[task.propertyKey] || {};
+		if (maintenanceTaskReferenceNode) {
+			maintenanceTaskReferenceNode.textContent = task.id + " | " + (property.name || "Property") + " | " + task.unit;
+		}
+		if (maintenanceTaskAddressNode) {
+			maintenanceTaskAddressNode.textContent = property.address || "--";
+		}
+		if (maintenanceTaskContactNode) {
+			maintenanceTaskContactNode.textContent = property.contactPerson || "--";
+		}
+		if (maintenanceTaskDescriptionNode) {
+			maintenanceTaskDescriptionNode.textContent = task.description;
+		}
+		if (maintenanceTaskReportedByNode) {
+			maintenanceTaskReportedByNode.textContent = task.reportedBy;
+		}
+		if (maintenanceTaskReportedDateNode) {
+			maintenanceTaskReportedDateNode.textContent = task.reportedDate;
+		}
+		if (maintenanceTaskMaterialsNode) {
+			maintenanceTaskMaterialsNode.textContent = task.requiredMaterials || "Not specified";
+		}
+		if (maintenanceTaskNotesNode) {
+			maintenanceTaskNotesNode.textContent = task.notes || "No notes added.";
+		}
+		if (maintenanceTaskStatusNode) {
+			maintenanceTaskStatusNode.value = task.status;
+		}
+
+		if (maintenanceTaskImageListNode) {
+			const items = [];
+			(task.images || []).forEach(function (imagePath, index) {
+				items.push("<li><a href=\"" + escapeHtml(imagePath) + "\" class=\"dash-link\" target=\"_blank\" rel=\"noopener\">Reference Image " + (index + 1) + "</a></li>");
+			});
+			if (task.uploads && task.uploads.beforeName) {
+				items.push("<li>Before Repair Upload: " + escapeHtml(task.uploads.beforeName) + "</li>");
+			}
+			if (task.uploads && task.uploads.afterName) {
+				items.push("<li>After Repair Upload: " + escapeHtml(task.uploads.afterName) + "</li>");
+			}
+			if (task.uploads && task.uploads.videoName) {
+				items.push("<li>Video Upload: " + escapeHtml(task.uploads.videoName) + "</li>");
+			}
+			maintenanceTaskImageListNode.innerHTML = items.length ? items.join("") : "<li>No task images available yet.</li>";
+		}
+	};
+
+	const renderMaintenancePropertyDetails = function (task) {
+		if (!task) {
+			setText("maintenance-property-name", "--");
+			setText("maintenance-property-location", "--");
+			setText("maintenance-property-access", "--");
+			setText("maintenance-property-emergency", "--");
+			return;
+		}
+
+		const property = maintenanceProperties[task.propertyKey] || {};
+		if (maintenancePropertyNameNode) {
+			maintenancePropertyNameNode.textContent = property.name || "--";
+		}
+		if (maintenancePropertyLocationNode) {
+			maintenancePropertyLocationNode.textContent = property.location || "--";
+		}
+		if (maintenancePropertyAccessNode) {
+			maintenancePropertyAccessNode.textContent = property.accessInstructions || "--";
+		}
+		if (maintenancePropertyEmergencyNode) {
+			maintenancePropertyEmergencyNode.textContent = property.emergencyContact || "--";
+		}
+	};
+
+	const renderMaintenanceSchedule = function (state) {
+		if (!maintenanceScheduleListNode) {
+			return;
+		}
+		maintenanceScheduleListNode.innerHTML = maintenanceScheduleTemplate.map(function (item) {
+			const isActive = item.taskId === state.selectedMaintenanceTaskId;
+			return "<li class=\"maintenance-schedule-item" + (isActive ? " is-active" : "") + "\">" +
+				"<span class=\"schedule-time\">" + escapeHtml(item.time) + "</span>" +
+				"<span class=\"schedule-text\">" + escapeHtml(item.issue) + " - " + escapeHtml(item.property) + "</span>" +
+			"</li>";
+		}).join("");
+	};
+
+	const renderMaintenanceDashboard = function (state) {
+		if (activeRoleKey !== "maintenance") {
+			return;
+		}
+
+		if (!Array.isArray(state.maintenanceTasks) || !state.maintenanceTasks.length) {
+			state.maintenanceTasks = cloneMaintenanceTasks();
+		}
+		if (!state.selectedMaintenanceTaskId || !getMaintenanceTaskById(state.selectedMaintenanceTaskId, state)) {
+			state.selectedMaintenanceTaskId = state.maintenanceTasks[0].id;
+		}
+
+		const selectedTask = getMaintenanceTaskById(state.selectedMaintenanceTaskId, state);
+		renderMaintenanceSummaryCards(state);
+		renderMaintenanceTaskList(state);
+		renderMaintenanceTaskDetail(selectedTask);
+		renderMaintenancePropertyDetails(selectedTask);
+		renderMaintenanceSchedule(state);
+
+		if (maintenanceExpenseFieldsNode && maintenanceExpenseToggleNode) {
+			maintenanceExpenseFieldsNode.hidden = !maintenanceExpenseToggleNode.checked;
+		}
+	};
+
 	if (!sessionStorage.getItem("everloftSessionLoginAt")) {
 		sessionStorage.setItem("everloftSessionLoginAt", new Date().toISOString());
 	}
@@ -1114,10 +1523,13 @@
 		asset: assetProfiles[activeRole.defaultAsset] ? activeRole.defaultAsset : "all",
 		selectedPeriodIndex: null,
 		payload: null,
-		roleWorkspace: null
+		roleWorkspace: null,
+		maintenanceTasks: cloneMaintenanceTasks(),
+		selectedMaintenanceTaskId: null
 	};
 
 	applyPermissionVisibility();
+	applyRoleVisibility();
 	applyFilterAccess(state);
 
 	let revenueChart = null;
@@ -1354,6 +1766,7 @@
 
 		updateAssetVisibility(payload.assetKey);
 		renderAlerts(payload, roleWorkspace);
+		renderMaintenanceDashboard(state);
 		if (hasPermission("view_financials")) {
 			renderDistributionHistory(payload);
 			renderDrilldown(payload, state.selectedPeriodIndex);
@@ -1374,6 +1787,155 @@
 
 		syncRangeButtons(state.range);
 	};
+
+	if (maintenanceTaskBodyNode) {
+		maintenanceTaskBodyNode.addEventListener("click", function (event) {
+			const trigger = event.target.closest("[data-maintenance-task-id]");
+			if (!trigger) {
+				return;
+			}
+			const selectedTaskId = trigger.getAttribute("data-maintenance-task-id");
+			if (!selectedTaskId) {
+				return;
+			}
+			state.selectedMaintenanceTaskId = selectedTaskId;
+			renderMaintenanceDashboard(state);
+		});
+	}
+
+	if (maintenanceUpdateStatusButton) {
+		maintenanceUpdateStatusButton.addEventListener("click", function () {
+			const task = getMaintenanceTaskById(state.selectedMaintenanceTaskId, state);
+			if (!task) {
+				setFeedback(maintenanceStatusFeedbackNode, "Select a task before updating status.", "error");
+				return;
+			}
+			if (!maintenanceTaskStatusNode) {
+				return;
+			}
+
+			task.status = maintenanceTaskStatusNode.value;
+			task.completionDate = task.status === "Completed" ? new Date().toISOString() : null;
+			renderMaintenanceDashboard(state);
+			setFeedback(maintenanceStatusFeedbackNode, "Status updated to " + task.status + " for " + task.id + ".", "success");
+		});
+	}
+
+	if (maintenanceUploadProofButton) {
+		maintenanceUploadProofButton.addEventListener("click", function () {
+			const task = getMaintenanceTaskById(state.selectedMaintenanceTaskId, state);
+			if (!task) {
+				setFeedback(maintenanceUploadFeedbackNode, "Select a task before uploading repair proof.", "error");
+				return;
+			}
+
+			const detailBeforeFile = maintenanceTaskBeforeImageNode && maintenanceTaskBeforeImageNode.files ? maintenanceTaskBeforeImageNode.files[0] : null;
+			const detailAfterFile = maintenanceTaskAfterImageNode && maintenanceTaskAfterImageNode.files ? maintenanceTaskAfterImageNode.files[0] : null;
+			const sectionBeforeFile = maintenanceBeforeImageNode && maintenanceBeforeImageNode.files ? maintenanceBeforeImageNode.files[0] : null;
+			const sectionAfterFile = maintenanceAfterImageNode && maintenanceAfterImageNode.files ? maintenanceAfterImageNode.files[0] : null;
+			const beforeFile = detailBeforeFile || sectionBeforeFile;
+			const afterFile = detailAfterFile || sectionAfterFile;
+			const videoFile = maintenanceVideoUploadNode && maintenanceVideoUploadNode.files ? maintenanceVideoUploadNode.files[0] : null;
+
+			if (!beforeFile || !afterFile) {
+				setFeedback(maintenanceUploadFeedbackNode, "Before and after repair images are required for QC upload.", "error");
+				return;
+			}
+
+			task.uploads = {
+				beforeName: beforeFile.name,
+				afterName: afterFile.name,
+				videoName: videoFile ? videoFile.name : "",
+				uploadedAt: new Date().toISOString()
+			};
+			renderMaintenanceTaskDetail(task);
+
+			if (maintenanceTaskBeforeImageNode) maintenanceTaskBeforeImageNode.value = "";
+			if (maintenanceTaskAfterImageNode) maintenanceTaskAfterImageNode.value = "";
+			if (maintenanceBeforeImageNode) maintenanceBeforeImageNode.value = "";
+			if (maintenanceAfterImageNode) maintenanceAfterImageNode.value = "";
+			if (maintenanceVideoUploadNode) maintenanceVideoUploadNode.value = "";
+
+			setFeedback(maintenanceUploadFeedbackNode, "Repair proof uploaded for " + task.id + ". Quality check trail updated.", "success");
+		});
+	}
+
+	if (maintenanceExpenseToggleNode && maintenanceExpenseFieldsNode) {
+		maintenanceExpenseToggleNode.addEventListener("change", function () {
+			maintenanceExpenseFieldsNode.hidden = !maintenanceExpenseToggleNode.checked;
+		});
+	}
+
+	if (maintenanceExpenseSubmitNode) {
+		maintenanceExpenseSubmitNode.addEventListener("click", function () {
+			if (!maintenanceExpenseToggleNode || !maintenanceExpenseToggleNode.checked) {
+				setFeedback(maintenanceExpenseStatusNode, "Enable expense entry before submitting material costs.", "error");
+				return;
+			}
+
+			const task = getMaintenanceTaskById(state.selectedMaintenanceTaskId, state);
+			if (!task) {
+				setFeedback(maintenanceExpenseStatusNode, "Select a task before submitting an expense request.", "error");
+				return;
+			}
+
+			const amountValue = maintenanceMaterialCostNode ? Number(maintenanceMaterialCostNode.value) : 0;
+			const descriptionValue = maintenanceExpenseDescriptionNode ? maintenanceExpenseDescriptionNode.value.trim() : "";
+			const billFile = maintenanceBillImageNode && maintenanceBillImageNode.files ? maintenanceBillImageNode.files[0] : null;
+
+			if (!(amountValue > 0)) {
+				setFeedback(maintenanceExpenseStatusNode, "Enter a valid material cost amount.", "error");
+				return;
+			}
+			if (!descriptionValue) {
+				setFeedback(maintenanceExpenseStatusNode, "Add a short description for the expense request.", "error");
+				return;
+			}
+			if (!billFile) {
+				setFeedback(maintenanceExpenseStatusNode, "Upload a bill image for expense approval.", "error");
+				return;
+			}
+
+			const claims = readExpenseClaims();
+			claims.push({
+				taskId: task.id,
+				property: (maintenanceProperties[task.propertyKey] && maintenanceProperties[task.propertyKey].name) || "Unknown Property",
+				materialCost: amountValue,
+				description: descriptionValue,
+				billImageName: billFile.name,
+				approvalStatus: "Pending operations_admin approval",
+				submittedAt: new Date().toISOString()
+			});
+			writeExpenseClaims(claims);
+
+			if (maintenanceMaterialCostNode) maintenanceMaterialCostNode.value = "";
+			if (maintenanceExpenseDescriptionNode) maintenanceExpenseDescriptionNode.value = "";
+			if (maintenanceBillImageNode) maintenanceBillImageNode.value = "";
+			maintenanceExpenseToggleNode.checked = false;
+			maintenanceExpenseFieldsNode.hidden = true;
+
+			const pendingCount = claims.filter(function (claim) {
+				return claim.approvalStatus === "Pending operations_admin approval";
+			}).length;
+			setFeedback(
+				maintenanceExpenseStatusNode,
+				"Expense submitted. Pending operations_admin approval (" + pendingCount + " request" + (pendingCount === 1 ? "" : "s") + ").",
+				"success"
+			);
+		});
+	}
+
+	if (activeRoleKey === "maintenance" && maintenanceExpenseStatusNode) {
+		const pendingCount = readExpenseClaims().filter(function (claim) {
+			return claim.approvalStatus === "Pending operations_admin approval";
+		}).length;
+		if (pendingCount > 0) {
+			setFeedback(
+				maintenanceExpenseStatusNode,
+				pendingCount + " expense request" + (pendingCount === 1 ? "" : "s") + " pending operations_admin approval."
+			);
+		}
+	}
 
 	if (rangeFilterNode) {
 		rangeFilterNode.addEventListener("change", function () {
