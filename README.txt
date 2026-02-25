@@ -31,3 +31,41 @@ Credits:
 		jQuery (jquery.com)
 		Scrollex (github.com/ajlkn/jquery.scrollex)
 		Responsive Tools (github.com/ajlkn/responsive-tools)
+
+
+Everloft Routing Conventions (GitHub Pages + GoDaddy)
+
+The site uses extension-less public URLs:
+- https://everloft.co.in/
+- https://everloft.co.in/login/
+- https://everloft.co.in/dashboard/
+- https://everloft.co.in/owner-program/
+- https://everloft.co.in/investor-program/
+- https://everloft.co.in/elements/
+
+Implementation pattern:
+- Each page lives at folder index path:
+  - /login/index.html
+  - /dashboard/index.html
+  - /owner-program/index.html
+  - /investor-program/index.html
+- Legacy root .html files are kept as redirect stubs:
+  - /login.html -> /login/
+  - /dashboard.html -> /dashboard/
+  - /owner-program.html -> /owner-program/
+  - /investor-program.html -> /investor-program/
+
+Linking rules:
+- Use absolute extension-less links in HTML/JS:
+  - href="/login/"
+  - href="/dashboard/"
+- Keep asset/script paths root-absolute from nested pages:
+  - /assets/...
+  - /images/...
+  - /screens/...
+
+When adding a new page:
+1. Create /<slug>/index.html
+2. Add root redirect file /<slug>.html to preserve backward compatibility
+3. Update sitemap.xml with extension-less URL: https://everloft.co.in/<slug>/
+4. Use extension-less links everywhere
