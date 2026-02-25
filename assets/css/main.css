@@ -5132,11 +5132,142 @@ input, select, textarea {
 		margin-bottom: 0.8em;
 	}
 
+	.everloft-dashboard .dashboard-alert-strip {
+		background: #ffffff;
+		border: solid 1px #d6dfeb;
+		border-radius: 0.85em;
+		padding: 0.95em 1.05em 0.8em 1.05em;
+	}
+
+	.everloft-dashboard .alert-strip-head {
+		align-items: baseline;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45em 0.8em;
+		justify-content: space-between;
+		margin-bottom: 0.55em;
+	}
+
+	.everloft-dashboard .alert-strip-head h2 {
+		font-size: 0.95em;
+		margin: 0;
+	}
+
+	.everloft-dashboard .alert-strip-head p {
+		color: #667998;
+		font-size: 0.76em;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		margin: 0;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .alert-strip-list {
+		display: grid;
+		gap: 0.48em;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.everloft-dashboard .alert-item {
+		align-items: flex-start;
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #526885;
+		display: flex;
+		font-size: 0.84em;
+		gap: 0.55em;
+		margin: 0;
+		padding: 0.52em 0.62em;
+	}
+
+	.everloft-dashboard .alert-item .icon {
+		margin-top: 0.12em;
+	}
+
+	.everloft-dashboard .alert-item.is-critical {
+		background: #fff3f0;
+		border-color: #f3cdc6;
+		color: #8b3628;
+	}
+
+	.everloft-dashboard .alert-item.is-warning {
+		background: #fff8ef;
+		border-color: #f0debf;
+		color: #8c6425;
+	}
+
+	.everloft-dashboard .alert-item.is-info {
+		background: #eff6ff;
+		border-color: #cadcf7;
+		color: #295f8d;
+	}
+
+	.everloft-dashboard .alert-item.is-success {
+		background: #edf8f1;
+		border-color: #cbe8d3;
+		color: #216847;
+	}
+
 	.everloft-dashboard .dashboard-section {
 		background: #ffffff;
 		border: solid 1px #d6dfeb;
 		border-radius: 0.85em;
 		padding: 1.25em 1.25em 1.05em 1.25em;
+	}
+
+	.everloft-dashboard .dashboard-controls {
+		padding-bottom: 1.2em;
+	}
+
+	.everloft-dashboard .dashboard-filter-grid {
+		display: grid;
+		gap: 0.75em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .filter-field {
+		display: grid;
+		gap: 0.35em;
+	}
+
+	.everloft-dashboard .filter-field label {
+		color: #5f7394;
+		font-size: 0.66em;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .filter-field select {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #354764;
+		font-size: 0.88em;
+		height: 2.65em;
+		line-height: 2.65em;
+		padding: 0 2.25em 0 0.75em;
+	}
+
+	.everloft-dashboard .dashboard-meta {
+		color: #637892;
+		display: flex;
+		flex-wrap: wrap;
+		font-size: 0.76em;
+		gap: 0.35em 1em;
+		margin: -0.15em 0 0.85em 0;
+	}
+
+	.everloft-dashboard .chart-meta {
+		color: #637892;
+		display: flex;
+		flex-wrap: wrap;
+		font-size: 0.74em;
+		gap: 0.35em 0.85em;
+		margin: -0.28em 0 0.65em 0;
 	}
 
 	.everloft-dashboard .dashboard-section h2 {
@@ -5489,9 +5620,51 @@ input, select, textarea {
 		color: #157347;
 	}
 
+	.everloft-dashboard .status-chip.is-pending {
+		background: #fff5db;
+		color: #946200;
+	}
+
 	.everloft-dashboard .history-panel h3 {
 		font-size: 0.95em;
 		margin-bottom: 0.5em;
+	}
+
+	.everloft-dashboard .drilldown-panel {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.65em;
+		margin-top: 0.75em;
+		padding: 0.85em;
+	}
+
+	.everloft-dashboard .drilldown-head {
+		align-items: baseline;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.32em 0.75em;
+		justify-content: space-between;
+		margin-bottom: 0.35em;
+	}
+
+	.everloft-dashboard .drilldown-head h3 {
+		font-size: 0.95em;
+		margin: 0;
+	}
+
+	.everloft-dashboard .drilldown-head p {
+		color: #5e7394;
+		font-size: 0.75em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		margin: 0;
+		text-transform: uppercase;
+	}
+
+	.everloft-dashboard .drilldown-help {
+		color: #5d7190;
+		font-size: 0.79em;
+		margin-bottom: 0.58em;
 	}
 
 	.everloft-dashboard .table-wrap {
@@ -5671,6 +5844,10 @@ input, select, textarea {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
 
+		.everloft-dashboard .dashboard-filter-grid {
+			grid-template-columns: 1fr;
+		}
+
 		.everloft-dashboard .chart-range-btn {
 			min-height: 2.8em;
 			padding: 0.55em 0.75em !important;
@@ -5768,6 +5945,17 @@ input, select, textarea {
 			margin-bottom: 0.68em;
 		}
 
+		.everloft-dashboard .alert-strip-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.25em;
+		}
+
+		.everloft-dashboard .dashboard-meta,
+		.everloft-dashboard .chart-meta {
+			font-size: 0.72em;
+		}
+
 		.everloft-dashboard .summary-grid,
 		.everloft-dashboard .asset-meta,
 		.everloft-dashboard .comm-grid,
@@ -5807,6 +5995,12 @@ input, select, textarea {
 
 		.everloft-dashboard .dash-action {
 			width: 100%;
+		}
+
+		.everloft-dashboard .drilldown-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.3em;
 		}
 
 	}
@@ -6225,6 +6419,19 @@ input, select, textarea {
 		color: rgba(255, 255, 255, 0.86);
 	}
 
+	.everloft-dashboard .dashboard-alert-strip {
+		background: linear-gradient(140deg, #f7f4ff 0%, #f1edff 100%);
+		border-color: #ddd4fb;
+		box-shadow: 0 0.8em 1.6em rgba(63, 40, 126, 0.08);
+	}
+
+	.everloft-dashboard .alert-strip-head p,
+	.everloft-dashboard .dashboard-meta,
+	.everloft-dashboard .chart-meta,
+	.everloft-dashboard .drilldown-help {
+		color: var(--dash-muted);
+	}
+
 	.everloft-dashboard .dashboard-section {
 		background: var(--dash-surface);
 		border-color: var(--dash-border);
@@ -6288,6 +6495,16 @@ input, select, textarea {
 		color: #ffffff;
 	}
 
+	.everloft-dashboard .filter-field label {
+		color: #665f93;
+	}
+
+	.everloft-dashboard .filter-field select {
+		background: #fcfbff;
+		border-color: #ddd4fb;
+		color: #4c4576;
+	}
+
 	.everloft-dashboard .chart-card svg polyline {
 		stroke: var(--dash-primary);
 	}
@@ -6319,6 +6536,11 @@ input, select, textarea {
 		color: #9a5f1e;
 	}
 
+	.everloft-dashboard .status-chip.is-pending {
+		background: #fff1df;
+		color: #9a5f1e;
+	}
+
 	.everloft-dashboard .dash-link {
 		color: var(--dash-primary);
 	}
@@ -6340,6 +6562,11 @@ input, select, textarea {
 	.everloft-dashboard .revenue-stack p {
 		background: #fbfaff;
 		border-color: #e3ddf7;
+	}
+
+	.everloft-dashboard .drilldown-panel {
+		background: #fcfbff;
+		border-color: #e5dff8;
 	}
 
 	.everloft-dashboard .revenue-stack p.net-row {

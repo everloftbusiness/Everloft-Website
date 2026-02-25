@@ -106,31 +106,83 @@
 						return;
 					}
 
+					const loginApiUrl = "https://script.google.com/macros/s/AKfycbynU254u0gahicbJsjk9Y_F38saapB7fysqv6p8f1du2IZj6yfxF1Xa_A-IXmqCh8rz/exec";
 					const form = document.getElementById("everloft-login-form");
 					const usernameInput = document.getElementById("login-username");
 					const passwordInput = document.getElementById("login-password");
 					const errorNode = document.getElementById("login-error");
+					const submitButton = form ? form.querySelector('button[type="submit"]') : null;
 
 					if (!form || !usernameInput || !passwordInput || !errorNode) {
 						return;
 					}
 
-					form.addEventListener("submit", function (event) {
+					form.addEventListener("submit", async function (event) {
 						event.preventDefault();
 
 						const username = usernameInput.value.trim();
 						const password = passwordInput.value;
 
-						if (username.length < 3 || password.length < 4) {
+						if (!username || !password) {
 							errorNode.hidden = false;
-							errorNode.textContent = "Please enter a valid username and password.";
+							errorNode.textContent = "Please enter username and password.";
 							return;
 						}
 
 						errorNode.hidden = true;
-						sessionStorage.setItem("everloftAuth", "1");
-						sessionStorage.setItem("everloftUserName", username);
-						window.location.href = "dashboard.html";
+						if (submitButton) {
+							submitButton.disabled = true;
+							submitButton.textContent = "Logging in...";
+						}
+
+						try {
+							const body = new URLSearchParams({
+								username: username,
+								password: password
+							});
+
+							const response = await fetch(loginApiUrl, {
+								method: "POST",
+								headers: { Accept: "application/json" },
+								body: body
+							});
+
+							if (!response.ok) {
+								throw new Error("Login request failed.");
+							}
+
+							const data = await response.json();
+							const state = String(data.result || data.status || "").toLowerCase();
+							const isSuccess = data.ok === true || state === "success" || state === "ok";
+
+							if (!isSuccess) {
+								throw new Error(data.message || "Invalid username or password.");
+							}
+
+							const successfulAt = new Date().toISOString();
+							const previousSuccessfulAt = localStorage.getItem("everloftLastSuccessfulLoginAt");
+							if (previousSuccessfulAt) {
+								localStorage.setItem("everloftPreviousSuccessfulLoginAt", previousSuccessfulAt);
+							}
+							localStorage.setItem("everloftLastSuccessfulLoginAt", successfulAt);
+
+							sessionStorage.setItem("everloftAuth", "1");
+							sessionStorage.setItem("everloftUserName", data.name || data.display_name || username);
+							sessionStorage.setItem("everloftSessionLoginAt", successfulAt);
+							window.location.href = "dashboard.html";
+						} catch (error) {
+							const failedCount = Number(localStorage.getItem("everloftFailedLogins") || "0") + 1;
+							localStorage.setItem("everloftFailedLogins", String(failedCount));
+							localStorage.setItem("everloftLastFailedLoginAt", new Date().toISOString());
+
+							errorNode.hidden = false;
+							errorNode.textContent = error && error.message ? error.message : "Unable to login right now.";
+						} finally {
+							if (submitButton) {
+								submitButton.disabled = false;
+								submitButton.textContent = "Login to Dashboard";
+							}
+						}
 					});
 				})();
 			</script>

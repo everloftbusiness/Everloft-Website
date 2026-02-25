@@ -46,28 +46,62 @@
 								<p>Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
 							</header>
 
+							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
+								<div class="alert-strip-head">
+									<h2>Alerts &amp; Risk Signals</h2>
+									<p id="alert-context">All Assets | Monthly</p>
+								</div>
+								<ul class="alert-strip-list" id="dashboard-alert-list">
+									<li class="alert-item is-info"><span class="icon solid fa-info-circle" aria-hidden="true"></span>Loading latest alerts...</li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section dashboard-controls">
+								<h2>Global Filters</h2>
+								<div class="dashboard-filter-grid">
+									<div class="filter-field">
+										<label for="global-range-filter">Date Range</label>
+										<select id="global-range-filter" aria-label="Select date range">
+											<option value="monthly" selected>Monthly</option>
+											<option value="quarterly">Quarterly</option>
+											<option value="yearly">Yearly</option>
+										</select>
+									</div>
+									<div class="filter-field">
+										<label for="global-asset-filter">Asset</label>
+										<select id="global-asset-filter" aria-label="Select asset">
+											<option value="all" selected>All Assets</option>
+											<option value="marari">Everloft Marari Cove</option>
+											<option value="kadavanthra">Everloft Kadavanthra Suites</option>
+											<option value="wayanad">Everloft Wayanad Ridge</option>
+										</select>
+									</div>
+								</div>
+							</section>
+
 							<section class="dashboard-section">
 								<h2>Overview</h2>
+								<p class="dashboard-meta"><span id="overview-freshness">Last updated: --</span><span id="overview-source">Source: Portfolio Ops DB</span></p>
 								<div class="summary-grid">
 									<article class="summary-card">
 										<p class="summary-label"><span class="icon solid fa-map-marker-alt" aria-hidden="true"></span> Active Asset(s)</p>
-										<p class="summary-value">3</p>
-										<p class="summary-note">2 live, 1 under development</p>
+										<p class="summary-value" id="overview-active-assets">3</p>
+										<p class="summary-note" id="overview-active-note">2 live, 1 under development</p>
 									</article>
 									<article class="summary-card">
 										<p class="summary-label"><span class="icon solid fa-hotel" aria-hidden="true"></span> Occupancy Status</p>
-										<p class="summary-value">78%</p>
-										<p class="summary-note">Current month blended occupancy</p>
+										<p class="summary-value" id="overview-occupancy-status">78%</p>
+										<p class="summary-note" id="overview-occupancy-note">Current month blended occupancy</p>
 									</article>
 									<article class="summary-card">
 										<p class="summary-label"><span class="icon solid fa-chart-bar" aria-hidden="true"></span> Month Performance</p>
-										<p class="summary-value">INR 8.42L</p>
-										<p class="summary-note">Gross revenue, current cycle</p>
+										<p class="summary-value" id="overview-month-performance">INR 8.42L</p>
+										<p class="summary-note" id="overview-performance-note">Gross revenue, current cycle</p>
 									</article>
 									<article class="summary-card">
 										<p class="summary-label"><span class="icon solid fa-file-alt" aria-hidden="true"></span> Latest Report</p>
-										<p class="summary-value">Jan 2026</p>
-										<p class="summary-note">Published 03 Feb 2026</p>
+										<p class="summary-value" id="overview-latest-report">Jan 2026</p>
+										<p class="summary-note" id="overview-report-note">Published 03 Feb 2026</p>
 									</article>
 								</div>
 							</section>
@@ -75,7 +109,7 @@
 							<section class="dashboard-section">
 								<h2>Asset Portfolio</h2>
 								<div class="asset-list">
-									<article class="asset-card">
+									<article class="asset-card" data-asset-key="marari">
 										<img src="images/pic01.jpg" alt="Everloft Marari Cove property preview" />
 										<div class="asset-details">
 											<h3>Everloft Marari Cove</h3>
@@ -87,7 +121,7 @@
 											</div>
 										</div>
 									</article>
-									<article class="asset-card">
+									<article class="asset-card" data-asset-key="kadavanthra">
 										<img src="images/pic02.jpg" alt="Everloft Kadavanthra Suites property preview" />
 										<div class="asset-details">
 											<h3>Everloft Kadavanthra Suites</h3>
@@ -99,7 +133,7 @@
 											</div>
 										</div>
 									</article>
-									<article class="asset-card">
+									<article class="asset-card" data-asset-key="wayanad">
 										<img src="images/pic03.jpg" alt="Everloft Wayanad Ridge property preview" />
 										<div class="asset-details">
 											<h3>Everloft Wayanad Ridge</h3>
@@ -116,6 +150,7 @@
 
 							<section class="dashboard-section">
 								<h2>Performance Overview</h2>
+								<p class="dashboard-meta"><span id="performance-freshness">Last updated: --</span><span id="performance-source">Source: Booking + Payment Consolidation</span></p>
 								<div class="chart-toolbar">
 									<button type="button" class="chart-range-btn is-active" data-range="monthly">Monthly</button>
 									<button type="button" class="chart-range-btn" data-range="quarterly">Quarterly</button>
@@ -143,6 +178,7 @@
 								<div class="chart-grid">
 									<article class="chart-card">
 										<h3>Revenue Trend</h3>
+										<p class="chart-meta"><span id="revenue-chart-freshness">Last updated: --</span><span>Source: Finance Ledger</span></p>
 										<div class="chart-canvas-wrap">
 											<canvas id="revenue-chart" aria-label="Revenue trend chart"></canvas>
 										</div>
@@ -150,6 +186,7 @@
 									</article>
 									<article class="chart-card">
 										<h3>Occupancy &amp; ADR Mix</h3>
+										<p class="chart-meta"><span id="mix-chart-freshness">Last updated: --</span><span>Source: Channel Booking Reports</span></p>
 										<div class="chart-canvas-wrap">
 											<canvas id="mix-chart" aria-label="Occupancy and ADR chart"></canvas>
 										</div>
@@ -160,25 +197,55 @@
 										</div>
 									</article>
 								</div>
+								<article class="drilldown-panel">
+									<div class="drilldown-head">
+										<h3>Transaction Drilldown</h3>
+										<p id="drilldown-context">Monthly | All Assets | Week 4</p>
+									</div>
+									<p class="drilldown-help">Tip: click a chart point or bar above to switch period-level transactions.</p>
+									<div class="table-wrap">
+										<table class="dashboard-table drilldown-table">
+											<thead>
+												<tr>
+													<th>Period</th>
+													<th>Channel</th>
+													<th>Nights</th>
+													<th>Revenue</th>
+													<th>Status</th>
+												</tr>
+											</thead>
+											<tbody id="drilldown-table-body">
+												<tr>
+													<td data-label="Period">-</td>
+													<td data-label="Channel">-</td>
+													<td data-label="Nights">-</td>
+													<td data-label="Revenue">-</td>
+													<td data-label="Status">-</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</article>
 							</section>
 
 							<section class="dashboard-section">
 								<h2>Revenue Breakdown</h2>
 								<div class="revenue-stack">
-									<p><span>Revenue Generated</span><strong>INR 8,42,000</strong></p>
-									<p><span>Operational Expenses</span><strong class="is-minus">- INR 2,18,000</strong></p>
-									<p><span>Maintenance Reserve</span><strong class="is-minus">- INR 58,000</strong></p>
-									<p class="net-row"><span>Net Performance</span><strong>INR 5,66,000</strong></p>
+									<p><span>Revenue Generated</span><strong id="revenue-generated">INR 8,42,000</strong></p>
+									<p><span>Operational Expenses</span><strong class="is-minus" id="revenue-expenses">- INR 2,18,000</strong></p>
+									<p><span>Maintenance Reserve</span><strong class="is-minus" id="revenue-maintenance">- INR 58,000</strong></p>
+									<p class="net-row"><span>Net Performance</span><strong id="revenue-net">INR 5,66,000</strong></p>
 								</div>
 							</section>
 
 							<section class="dashboard-section">
 								<h2>Payout / Distribution</h2>
+								<p class="dashboard-meta"><span id="distribution-freshness">Last updated: --</span><span id="distribution-source">Source: Settlement Ledger</span></p>
 								<div class="payout-grid">
 									<article class="status-panel">
 										<p class="status-title">Distribution Status</p>
-										<p class="status-chip is-done"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Processed</p>
-										<p><strong>Next reporting cycle:</strong> 05 Mar 2026</p>
+										<p class="status-chip is-done" id="payout-status-chip"><span class="icon solid fa-check-circle" aria-hidden="true"></span> Processed</p>
+										<p><strong>Next reporting cycle:</strong> <span id="payout-next-cycle">05 Mar 2026</span></p>
 									</article>
 									<article class="history-panel">
 										<h3>Distribution History</h3>
@@ -192,22 +259,10 @@
 														<th>Statement</th>
 													</tr>
 												</thead>
-												<tbody>
+												<tbody id="distribution-history-body">
 													<tr>
 														<td data-label="Period">Jan 2026</td>
 														<td data-label="Net Amount">INR 5,66,000</td>
-														<td data-label="Status">Processed</td>
-														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
-													</tr>
-													<tr>
-														<td data-label="Period">Dec 2025</td>
-														<td data-label="Net Amount">INR 5,12,400</td>
-														<td data-label="Status">Processed</td>
-														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
-													</tr>
-													<tr>
-														<td data-label="Period">Nov 2025</td>
-														<td data-label="Net Amount">INR 4,88,100</td>
 														<td data-label="Status">Processed</td>
 														<td data-label="Statement"><a href="#" class="dash-link"><span class="icon solid fa-download" aria-hidden="true"></span> PDF</a></td>
 													</tr>
@@ -220,6 +275,7 @@
 
 							<section class="dashboard-section">
 								<h2>Asset Value</h2>
+								<p class="dashboard-meta"><span id="asset-value-freshness">Last updated: --</span><span id="asset-value-source">Source: Valuation Model v3.2</span></p>
 								<div class="asset-value-grid">
 									<article class="chart-card">
 										<h3>Estimated Asset Value Trend</h3>
@@ -312,6 +368,9 @@
 								<h2>Security & Access Controls</h2>
 								<ul>
 									<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Two-factor authentication enabled.</li>
+									<li><span class="icon solid fa-user-clock" aria-hidden="true"></span> Last successful login (this device): <strong id="security-last-login">Not available</strong></li>
+									<li><span class="icon solid fa-sign-in-alt" aria-hidden="true"></span> Current session started: <strong id="security-session-start">Not available</strong></li>
+									<li><span class="icon solid fa-exclamation-triangle" aria-hidden="true"></span> Failed logins (this device): <strong id="security-failed-count">0</strong> | Last failed: <strong id="security-last-failed">None</strong></li>
 									<li><span class="icon solid fa-history" aria-hidden="true"></span> Download logs and document access history.</li>
 									<li><span class="icon solid fa-file-pdf" aria-hidden="true"></span> Secure PDF statements with traceable issue IDs.</li>
 									<li><span class="icon solid fa-user-lock" aria-hidden="true"></span> Role-based access controls for investor accounts.</li>
@@ -340,271 +399,8 @@
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
 			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-			<script>
-				(function () {
-					const authFlag = sessionStorage.getItem("everloftAuth");
-					if (authFlag !== "1") {
-						window.location.href = "login.html";
-						return;
-					}
-
-					const userName = sessionStorage.getItem("everloftUserName") || "User";
-					const userNameNode = document.getElementById("dashboard-user-name");
-					if (userNameNode) {
-						userNameNode.textContent = userName;
-					}
-
-					const logoutNode = document.getElementById("dashboard-logout");
-					if (logoutNode) {
-						logoutNode.addEventListener("click", function () {
-							sessionStorage.removeItem("everloftAuth");
-							sessionStorage.removeItem("everloftUserName");
-						});
-					}
-
-					if (!window.Chart) {
-						return;
-					}
-
-					const formatInr = function (value) {
-						return "INR " + Number(value).toLocaleString("en-IN");
-					};
-
-					const chartData = {
-						monthly: {
-							labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-							revenue: [168000, 184000, 207000, 241000],
-							occupancy: [69, 73, 79, 86],
-							adr: [6820, 7150, 7480, 7810],
-							summary: {
-								nights: "127",
-								adr: "INR 7,420",
-								occupancy: "78%",
-								revenue: "INR 8.42L",
-								total: "INR 8.42L",
-								avgOcc: "78%",
-								season: "+8% vs previous month",
-								note: "Steady growth with stronger booking velocity in the recent cycle."
-							}
-						},
-						quarterly: {
-							labels: ["Q1", "Q2", "Q3", "Q4"],
-							revenue: [1720000, 1980000, 2240000, 2460000],
-							occupancy: [68, 72, 77, 81],
-							adr: [6940, 7320, 7610, 8040],
-							summary: {
-								nights: "362",
-								adr: "INR 7,478",
-								occupancy: "74%",
-								revenue: "INR 84.0L",
-								total: "INR 84.0L",
-								avgOcc: "74%",
-								season: "+11% vs last year",
-								note: "Quarterly momentum is supported by direct bookings and peak-weekend premiums."
-							}
-						},
-						yearly: {
-							labels: ["2022", "2023", "2024", "2025", "2026"],
-							revenue: [4980000, 6150000, 7420000, 8840000, 10100000],
-							occupancy: [62, 67, 71, 75, 79],
-							adr: [6120, 6610, 7010, 7480, 8120],
-							summary: {
-								nights: "1,548",
-								adr: "INR 7,068",
-								occupancy: "71%",
-								revenue: "INR 4.06Cr",
-								total: "INR 4.06Cr",
-								avgOcc: "71%",
-								season: "+18% CAGR",
-								note: "Yearly trend shows healthy scale-up with disciplined pricing and occupancy control."
-							}
-						}
-					};
-
-					const revenueCtx = document.getElementById("revenue-chart");
-					const mixCtx = document.getElementById("mix-chart");
-					if (!revenueCtx || !mixCtx) {
-						return;
-					}
-					const isCompactScreen = window.matchMedia("(max-width: 736px)").matches;
-
-					const gradient = revenueCtx.getContext("2d").createLinearGradient(0, 0, 0, 260);
-					gradient.addColorStop(0, "rgba(94, 66, 166, 0.36)");
-					gradient.addColorStop(1, "rgba(94, 66, 166, 0.03)");
-
-					const revenueChart = new Chart(revenueCtx, {
-						type: "line",
-						data: {
-							labels: chartData.monthly.labels,
-							datasets: [{
-								label: "Revenue",
-								data: chartData.monthly.revenue,
-								borderColor: "#5e42a6",
-								backgroundColor: gradient,
-								fill: true,
-								tension: 0.35,
-								borderWidth: 3,
-								pointRadius: isCompactScreen ? 2.4 : 4,
-								pointBackgroundColor: "#4c338f"
-							}]
-						},
-						options: {
-							responsive: true,
-							maintainAspectRatio: false,
-							plugins: {
-								legend: { display: false },
-								tooltip: {
-									callbacks: {
-										label: function (context) {
-											return " " + formatInr(context.raw);
-										}
-									}
-								}
-							},
-							scales: {
-								x: {
-									grid: { display: false },
-									ticks: {
-										color: "#696492",
-										maxRotation: 0,
-										autoSkip: true,
-										maxTicksLimit: isCompactScreen ? 4 : 7
-									}
-								},
-								y: {
-									grid: { color: "rgba(121, 105, 179, 0.2)" },
-									title: { display: !isCompactScreen, text: "Revenue (INR)", color: "#5d5789" },
-									ticks: {
-										color: "#696492",
-										maxTicksLimit: isCompactScreen ? 4 : 6,
-										callback: function (value) {
-											return "INR " + Number(value / 1000).toFixed(0) + "k";
-										}
-									}
-								}
-							}
-						}
-					});
-
-					const mixChart = new Chart(mixCtx, {
-						type: "bar",
-						data: {
-							labels: chartData.monthly.labels,
-							datasets: [
-								{
-									type: "bar",
-									label: "Occupancy %",
-									data: chartData.monthly.occupancy,
-									backgroundColor: "rgba(79, 168, 207, 0.78)",
-									borderRadius: isCompactScreen ? 4 : 6,
-									yAxisID: "y"
-								},
-								{
-									type: "line",
-									label: "ADR (INR)",
-									data: chartData.monthly.adr,
-									borderColor: "#f39f4c",
-									backgroundColor: "rgba(243, 159, 76, 0.24)",
-									borderWidth: 3,
-									pointRadius: isCompactScreen ? 2.2 : 3,
-									tension: 0.3,
-									yAxisID: "y1"
-								}
-							]
-						},
-						options: {
-							responsive: true,
-							maintainAspectRatio: false,
-							plugins: {
-								legend: {
-									position: isCompactScreen ? "top" : "bottom",
-									labels: {
-										boxWidth: isCompactScreen ? 10 : 12,
-										color: "#5f5a86",
-										usePointStyle: true,
-										pointStyle: "circle",
-										font: { size: isCompactScreen ? 10 : 12 }
-									}
-								}
-							},
-							scales: {
-								y: {
-									beginAtZero: true,
-									max: 100,
-									grid: { color: "rgba(121, 105, 179, 0.2)" },
-									title: { display: !isCompactScreen, text: "Occupancy %", color: "#5d5789" },
-									ticks: { color: "#696492", maxTicksLimit: isCompactScreen ? 4 : 6 }
-								},
-								y1: {
-									position: "right",
-									grid: { drawOnChartArea: false },
-									title: { display: !isCompactScreen, text: "ADR (INR)", color: "#5d5789" },
-									ticks: {
-										color: "#696492",
-										maxTicksLimit: isCompactScreen ? 4 : 6,
-										callback: function (value) {
-											return (Number(value) / 1000).toFixed(1) + "k";
-										}
-									}
-								},
-								x: {
-									ticks: {
-										color: "#696492",
-										maxRotation: 0,
-										autoSkip: true,
-										maxTicksLimit: isCompactScreen ? 4 : 7
-									}
-								}
-							}
-						}
-					});
-
-					const summaryNode = document.getElementById("period-summary");
-					const noteNode = document.getElementById("chart-note");
-					const kpiNights = document.getElementById("kpi-nights");
-					const kpiAdr = document.getElementById("kpi-adr");
-					const kpiOcc = document.getElementById("kpi-occupancy");
-					const kpiRev = document.getElementById("kpi-revenue");
-
-					const applyRange = function (rangeKey) {
-						const payload = chartData[rangeKey];
-						if (!payload) {
-							return;
-						}
-
-						revenueChart.data.labels = payload.labels;
-						revenueChart.data.datasets[0].data = payload.revenue;
-						revenueChart.update();
-
-						mixChart.data.labels = payload.labels;
-						mixChart.data.datasets[0].data = payload.occupancy;
-						mixChart.data.datasets[1].data = payload.adr;
-						mixChart.update();
-
-						if (kpiNights) kpiNights.textContent = payload.summary.nights;
-						if (kpiAdr) kpiAdr.textContent = payload.summary.adr;
-						if (kpiOcc) kpiOcc.textContent = payload.summary.occupancy;
-						if (kpiRev) kpiRev.textContent = payload.summary.revenue;
-						if (noteNode) noteNode.textContent = payload.summary.note;
-
-						if (summaryNode) {
-							summaryNode.innerHTML =
-								"<p><strong>Total Revenue:</strong> " + payload.summary.total + "</p>" +
-								"<p><strong>Average Occupancy:</strong> " + payload.summary.avgOcc + "</p>" +
-								"<p><strong>Seasonal Comparison:</strong> " + payload.summary.season + "</p>";
-						}
-					};
-
-					const rangeButtons = Array.prototype.slice.call(document.querySelectorAll(".chart-range-btn"));
-					rangeButtons.forEach(function (button) {
-						button.addEventListener("click", function () {
-							rangeButtons.forEach(function (node) { node.classList.remove("is-active"); });
-							button.classList.add("is-active");
-							applyRange(button.getAttribute("data-range"));
-						});
-					});
-				})();
-			</script>
+			<script src="assets/js/dashboard-enhancements.js"></script>
 
 	</body>
 </html>
+
