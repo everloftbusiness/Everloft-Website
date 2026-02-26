@@ -215,8 +215,8 @@
 		housekeeping: {
 			label: "Housekeeping Staff",
 			level: "Level 3 - Operational Staff",
-			heroEyebrow: "Housekeeping Task Console",
-			heroDescription: "Cleaning schedules, check-in turnover tasks, and completion status for assigned properties.",
+			heroEyebrow: "Housekeeping Staff Dashboard",
+			heroDescription: "Assigned cleaning tasks with checklist, photo proof, and time-tracking controls only.",
 			permissions: ["view_property", "assign_task"],
 			allowedAssets: ["marari", "kadavanthra", "wayanad"],
 			allowedRanges: ["monthly"],
@@ -270,8 +270,8 @@
 		guest: {
 			label: "Guest / Customer",
 			level: "External Layer - Guest",
-			heroEyebrow: "Guest Stay Console",
-			heroDescription: "Booking history, upcoming stays, invoices, and support updates without backend financial visibility.",
+			heroEyebrow: "Everloft Guest Dashboard",
+			heroDescription: "Own booking, stay instructions, support actions, payments, and profile controls only.",
 			permissions: ["view_only_own_data"],
 			allowedAssets: ["marari"],
 			allowedRanges: ["monthly"],

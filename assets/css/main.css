@@ -6134,6 +6134,234 @@ input, select, textarea {
 		padding-top: 0.75em;
 	}
 
+	.everloft-dashboard .housekeeping-summary-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .housekeeping-task-row.is-selected {
+		background: #f1ecff;
+	}
+
+	.everloft-dashboard .housekeeping-task-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6em;
+		margin-bottom: 0.65em;
+	}
+
+	.everloft-dashboard .housekeeping-checklist-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .housekeeping-checklist-block {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		padding: 0.65em 0.72em;
+	}
+
+	.everloft-dashboard .housekeeping-checklist-block h3 {
+		font-size: 0.9em;
+		margin-bottom: 0.45em;
+	}
+
+	.everloft-dashboard .housekeeping-checklist-items {
+		display: grid;
+		gap: 0.42em;
+	}
+
+	.everloft-dashboard .housekeeping-check-item {
+		align-items: flex-start;
+		display: flex;
+		gap: 0.5em;
+		font-size: 0.84em;
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .housekeeping-check-item input[type="checkbox"] {
+		margin-top: 0.2em;
+	}
+
+	.everloft-dashboard .housekeeping-time-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .housekeeping-time-card {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		padding: 0.7em 0.76em;
+	}
+
+	.everloft-dashboard .housekeeping-time-card .summary-label {
+		margin-bottom: 0.38em;
+	}
+
+	.everloft-dashboard .housekeeping-time-card .summary-value {
+		font-size: 1.15em;
+	}
+
+	.everloft-dashboard .housekeeping-report-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-bottom: 0.7em;
+	}
+
+	.everloft-dashboard .housekeeping-report-grid select,
+	.everloft-dashboard .housekeeping-report-grid textarea {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #354764;
+		font-size: 0.85em;
+		min-height: 2.65em;
+		padding: 0.5em 0.65em;
+		width: 100%;
+	}
+
+	.everloft-dashboard .housekeeping-report-grid textarea {
+		min-height: 5.4em;
+		resize: vertical;
+	}
+
+	.everloft-dashboard .guest-welcome-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		margin-top: 0.7em;
+	}
+
+	.everloft-dashboard .guest-kv-item {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		margin-bottom: 0;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .guest-kv-item p {
+		margin-bottom: 0.2em;
+	}
+
+	.everloft-dashboard .guest-kv-item p:last-child {
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .guest-empty-cta {
+		border-top: solid 1px #dce4f1;
+		margin-top: 0.8em;
+		padding-top: 0.7em;
+	}
+
+	.everloft-dashboard .guest-upcoming-card {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		padding: 0.75em 0.82em;
+	}
+
+	.everloft-dashboard .guest-key-value-grid {
+		display: grid;
+		gap: 0.58em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.everloft-dashboard .guest-key-value-grid p {
+		background: #ffffff;
+		border: solid 1px #e4ebf5;
+		border-radius: 0.48em;
+		font-size: 0.84em;
+		margin-bottom: 0;
+		padding: 0.58em 0.65em;
+	}
+
+	.everloft-dashboard .guest-booking-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6em;
+		margin-top: 0.72em;
+	}
+
+	.everloft-dashboard .guest-support-grid {
+		display: grid;
+		gap: 0.62em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .guest-support-grid .button {
+		min-height: 2.95em;
+	}
+
+	.everloft-dashboard .guest-payment-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .guest-payment-card {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		margin-bottom: 0;
+		padding: 0.62em 0.72em;
+	}
+
+	.everloft-dashboard .guest-payment-card .summary-label,
+	.everloft-dashboard .guest-payment-card .summary-value {
+		margin-bottom: 0;
+	}
+
+	.everloft-dashboard .guest-review-form {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .guest-review-form textarea,
+	.everloft-dashboard .guest-review-form select,
+	.everloft-dashboard .guest-review-form input[type="file"] {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #354764;
+		font-size: 0.85em;
+		min-height: 2.65em;
+		padding: 0.5em 0.65em;
+		width: 100%;
+	}
+
+	.everloft-dashboard .guest-review-form textarea {
+		min-height: 5.3em;
+		resize: vertical;
+	}
+
+	.everloft-dashboard .guest-profile-grid {
+		display: grid;
+		gap: 0.72em;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-bottom: 0.72em;
+	}
+
+	.everloft-dashboard .guest-profile-grid input[type="text"],
+	.everloft-dashboard .guest-profile-grid input[type="password"] {
+		background: #f8faff;
+		border: solid 1px #dce4f1;
+		border-radius: 0.55em;
+		color: #354764;
+		font-size: 0.85em;
+		min-height: 2.65em;
+		padding: 0.5em 0.65em;
+		width: 100%;
+	}
+
 	@media screen and (max-width: 1280px) {
 
 		body.investor-dashboard-page #main.wrapper > .inner {
@@ -6163,6 +6391,38 @@ input, select, textarea {
 
 		.everloft-dashboard .maintenance-upload-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.everloft-dashboard .housekeeping-checklist-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .housekeeping-time-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.everloft-dashboard .housekeeping-report-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .guest-welcome-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.everloft-dashboard .guest-support-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.everloft-dashboard .guest-payment-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .guest-review-form {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .guest-profile-grid {
+			grid-template-columns: 1fr;
 		}
 
 	}
@@ -6205,6 +6465,14 @@ input, select, textarea {
 
 		.everloft-dashboard .dash-action {
 			min-height: 2.95em;
+		}
+
+		.everloft-dashboard .housekeeping-time-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.everloft-dashboard .guest-support-grid {
+			grid-template-columns: 1fr;
 		}
 
 	}
