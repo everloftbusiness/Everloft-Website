@@ -46,6 +46,42 @@
 								<p id="dashboard-hero-description">Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
 							</header>
 
+							<section class="dashboard-section investor-portfolio-overview" data-role-only="investor" aria-label="Portfolio overview">
+								<h2>Your Investment Portfolio</h2>
+								<div class="summary-grid investor-portfolio-grid">
+									<article class="summary-card">
+										<p class="summary-label">Total Properties Invested</p>
+										<p class="summary-value" id="inv-kpi-total-properties">--</p>
+										<p class="summary-note">Number of Everloft properties you are invested in</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Total Invested Amount</p>
+										<p class="summary-value" id="inv-kpi-total-invested">--</p>
+										<p class="summary-note">Capital committed across your holdings</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Current Portfolio Value</p>
+										<p class="summary-value" id="inv-kpi-portfolio-value">--</p>
+										<p class="summary-note">Illustrative mark-to-market estimate</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">This Month Profit</p>
+										<p class="summary-value" id="inv-kpi-month-profit">--</p>
+										<p class="summary-note">Net profit for current cycle (sample)</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">YTD Profit</p>
+										<p class="summary-value" id="inv-kpi-ytd-profit">--</p>
+										<p class="summary-note">Calendar year-to-date profit (sample)</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Total Payout Received</p>
+										<p class="summary-value" id="inv-kpi-total-payout">--</p>
+										<p class="summary-note">Total distributions made to you (sample)</p>
+									</article>
+								</div>
+							</section>
+
 							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
 								<div class="alert-strip-head">
 									<h2>Alerts &amp; Risk Signals</h2>
@@ -440,12 +476,34 @@
 							</section>
 
 							<section class="dashboard-section" data-permissions="view_financials">
-								<h2>Revenue Breakdown</h2>
+								<h2>Monthly Performance Snapshot</h2>
 								<div class="revenue-stack">
 									<p><span>Revenue Generated</span><strong id="revenue-generated">INR 8,42,000</strong></p>
 									<p><span>Operational Expenses</span><strong class="is-minus" id="revenue-expenses">- INR 2,18,000</strong></p>
 									<p><span>Maintenance Reserve</span><strong class="is-minus" id="revenue-maintenance">- INR 58,000</strong></p>
 									<p class="net-row"><span>Net Performance</span><strong id="revenue-net">INR 5,66,000</strong></p>
+								</div>
+								<div class="investor-performance-breakdown" data-role-only="investor">
+									<h3>Investor Profit Breakdown</h3>
+									<div class="table-wrap">
+										<table class="dashboard-table investor-monthly-table">
+											<thead>
+												<tr>
+													<th>Line Item</th>
+													<th>Amount</th>
+													<th>Notes</th>
+												</tr>
+											</thead>
+											<tbody id="inv-monthly-breakdown-body">
+												<tr>
+													<td data-label="Line Item">Loading...</td>
+													<td data-label="Amount">--</td>
+													<td data-label="Notes">--</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<p class="investor-formula-note">Net Profit = Revenue − Expenses. Your payout is calculated as Net Profit × Your Ownership % (illustrative).</p>
 								</div>
 							</section>
 
@@ -484,6 +542,68 @@
 								</div>
 							</section>
 
+							<section class="dashboard-section investor-occupancy-section" data-role-only="investor" data-permissions="view_financials|view_only_own_data">
+								<h2>Occupancy &amp; Booking Analytics</h2>
+								<div class="investor-occupancy-grid">
+									<article class="investor-occupancy-kpis">
+										<p><strong>Occupancy Rate (This Month):</strong> <span id="inv-occupancy-rate">--</span></p>
+										<p><strong>Total Nights Booked:</strong> <span id="inv-total-nights">--</span></p>
+										<p><strong>Average Daily Rate (ADR):</strong> <span id="inv-adr">--</span></p>
+										<p><strong>Average Stay Duration:</strong> <span id="inv-avg-stay">--</span></p>
+										<p><strong>Upcoming Bookings:</strong> <span id="inv-upcoming-bookings">--</span></p>
+									</article>
+									<article class="investor-revenue-trend">
+										<h3>Revenue Trend (Last 6 Months)</h3>
+										<div class="chart-canvas-wrap investor-chart-placeholder" id="inv-revenue-trend-chart">
+											<p>Trend line will show how revenue has moved month-on-month for your invested property.</p>
+										</div>
+									</article>
+                                </div>
+							</section>
+
+							<section class="dashboard-section investor-payout-history" data-role-only="investor" data-permissions="view_financials|view_only_own_data">
+								<h2>Payout History</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table investor-payout-table">
+										<thead>
+											<tr>
+												<th>Month</th>
+												<th>Net Profit</th>
+												<th>Your Share</th>
+												<th>Status</th>
+												<th>Paid Date</th>
+												<th>Statement</th>
+											</tr>
+										</thead>
+										<tbody id="inv-payout-history-body">
+											<tr>
+												<td data-label="Month">--</td>
+												<td data-label="Net Profit">--</td>
+												<td data-label="Your Share">--</td>
+												<td data-label="Status">--</td>
+												<td data-label="Paid Date">--</td>
+												<td data-label="Statement">--</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+								<p><strong>Bank account on record:</strong> <span id="inv-bank-details">--</span></p>
+								<p><button type="button" class="button small" id="inv-download-latest-statement-btn" disabled>Download latest statement (PDF)</button></p>
+							</section>
+
+							<section class="dashboard-section investor-property-details" data-role-only="investor" data-permissions="view_only_own_data|view_financials">
+								<h2>Property Details</h2>
+								<ul class="investor-property-list">
+									<li><strong>Property name:</strong> <span id="inv-property-name">--</span></li>
+									<li><strong>Location:</strong> <span id="inv-property-location">--</span></li>
+									<li><strong>Total investment value:</strong> <span id="inv-property-investment">--</span></li>
+									<li><strong>Your ownership %:</strong> <span id="inv-property-ownership">--</span></li>
+									<li><strong>Investment date:</strong> <span id="inv-property-date">--</span></li>
+									<li><strong>Co-investors (aggregate % only):</strong> <span id="inv-property-coinvestors">--</span></li>
+								</ul>
+								<p class="investor-privacy-note">Co-investor information is shown only as aggregate percentages. No personal details are displayed.</p>
+							</section>
+
 							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
 								<h2>Asset Value</h2>
 								<p class="dashboard-meta"><span id="asset-value-freshness">Last updated: --</span><span id="asset-value-source">Source: Valuation Model v3.2</span></p>
@@ -502,26 +622,53 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section" data-permissions="assign_task|view_property" data-hide-for-role="maintenance">
-								<h2>Operational Insights</h2>
-								<div class="insight-grid">
-									<article>
-										<h3><span class="icon solid fa-calendar-week" aria-hidden="true"></span> Peak Demand</h3>
-										<p>Friday to Sunday continues to drive the highest conversion and ADR performance.</p>
+							<section class="dashboard-section investor-property-health" data-role-only="investor" data-permissions="view_property|view_only_own_data">
+								<h2>Property Health</h2>
+								<div class="investor-health-grid">
+									<article class="investor-health-card">
+										<h3>Maintenance &amp; Inspections</h3>
+										<ul>
+											<li><strong>Open maintenance issues:</strong> <span id="inv-health-open-issues">--</span></li>
+											<li><strong>Last inspection date:</strong> <span id="inv-health-last-inspection">--</span></li>
+											<li><strong>Recent upgrades:</strong> <span id="inv-health-upgrades">--</span></li>
+										</ul>
 									</article>
-									<article>
-										<h3><span class="icon solid fa-share-alt" aria-hidden="true"></span> Booking Sources</h3>
-										<p>Direct: 34% | Airbnb: 41% | Booking Platforms: 25%</p>
-									</article>
-									<article>
-										<h3><span class="icon solid fa-star" aria-hidden="true"></span> Guest Satisfaction</h3>
-										<p>Average rating: 4.7 / 5 across active listings.</p>
-									</article>
-									<article>
-										<h3><span class="icon solid fa-tools" aria-hidden="true"></span> Maintenance Status</h3>
-										<p>All preventive tasks closed for current month. No critical incidents open.</p>
+									<article class="investor-health-card">
+										<h3>Cleaning &amp; Experience</h3>
+										<ul>
+											<li><strong>Cleaning quality score:</strong> <span id="inv-health-cleaning-score">--</span></li>
+											<li><strong>Complaint count (this month):</strong> <span id="inv-health-complaints">--</span></li>
+											<li><strong>Readiness note:</strong> <span id="inv-health-readiness-note">--</span></li>
+										</ul>
 									</article>
 								</div>
+							</section>
+
+							<section class="dashboard-section investor-guest-performance" data-role-only="investor" data-permissions="view_only_own_data">
+								<h2>Guest Performance</h2>
+								<div class="investor-guest-grid">
+									<article class="investor-guest-kpis">
+										<p><strong>Average rating:</strong> <span id="inv-guest-average-rating">--</span></p>
+										<p><strong>Repeat guest %:</strong> <span id="inv-guest-repeat-percent">--</span></p>
+										<p><strong>Complaint count (this month):</strong> <span id="inv-guest-complaint-count">--</span></p>
+									</article>
+									<article class="investor-guest-reviews">
+										<h3>Recent Reviews</h3>
+										<ul id="inv-guest-reviews-list">
+											<li>Loading reviews...</li>
+										</ul>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section investor-longterm-performance" data-role-only="investor" data-permissions="view_financials|view_only_own_data">
+								<h2>Long-Term Performance</h2>
+								<ul class="investor-longterm-list">
+									<li><strong>Total profit since investment:</strong> <span id="inv-lt-total-profit">--</span></li>
+									<li><strong>ROI % so far:</strong> <span id="inv-lt-roi-percent">--</span></li>
+									<li><strong>Break-even progress:</strong> <span id="inv-lt-break-even">--</span></li>
+									<li><strong>Year-over-year growth:</strong> <span id="inv-lt-yoy-growth">--</span></li>
+								</ul>
 							</section>
 
 							<section class="dashboard-section" data-permissions="view_only_own_data|view_financials">

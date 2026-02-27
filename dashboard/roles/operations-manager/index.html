@@ -46,6 +46,47 @@
 								<p id="dashboard-hero-description">Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
 							</header>
 
+							<section class="dashboard-section ops-master-overview" data-role-only="operations_manager" aria-label="Operations KPIs">
+								<h2>Operations Overview</h2>
+								<div class="summary-grid ops-kpi-grid">
+									<article class="summary-card">
+										<p class="summary-label">Total Active Properties</p>
+										<p class="summary-value" id="ops-kpi-active-properties">--</p>
+										<p class="summary-note">Currently active in rotation</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Today’s Check-ins</p>
+										<p class="summary-value" id="ops-kpi-today-checkins">--</p>
+										<p class="summary-note">Expected arrivals</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Today’s Check-outs</p>
+										<p class="summary-value" id="ops-kpi-today-checkouts">--</p>
+										<p class="summary-note">Departing guests</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Pending Cleaning Tasks</p>
+										<p class="summary-value" id="ops-kpi-pending-cleaning">--</p>
+										<p class="summary-note">Rooms still to be turned</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Open Maintenance Issues</p>
+										<p class="summary-value" id="ops-kpi-open-maintenance">--</p>
+										<p class="summary-note">Operational issues open</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Occupancy Rate (This Month)</p>
+										<p class="summary-value" id="ops-kpi-occupancy-rate">--</p>
+										<p class="summary-note">Blended across managed properties</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Revenue (This Month)</p>
+										<p class="summary-value" id="ops-kpi-revenue-month">--</p>
+										<p class="summary-note">Illustrative operational view only</p>
+									</article>
+								</div>
+							</section>
+
 							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
 								<div class="alert-strip-head">
 									<h2>Alerts &amp; Risk Signals</h2>
@@ -502,24 +543,205 @@
 								</div>
 							</section>
 
-							<section class="dashboard-section" data-permissions="assign_task|view_property" data-hide-for-role="maintenance">
-								<h2>Operational Insights</h2>
-								<div class="insight-grid">
+							<section class="dashboard-section ops-today-timeline" data-role-only="operations_manager" data-permissions="view_property|assign_task">
+								<h2>Today’s Activity Timeline</h2>
+								<div class="ops-timeline-grid">
+									<article class="ops-timeline-block">
+										<h3>Morning</h3>
+										<ul id="ops-timeline-morning">
+											<li>Loading...</li>
+										</ul>
+									</article>
+									<article class="ops-timeline-block">
+										<h3>Afternoon</h3>
+										<ul id="ops-timeline-afternoon">
+											<li>Loading...</li>
+										</ul>
+									</article>
+									<article class="ops-timeline-block">
+										<h3>Evening</h3>
+										<ul id="ops-timeline-evening">
+											<li>Loading...</li>
+										</ul>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section ops-housekeeping-panel" data-role-only="operations_manager" data-permissions="assign_task|view_property">
+								<h2>Housekeeping Control Panel</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table ops-housekeeping-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>Checkout Time</th>
+												<th>Cleaning Assigned</th>
+												<th>Status</th>
+												<th>Action</th>
+											</tr>
+										</thead>
+										<tbody id="ops-housekeeping-body">
+											<tr>
+												<td data-label="Property">--</td>
+												<td data-label="Checkout Time">--</td>
+												<td data-label="Cleaning Assigned">--</td>
+												<td data-label="Status">--</td>
+												<td data-label="Action">--</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+								<p class="ops-panel-note">Assignments and approvals here are illustrative; final staffing and photo approvals will run through Everloft’s internal tools.</p>
+							</section>
+
+							<section class="dashboard-section ops-maintenance-panel" data-role-only="operations_manager" data-permissions="assign_task|view_property">
+								<h2>Maintenance Control Panel</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table ops-maintenance-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>Issue</th>
+												<th>Priority</th>
+												<th>Assigned To</th>
+												<th>Status</th>
+												<th>Age</th>
+											</tr>
+										</thead>
+										<tbody id="ops-maintenance-body">
+											<tr>
+												<td data-label="Property">--</td>
+												<td data-label="Issue">--</td>
+												<td data-label="Priority">--</td>
+												<td data-label="Assigned To">--</td>
+												<td data-label="Status">--</td>
+												<td data-label="Age">--</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+								<p class="ops-panel-note">Red rows highlight overdue items; yellow rows indicate “waiting for parts”; green rows show items closed today (illustrative).</p>
+							</section>
+
+							<section class="dashboard-section ops-booking-management" data-role-only="operations_manager" data-permissions="manage_bookings|view_property">
+								<h2>Booking Management</h2>
+								<div class="ops-booking-grid">
 									<article>
-										<h3><span class="icon solid fa-calendar-week" aria-hidden="true"></span> Peak Demand</h3>
-										<p>Friday to Sunday continues to drive the highest conversion and ADR performance.</p>
+										<h3>Upcoming 7 Days</h3>
+										<ul id="ops-bookings-upcoming">
+											<li>Loading...</li>
+										</ul>
 									</article>
 									<article>
-										<h3><span class="icon solid fa-share-alt" aria-hidden="true"></span> Booking Sources</h3>
-										<p>Direct: 34% | Airbnb: 41% | Booking Platforms: 25%</p>
+										<h3>Alerts</h3>
+										<ul id="ops-bookings-alerts">
+											<li>Loading...</li>
+										</ul>
+									</article>
+								</div>
+								<p class="ops-panel-note">Manual booking entry, date blocks, and payment confirmations here are non-functional samples for now.</p>
+							</section>
+
+							<section class="dashboard-section ops-property-status" data-role-only="operations_manager" data-permissions="view_property|assign_task">
+								<h2>Property Status Overview</h2>
+								<div class="table-wrap">
+									<table class="dashboard-table ops-property-status-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>Next Check-in</th>
+												<th>Cleaning Status</th>
+												<th>Maintenance Status</th>
+												<th>Ready?</th>
+											</tr>
+										</thead>
+										<tbody id="ops-property-status-body">
+											<tr>
+												<td data-label="Property">--</td>
+												<td data-label="Next Check-in">--</td>
+												<td data-label="Cleaning Status">--</td>
+												<td data-label="Maintenance Status">--</td>
+												<td data-label="Ready?">--</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section ops-alerts" data-role-only="operations_manager" data-permissions="assign_task|view_property|manage_bookings">
+								<h2>Alerts &amp; Escalations</h2>
+								<ul id="ops-alerts-list">
+									<li>Loading...</li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section ops-analytics" data-role-only="operations_manager" data-permissions="view_property|assign_task">
+								<h2>Operational Analytics</h2>
+								<ul class="ops-analytics-list">
+									<li><strong>Occupancy % (This Month):</strong> <span id="ops-analytics-occupancy">--</span></li>
+									<li><strong>Average turnaround time:</strong> <span id="ops-analytics-turnaround">--</span></li>
+									<li><strong>Average cleaning time:</strong> <span id="ops-analytics-cleaning">--</span></li>
+									<li><strong>Maintenance resolution time:</strong> <span id="ops-analytics-maintenance">--</span></li>
+									<li><strong>Cancellation rate:</strong> <span id="ops-analytics-cancellations">--</span></li>
+								</ul>
+							</section>
+
+							<section class="dashboard-section ops-expense-entry" data-role-only="operations_manager" data-permissions="assign_task|view_property">
+								<h2>Operational Expense Entry (Sample)</h2>
+								<p class="ops-panel-note">Entries here are illustrative only. Final approval and finance workflows will be handled through finance-admin tools.</p>
+								<div class="ops-expense-grid">
+									<div class="filter-field">
+										<label for="ops-expense-property">Property</label>
+										<select id="ops-expense-property">
+											<option value="marari">Everloft Marari Cove</option>
+											<option value="kadavanthra">Everloft Kadavanthra Suites</option>
+											<option value="wayanad">Everloft Wayanad Ridge</option>
+										</select>
+									</div>
+									<div class="filter-field">
+										<label for="ops-expense-type">Expense Type</label>
+										<select id="ops-expense-type">
+											<option value="maintenance">Maintenance</option>
+											<option value="utilities">Utilities</option>
+											<option value="supplies">Supplies</option>
+										</select>
+									</div>
+									<div class="filter-field">
+										<label for="ops-expense-amount">Amount</label>
+										<input type="number" id="ops-expense-amount" min="0" step="0.01" placeholder="Enter amount" />
+									</div>
+									<div class="filter-field">
+										<label for="ops-expense-description">Description</label>
+										<textarea id="ops-expense-description" rows="2" placeholder="Describe the expense (sample only)"></textarea>
+									</div>
+									<div class="filter-field">
+										<label for="ops-expense-bill">Upload Bill Image</label>
+										<input type="file" id="ops-expense-bill" accept="image/*" />
+									</div>
+								</div>
+								<p id="ops-expense-feedback">Expense entries are stored as sample data in this demo.</p>
+							</section>
+
+							<section class="dashboard-section ops-staff-snapshot" data-role-only="operations_manager" data-permissions="assign_task">
+								<h2>Staff Management Snapshot</h2>
+								<div class="ops-staff-grid">
+									<article>
+										<h3>Housekeeping Staff</h3>
+										<ul id="ops-staff-housekeeping">
+											<li>Loading...</li>
+										</ul>
 									</article>
 									<article>
-										<h3><span class="icon solid fa-star" aria-hidden="true"></span> Guest Satisfaction</h3>
-										<p>Average rating: 4.7 / 5 across active listings.</p>
+										<h3>Maintenance Staff</h3>
+										<ul id="ops-staff-maintenance">
+											<li>Loading...</li>
+										</ul>
 									</article>
 									<article>
-										<h3><span class="icon solid fa-tools" aria-hidden="true"></span> Maintenance Status</h3>
-										<p>All preventive tasks closed for current month. No critical incidents open.</p>
+										<h3>Workload &amp; Performance</h3>
+										<ul id="ops-staff-performance">
+											<li>Loading...</li>
+										</ul>
 									</article>
 								</div>
 							</section>

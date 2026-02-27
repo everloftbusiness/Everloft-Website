@@ -46,6 +46,42 @@
 								<p id="dashboard-hero-description">Track portfolio performance, occupancy health, asset value movement, and reporting updates with full transparency.</p>
 							</header>
 
+							<section class="dashboard-section owner-summary-section" data-role-only="property_owner" aria-label="Owner performance summary">
+								<h2>Property Owner Overview</h2>
+								<div class="summary-grid owner-kpi-grid">
+									<article class="summary-card">
+										<p class="summary-label">Total Bookings (This Month)</p>
+										<p class="summary-value" id="owner-kpi-total-bookings">--</p>
+										<p class="summary-note">Confirmed stays in current cycle</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Occupancy Rate</p>
+										<p class="summary-value" id="owner-kpi-occupancy-rate">--</p>
+										<p class="summary-note">Blended across your property</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Gross Revenue</p>
+										<p class="summary-value" id="owner-kpi-gross-revenue">--</p>
+										<p class="summary-note">Before expenses and commission</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Total Expenses</p>
+										<p class="summary-value" id="owner-kpi-total-expenses">--</p>
+										<p class="summary-note">Ops, maintenance, and utilities</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Net Earnings (After Commission)</p>
+										<p class="summary-value" id="owner-kpi-net-earnings">--</p>
+										<p class="summary-note">Indicative owner share for period</p>
+									</article>
+									<article class="summary-card">
+										<p class="summary-label">Payout Status</p>
+										<p class="summary-value" id="owner-kpi-payout-status">--</p>
+										<p class="summary-note" id="owner-kpi-payout-note">Payout timeline and status</p>
+									</article>
+								</div>
+							</section>
+
 							<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
 								<div class="alert-strip-head">
 									<h2>Alerts &amp; Risk Signals</h2>
@@ -447,6 +483,43 @@
 									<p><span>Maintenance Reserve</span><strong class="is-minus" id="revenue-maintenance">- INR 58,000</strong></p>
 									<p class="net-row"><span>Net Performance</span><strong id="revenue-net">INR 5,66,000</strong></p>
 								</div>
+								<div class="owner-revenue-breakdown" data-role-only="property_owner">
+									<h3>Owner Revenue Breakdown</h3>
+									<div class="table-wrap">
+										<table class="dashboard-table owner-revenue-table">
+											<thead>
+												<tr>
+													<th>Line Item</th>
+													<th>Amount</th>
+													<th>Notes</th>
+												</tr>
+											</thead>
+											<tbody id="owner-revenue-breakdown-body">
+												<tr>
+													<td data-label="Line Item">Loading...</td>
+													<td data-label="Amount">--</td>
+													<td data-label="Notes">--</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="owner-revenue-charts">
+										<article class="chart-card">
+											<h3>Monthly Revenue vs Expenses</h3>
+											<p class="chart-meta"><span id="owner-monthly-revexp-label">Last 6 months</span><span>Illustrative owner view</span></p>
+											<div class="chart-canvas-wrap owner-chart-placeholder" id="owner-monthly-revexp-chart">
+												<p>Trend will show how revenue and expenses move across months for your property.</p>
+											</div>
+										</article>
+										<article class="chart-card">
+											<h3>Yearly Performance</h3>
+											<p class="chart-meta"><span id="owner-yearly-performance-label">Last 3 years</span><span>Illustrative owner view</span></p>
+											<div class="chart-canvas-wrap owner-chart-placeholder" id="owner-yearly-performance-chart">
+												<p>High-level view of how performance has trended year on year.</p>
+											</div>
+										</article>
+									</div>
+								</div>
 							</section>
 
 							<section class="dashboard-section" data-permissions="view_financials">
@@ -571,6 +644,170 @@
 										<h3>Fort Kochi Heritage Suites</h3>
 										<p>Early-stage structured participation window for selected investors.</p>
 										<a href="#" class="dash-link"><span class="icon solid fa-hand-point-right" aria-hidden="true"></span> Mark Interest</a>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section owner-bookings-section" data-role-only="property_owner" data-permissions="view_only_own_data">
+								<h2>Booking Calendar &amp; Details</h2>
+								<div class="owner-bookings-grid">
+									<article class="owner-calendar-card" aria-label="Booking calendar">
+										<h3>Booking Calendar</h3>
+										<div class="owner-calendar-legend">
+											<span class="legend-pill is-booked">Booked</span>
+											<span class="legend-pill is-blocked">Platform Blocked</span>
+											<span class="legend-pill is-maintenance">Maintenance</span>
+											<span class="legend-pill is-owner-block">Owner Blocked</span>
+										</div>
+										<div class="owner-calendar-wrap" id="owner-booking-calendar">
+											<p>Calendar loading...</p>
+										</div>
+										<div class="owner-calendar-actions">
+											<button type="button" class="button small" id="owner-request-block-dates-btn">Request personal block dates</button>
+											<p id="owner-calendar-note">Future reservations and blocks are shown for visibility only.</p>
+										</div>
+									</article>
+									<article class="owner-booking-table-card" aria-label="Booking details list">
+										<h3>Booking Details</h3>
+										<div class="table-wrap">
+											<table class="dashboard-table owner-bookings-table">
+												<thead>
+													<tr>
+														<th>Guest</th>
+														<th>Dates</th>
+														<th>Platform</th>
+														<th>Amount</th>
+														<th>Status</th>
+														<th>Rating</th>
+														<th>Notes</th>
+													</tr>
+												</thead>
+												<tbody id="owner-bookings-body">
+													<tr>
+														<td data-label="Guest">Loading...</td>
+														<td data-label="Dates">--</td>
+														<td data-label="Platform">--</td>
+														<td data-label="Amount">--</td>
+														<td data-label="Status">--</td>
+														<td data-label="Rating">--</td>
+														<td data-label="Notes">--</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+										<p class="owner-privacy-note">Guest contact numbers are not shown here to protect privacy. All guest communication continues through Everloft systems.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section owner-health-section" data-role-only="property_owner" data-permissions="view_property">
+								<h2>Maintenance, Housekeeping &amp; Property Health</h2>
+								<div class="owner-health-grid">
+									<article class="owner-maintenance-card">
+										<h3>Maintenance Overview</h3>
+										<ul class="owner-maintenance-list">
+											<li><strong>Open issues:</strong> <span id="owner-maintenance-open-count">--</span></li>
+											<li><strong>Completed repairs (this month):</strong> <span id="owner-maintenance-completed-count">--</span></li>
+											<li><strong>Upcoming maintenance:</strong> <span id="owner-maintenance-upcoming-count">--</span></li>
+										</ul>
+										<div class="table-wrap">
+											<table class="dashboard-table owner-maintenance-table">
+												<thead>
+													<tr>
+														<th>Type</th>
+														<th>Priority</th>
+														<th>Status</th>
+														<th>Target Date</th>
+													</tr>
+												</thead>
+												<tbody id="owner-maintenance-body">
+													<tr>
+														<td data-label="Type">--</td>
+														<td data-label="Priority">--</td>
+														<td data-label="Status">--</td>
+														<td data-label="Target Date">--</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+										<div class="owner-maintenance-photos">
+											<h4>Maintenance Photos (Before / After)</h4>
+											<ul id="owner-maintenance-photos-list">
+												<li>Illustrative images will appear here once maintenance is logged.</li>
+											</ul>
+										</div>
+									</article>
+									<article class="owner-housekeeping-card">
+										<h3>Housekeeping Status</h3>
+										<ul class="owner-housekeeping-list">
+											<li><strong>Cleaning completed:</strong> <span id="owner-housekeeping-cleaning-status">--</span></li>
+											<li><strong>Last inspection:</strong> <span id="owner-housekeeping-last-inspection">--</span></li>
+											<li><strong>Readiness:</strong> <span id="owner-housekeeping-readiness" class="owner-readiness-pill">--</span></li>
+										</ul>
+										<p id="owner-housekeeping-note">Status reflects current cycle housekeeping and inspection checkpoints.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section owner-payouts-section" data-role-only="property_owner" data-permissions="view_financials|view_only_own_data">
+								<h2>Owner Payouts</h2>
+								<p class="dashboard-meta">
+									<span>Current month payout: <strong id="owner-payout-current">--</strong></span>
+									<span>Next payout date: <strong id="owner-payout-next-date">--</strong></span>
+								</p>
+								<div class="owner-payout-grid">
+									<article class="owner-payout-history">
+										<h3>Payout History</h3>
+										<div class="table-wrap">
+											<table class="dashboard-table owner-payout-table">
+												<thead>
+													<tr>
+														<th>Period</th>
+														<th>Net Earnings</th>
+														<th>Payment Date</th>
+														<th>Statement</th>
+													</tr>
+												</thead>
+												<tbody id="owner-payout-history-body">
+													<tr>
+														<td data-label="Period">--</td>
+														<td data-label="Net Earnings">--</td>
+														<td data-label="Payment Date">--</td>
+														<td data-label="Statement">--</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</article>
+									<article class="owner-payout-meta">
+										<h3>Bank &amp; Statements</h3>
+										<p><strong>Bank account on record:</strong> <span id="owner-bank-details">--</span></p>
+										<p><button type="button" class="button small" id="owner-download-statement-btn" disabled>Download latest statement (PDF)</button></p>
+										<p class="owner-payout-note">Statements and payout status here are illustrative. Final statements will be shared through Everloft's official channels.</p>
+									</article>
+								</div>
+							</section>
+
+							<section class="dashboard-section owner-reviews-analytics-section" data-role-only="property_owner" data-permissions="view_only_own_data">
+								<h2>Guest Reviews &amp; Performance Analytics</h2>
+								<div class="owner-reviews-analytics-grid">
+									<article class="owner-reviews-card">
+										<h3>Guest Reviews</h3>
+										<p><strong>Property rating:</strong> <span id="owner-average-rating">--</span></p>
+										<ul class="owner-reviews-list" id="owner-reviews-list">
+											<li>Loading reviews...</li>
+										</ul>
+										<p><a href="#" class="dash-link" id="owner-view-more-reviews-link">View more feedback (sample)</a></p>
+									</article>
+									<article class="owner-analytics-card">
+										<h3>Performance Analytics</h3>
+										<div class="owner-analytics-kpis">
+											<p><strong>Average nightly rate:</strong> <span id="owner-analytics-avg-rate">--</span></p>
+											<p><strong>Average stay duration:</strong> <span id="owner-analytics-avg-stay">--</span></p>
+											<p><strong>Seasonal occupancy trend:</strong> <span id="owner-analytics-seasonal-trend">--</span></p>
+											<p><strong>Change vs last month:</strong> <span id="owner-analytics-vs-last-month">--</span></p>
+										</div>
+										<p id="owner-analytics-note">These analytics use controlled dummy data to demonstrate how your dashboard will summarize performance over time.</p>
 									</article>
 								</div>
 							</section>

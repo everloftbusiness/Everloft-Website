@@ -1767,6 +1767,18 @@
 		updateAssetVisibility(payload.assetKey);
 		renderAlerts(payload, roleWorkspace);
 		renderMaintenanceDashboard(state);
+		if (activeRoleKey === "property_owner" && activeRoleWidget && typeof activeRoleWidget.getOwnerDashboardData === "function") {
+			const ownerData = activeRoleWidget.getOwnerDashboardData(payload);
+			renderOwnerDashboard(ownerData);
+		}
+		if (activeRoleKey === "operations_manager" && activeRoleWidget && typeof activeRoleWidget.getOperationsDashboardData === "function") {
+			const opsData = activeRoleWidget.getOperationsDashboardData(payload);
+			renderOperationsDashboard(opsData);
+		}
+		if (activeRoleKey === "investor" && activeRoleWidget && typeof activeRoleWidget.getInvestorDashboardData === "function") {
+			const investorData = activeRoleWidget.getInvestorDashboardData(payload);
+			renderInvestorDashboard(investorData);
+		}
 		if (hasPermission("view_financials")) {
 			renderDistributionHistory(payload);
 			renderDrilldown(payload, state.selectedPeriodIndex);
@@ -1786,6 +1798,391 @@
 		}
 
 		syncRangeButtons(state.range);
+	};
+
+	const renderOwnerDashboard = function (ownerData) {
+		if (!ownerData) {
+			return;
+		}
+
+		const setNodeText = function (id, value) {
+			const node = document.getElementById(id);
+			if (node) {
+				node.textContent = value;
+			}
+		};
+
+		if (ownerData.overview) {
+			setNodeText("owner-kpi-total-bookings", ownerData.overview.totalBookings);
+			setNodeText("owner-kpi-occupancy-rate", ownerData.overview.occupancyRate);
+			setNodeText("owner-kpi-gross-revenue", ownerData.overview.grossRevenue);
+			setNodeText("owner-kpi-total-expenses", ownerData.overview.totalExpenses);
+			setNodeText("owner-kpi-net-earnings", ownerData.overview.netEarnings);
+			setNodeText("owner-kpi-payout-status", ownerData.overview.payoutStatus);
+			setNodeText("owner-kpi-payout-note", ownerData.overview.payoutNote);
+		}
+
+		if (Array.isArray(ownerData.revenueBreakdown)) {
+			const tableBody = document.getElementById("owner-revenue-breakdown-body");
+			if (tableBody) {
+				tableBody.innerHTML = ownerData.revenueBreakdown.map(function (row) {
+					return "<tr>" +
+						"<td data-label=\"Line Item\">" + row.label + "</td>" +
+						"<td data-label=\"Amount\">" + row.amount + "</td>" +
+						"<td data-label=\"Notes\">" + row.note + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (ownerData.bookingCalendar && Array.isArray(ownerData.bookingCalendar.days)) {
+			const calendarNode = document.getElementById("owner-booking-calendar");
+			if (calendarNode) {
+				const monthLabel = ownerData.bookingCalendar.monthLabel || "Current Month";
+				const days = ownerData.bookingCalendar.days.slice(0, 30);
+				const weeks = [];
+				for (let index = 0; index < days.length; index += 7) {
+					weeks.push(days.slice(index, index + 7));
+				}
+				const markup = [
+					"<p class=\"owner-calendar-month\">" + monthLabel + "</p>",
+					"<div class=\"owner-calendar-grid\">",
+					weeks.map(function (week) {
+						return "<div class=\"owner-calendar-row\">" + week.map(function (day) {
+							const statusClass = "status-" + day.status;
+							return "<span class=\"owner-calendar-cell " + statusClass + "\" aria-label=\"Day " + day.day + " (" + day.status + ")\">" +
+								"<strong>" + day.day + "</strong>" +
+							"</span>";
+						}).join("") + "</div>";
+					}).join(""),
+					"</div>"
+				].join("");
+				calendarNode.innerHTML = markup;
+			}
+		}
+
+		if (Array.isArray(ownerData.bookings)) {
+			const bookingsBody = document.getElementById("owner-bookings-body");
+			if (bookingsBody) {
+				bookingsBody.innerHTML = ownerData.bookings.map(function (booking) {
+					return "<tr>" +
+						"<td data-label=\"Guest\">" + booking.guestLabel + "</td>" +
+						"<td data-label=\"Dates\">" + booking.dates + "</td>" +
+						"<td data-label=\"Platform\">" + booking.platform + "</td>" +
+						"<td data-label=\"Amount\">" + booking.amount + "</td>" +
+						"<td data-label=\"Status\">" + booking.status + "</td>" +
+						"<td data-label=\"Rating\">" + booking.rating + "</td>" +
+						"<td data-label=\"Notes\">" + booking.notes + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (ownerData.maintenance) {
+			setNodeText("owner-maintenance-open-count", ownerData.maintenance.openIssues);
+			setNodeText("owner-maintenance-completed-count", ownerData.maintenance.completedThisMonth);
+			setNodeText("owner-maintenance-upcoming-count", ownerData.maintenance.upcoming);
+			const maintenanceBody = document.getElementById("owner-maintenance-body");
+			if (maintenanceBody && Array.isArray(ownerData.maintenance.rows)) {
+				maintenanceBody.innerHTML = ownerData.maintenance.rows.map(function (row) {
+					return "<tr>" +
+						"<td data-label=\"Type\">" + row.type + "</td>" +
+						"<td data-label=\"Priority\">" + row.priority + "</td>" +
+						"<td data-label=\"Status\">" + row.status + "</td>" +
+						"<td data-label=\"Target Date\">" + row.targetDate + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+			const photosList = document.getElementById("owner-maintenance-photos-list");
+			if (photosList && Array.isArray(ownerData.maintenance.photos)) {
+				photosList.innerHTML = ownerData.maintenance.photos.map(function (note) {
+					return "<li>" + note + "</li>";
+				}).join("");
+			}
+		}
+
+		if (ownerData.housekeeping) {
+			setNodeText("owner-housekeeping-cleaning-status", ownerData.housekeeping.cleaningStatus);
+			setNodeText("owner-housekeeping-last-inspection", ownerData.housekeeping.lastInspection);
+			const readinessNode = document.getElementById("owner-housekeeping-readiness");
+			if (readinessNode) {
+				readinessNode.textContent = ownerData.housekeeping.readiness;
+				readinessNode.classList.remove("is-ready", "is-pending");
+				if (ownerData.housekeeping.readinessTone === "ready") {
+					readinessNode.classList.add("is-ready");
+				} else if (ownerData.housekeeping.readinessTone === "pending") {
+					readinessNode.classList.add("is-pending");
+				}
+			}
+			setNodeText("owner-housekeeping-note", ownerData.housekeeping.note);
+		}
+
+		if (ownerData.payouts) {
+			setNodeText("owner-payout-current", ownerData.payouts.currentAmount);
+			setNodeText("owner-payout-next-date", ownerData.payouts.nextDate);
+			setNodeText("owner-bank-details", ownerData.payouts.bankDetails);
+			const payoutHistoryBody = document.getElementById("owner-payout-history-body");
+			if (payoutHistoryBody && Array.isArray(ownerData.payouts.history)) {
+				payoutHistoryBody.innerHTML = ownerData.payouts.history.map(function (item) {
+					return "<tr>" +
+						"<td data-label=\"Period\">" + item.period + "</td>" +
+						"<td data-label=\"Net Earnings\">" + item.amount + "</td>" +
+						"<td data-label=\"Payment Date\">" + item.date + "</td>" +
+						"<td data-label=\"Statement\"><span class=\"icon solid fa-download\" aria-hidden=\"true\"></span> " + item.reference + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (ownerData.reviews) {
+			setNodeText("owner-average-rating", ownerData.reviews.averageRating);
+			const reviewsList = document.getElementById("owner-reviews-list");
+			if (reviewsList && Array.isArray(ownerData.reviews.items)) {
+				reviewsList.innerHTML = ownerData.reviews.items.map(function (item) {
+					return "<li><strong>" + item.label + ":</strong> " + item.note + "</li>";
+				}).join("");
+			}
+		}
+
+		if (ownerData.analytics) {
+			setNodeText("owner-analytics-avg-rate", ownerData.analytics.averageNightlyRate);
+			setNodeText("owner-analytics-avg-stay", ownerData.analytics.averageStayDuration);
+			setNodeText("owner-analytics-seasonal-trend", ownerData.analytics.seasonalTrend);
+			setNodeText("owner-analytics-vs-last-month", ownerData.analytics.vsLastMonth);
+		}
+	};
+
+	const renderOperationsDashboard = function (opsData) {
+		if (!opsData) {
+			return;
+		}
+
+		const setNodeText = function (id, value) {
+			const node = document.getElementById(id);
+			if (node) {
+				node.textContent = value;
+			}
+		};
+
+		if (opsData.kpis) {
+			setNodeText("ops-kpi-active-properties", opsData.kpis.activeProperties);
+			setNodeText("ops-kpi-today-checkins", opsData.kpis.todayCheckins);
+			setNodeText("ops-kpi-today-checkouts", opsData.kpis.todayCheckouts);
+			setNodeText("ops-kpi-pending-cleaning", opsData.kpis.pendingCleaning);
+			setNodeText("ops-kpi-open-maintenance", opsData.kpis.openMaintenance);
+			setNodeText("ops-kpi-occupancy-rate", opsData.kpis.occupancyRate);
+			setNodeText("ops-kpi-revenue-month", opsData.kpis.revenueMonth);
+		}
+
+		if (opsData.todayTimeline) {
+			const renderList = function (id, items) {
+				const node = document.getElementById(id);
+				if (!node || !Array.isArray(items)) {
+					return;
+				}
+				node.innerHTML = items.map(function (item) {
+					return "<li>" + item + "</li>";
+				}).join("");
+			};
+
+			renderList("ops-timeline-morning", opsData.todayTimeline.morning);
+			renderList("ops-timeline-afternoon", opsData.todayTimeline.afternoon);
+			renderList("ops-timeline-evening", opsData.todayTimeline.evening);
+		}
+
+		if (Array.isArray(opsData.housekeepingRows)) {
+			const hkBody = document.getElementById("ops-housekeeping-body");
+			if (hkBody) {
+				hkBody.innerHTML = opsData.housekeepingRows.map(function (row) {
+					return "<tr>" +
+						"<td data-label=\"Property\">" + row.property + "</td>" +
+						"<td data-label=\"Checkout Time\">" + row.checkout + "</td>" +
+						"<td data-label=\"Cleaning Assigned\">" + row.assigned + "</td>" +
+						"<td data-label=\"Status\">" + row.status + "</td>" +
+						"<td data-label=\"Action\"><button type=\"button\" class=\"button small\">" + row.actionLabel + "</button></td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (Array.isArray(opsData.maintenanceRows)) {
+			const mtBody = document.getElementById("ops-maintenance-body");
+			if (mtBody) {
+				mtBody.innerHTML = opsData.maintenanceRows.map(function (row) {
+					const statusClass =
+						row.status.indexOf("Overdue") !== -1 ? "is-overdue" :
+						row.status.indexOf("Waiting") !== -1 ? "is-waiting" :
+						row.status.indexOf("Completed") !== -1 ? "is-completed" :
+						"";
+					return "<tr class=\"" + statusClass + "\">" +
+						"<td data-label=\"Property\">" + row.property + "</td>" +
+						"<td data-label=\"Issue\">" + row.issue + "</td>" +
+						"<td data-label=\"Priority\">" + row.priority + "</td>" +
+						"<td data-label=\"Assigned To\">" + row.assignedTo + "</td>" +
+						"<td data-label=\"Status\">" + row.status + "</td>" +
+						"<td data-label=\"Age\">" + row.age + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (opsData.bookingManagement) {
+			const renderList = function (id, items) {
+				const node = document.getElementById(id);
+				if (!node || !Array.isArray(items)) {
+					return;
+				}
+				node.innerHTML = items.map(function (item) {
+					return "<li>" + item + "</li>";
+				}).join("");
+			};
+			renderList("ops-bookings-upcoming", opsData.bookingManagement.upcoming);
+			renderList("ops-bookings-alerts", opsData.bookingManagement.alerts);
+		}
+
+		if (Array.isArray(opsData.propertyStatusRows)) {
+			const psBody = document.getElementById("ops-property-status-body");
+			if (psBody) {
+				psBody.innerHTML = opsData.propertyStatusRows.map(function (row) {
+					return "<tr>" +
+						"<td data-label=\"Property\">" + row.property + "</td>" +
+						"<td data-label=\"Next Check-in\">" + row.nextCheckin + "</td>" +
+						"<td data-label=\"Cleaning Status\">" + row.cleaning + "</td>" +
+						"<td data-label=\"Maintenance Status\">" + row.maintenance + "</td>" +
+						"<td data-label=\"Ready?\">" + row.ready + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (Array.isArray(opsData.alerts)) {
+			const alertsNode = document.getElementById("ops-alerts-list");
+			if (alertsNode) {
+				alertsNode.innerHTML = opsData.alerts.map(function (item) {
+					return "<li>" + item + "</li>";
+				}).join("");
+			}
+		}
+
+		if (opsData.analytics) {
+			setNodeText("ops-analytics-occupancy", opsData.analytics.occupancy);
+			setNodeText("ops-analytics-turnaround", opsData.analytics.turnaround);
+			setNodeText("ops-analytics-cleaning", opsData.analytics.cleaning);
+			setNodeText("ops-analytics-maintenance", opsData.analytics.maintenanceResolution);
+			setNodeText("ops-analytics-cancellations", opsData.analytics.cancellationRate);
+		}
+
+		if (opsData.staff) {
+			const renderList = function (id, items) {
+				const node = document.getElementById(id);
+				if (!node || !Array.isArray(items)) {
+					return;
+				}
+				node.innerHTML = items.map(function (item) {
+					return "<li>" + item + "</li>";
+				}).join("");
+			};
+			renderList("ops-staff-housekeeping", opsData.staff.housekeeping);
+			renderList("ops-staff-maintenance", opsData.staff.maintenance);
+			renderList("ops-staff-performance", opsData.staff.performance);
+		}
+	};
+
+	const renderInvestorDashboard = function (investorData) {
+		if (!investorData) {
+			return;
+		}
+
+		const setNodeText = function (id, value) {
+			const node = document.getElementById(id);
+			if (node) {
+				node.textContent = value;
+			}
+		};
+
+		if (investorData.portfolio) {
+			setNodeText("inv-kpi-total-properties", investorData.portfolio.totalProperties);
+			setNodeText("inv-kpi-total-invested", investorData.portfolio.totalInvested);
+			setNodeText("inv-kpi-portfolio-value", investorData.portfolio.portfolioValue);
+			setNodeText("inv-kpi-month-profit", investorData.portfolio.monthProfit);
+			setNodeText("inv-kpi-ytd-profit", investorData.portfolio.ytdProfit);
+			setNodeText("inv-kpi-total-payout", investorData.portfolio.totalPayout);
+		}
+
+		if (Array.isArray(investorData.monthlyBreakdown)) {
+			const breakdownBody = document.getElementById("inv-monthly-breakdown-body");
+			if (breakdownBody) {
+				breakdownBody.innerHTML = investorData.monthlyBreakdown.map(function (row) {
+					return "<tr>" +
+						"<td data-label=\"Line Item\">" + row.label + "</td>" +
+						"<td data-label=\"Amount\">" + row.amount + "</td>" +
+						"<td data-label=\"Notes\">" + row.note + "</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (investorData.occupancy) {
+			setNodeText("inv-occupancy-rate", investorData.occupancy.occupancyRate);
+			setNodeText("inv-total-nights", investorData.occupancy.totalNights);
+			setNodeText("inv-adr", investorData.occupancy.adr);
+			setNodeText("inv-avg-stay", investorData.occupancy.averageStay);
+			setNodeText("inv-upcoming-bookings", investorData.occupancy.upcomingBookings);
+		}
+
+		if (investorData.payouts) {
+			setNodeText("inv-bank-details", investorData.payouts.bankDetails);
+			const payoutBody = document.getElementById("inv-payout-history-body");
+			if (payoutBody && Array.isArray(investorData.payouts.history)) {
+				payoutBody.innerHTML = investorData.payouts.history.map(function (item) {
+					return "<tr>" +
+						"<td data-label=\"Month\">" + item.month + "</td>" +
+						"<td data-label=\"Net Profit\">" + item.netProfit + "</td>" +
+						"<td data-label=\"Your Share\">" + item.share + "</td>" +
+						"<td data-label=\"Status\">" + item.status + "</td>" +
+						"<td data-label=\"Paid Date\">" + item.paidDate + "</td>" +
+						"<td data-label=\"Statement\"><span class=\"icon solid fa-download\" aria-hidden=\"true\"></span> PDF</td>" +
+					"</tr>";
+				}).join("");
+			}
+		}
+
+		if (investorData.property) {
+			setNodeText("inv-property-name", investorData.property.name);
+			setNodeText("inv-property-location", investorData.property.location);
+			setNodeText("inv-property-investment", investorData.property.investmentValue);
+			setNodeText("inv-property-ownership", investorData.property.ownership);
+			setNodeText("inv-property-date", investorData.property.investmentDate);
+			setNodeText("inv-property-coinvestors", investorData.property.coInvestors);
+		}
+
+		if (investorData.health) {
+			setNodeText("inv-health-open-issues", investorData.health.openIssues);
+			setNodeText("inv-health-last-inspection", investorData.health.lastInspection);
+			setNodeText("inv-health-upgrades", investorData.health.upgrades);
+			setNodeText("inv-health-cleaning-score", investorData.health.cleaningScore);
+			setNodeText("inv-health-complaints", investorData.health.complaints);
+			setNodeText("inv-health-readiness-note", investorData.health.readinessNote);
+		}
+
+		if (investorData.guest) {
+			setNodeText("inv-guest-average-rating", investorData.guest.averageRating);
+			setNodeText("inv-guest-repeat-percent", investorData.guest.repeatPercent);
+			setNodeText("inv-guest-complaint-count", investorData.guest.complaintCount);
+			const reviewList = document.getElementById("inv-guest-reviews-list");
+			if (reviewList && Array.isArray(investorData.guest.reviews)) {
+				reviewList.innerHTML = investorData.guest.reviews.map(function (item) {
+					return "<li><strong>" + item.label + ":</strong> " + item.note + "</li>";
+				}).join("");
+			}
+		}
+
+		if (investorData.longTerm) {
+			setNodeText("inv-lt-total-profit", investorData.longTerm.totalProfit);
+			setNodeText("inv-lt-roi-percent", investorData.longTerm.roiPercent);
+			setNodeText("inv-lt-break-even", investorData.longTerm.breakEven);
+			setNodeText("inv-lt-yoy-growth", investorData.longTerm.yoyGrowth);
+		}
 	};
 
 	if (maintenanceTaskBodyNode) {
