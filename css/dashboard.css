@@ -1,0 +1,162 @@
+.super-admin-console {
+    position: relative;
+}
+
+.super-admin-console .dashboard-loading {
+    align-items: center;
+    background: rgba(17, 13, 31, 0.68);
+    backdrop-filter: blur(14px);
+    border-radius: 0.85em;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65em;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 1000;
+}
+
+.super-admin-console .dashboard-loading .loader {
+    animation: dashboard-spin 0.95s linear infinite;
+    border: solid 4px rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    border-right-color: #b74e91;
+    border-top-color: #ffffff;
+    height: 3.1em;
+    width: 3.1em;
+}
+
+@keyframes dashboard-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.super-admin-console .dashboard-warning {
+    background: #fff8ef;
+    border: solid 1px #f0debf;
+    border-radius: 0.85em;
+    color: #8c6425;
+    font-size: 0.84em;
+    font-weight: 600;
+    line-height: 1.55;
+    padding: 0.85em 1em;
+}
+
+.super-admin-console .dashboard-warning[hidden] {
+    display: none !important;
+}
+
+.super-admin-console .dashboard-filter-grid-wide {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.super-admin-console .summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.super-admin-console .insight-grid#notes-list article {
+    min-height: 100%;
+}
+
+.super-admin-console .insight-grid#notes-list h3 {
+    margin-bottom: 0.35em;
+}
+
+.super-admin-console .insight-grid#notes-list p {
+    margin-bottom: 0.45em;
+}
+
+.super-admin-console .super-admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+    margin: -0.15em 0 0.9em 0;
+}
+
+.super-admin-console .payout-grid {
+    align-items: start;
+}
+
+.super-admin-console .history-panel .table-wrap {
+    margin-top: 0.45em;
+}
+
+.super-admin-console .dashboard-table td .button,
+.super-admin-console .dashboard-table td .dash-link {
+    margin: 0 0.25em 0.25em 0;
+}
+
+.super-admin-console .dashboard-table td .button.small {
+    min-width: 0;
+    padding-left: 0.85em;
+    padding-right: 0.85em;
+}
+
+.super-admin-console .rank-positive {
+    color: #157347;
+    font-weight: 700;
+}
+
+.super-admin-console .rank-negative {
+    color: #b65823;
+    font-weight: 700;
+}
+
+.super-admin-console .opportunity-status {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin: 0 0.45em 0.25em 0;
+    padding: 0.28em 0.65em;
+    text-transform: uppercase;
+}
+
+.super-admin-console .opportunity-status.is-pipeline {
+    background: #eef3ff;
+    color: #456089;
+}
+
+.super-admin-console .opportunity-status.is-negotiation {
+    background: #fff5db;
+    color: #946200;
+}
+
+.super-admin-console .opportunity-status.is-closed {
+    background: #e7f8ef;
+    color: #157347;
+}
+
+.super-admin-console .dashboard-table tbody tr td:last-child {
+    min-width: 12em;
+}
+
+.super-admin-console .security-panel strong {
+    color: #1f3049;
+    font-size: 1.02em;
+}
+
+@media screen and (max-width: 980px) {
+    .super-admin-console .dashboard-filter-grid-wide,
+    .super-admin-console .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media screen and (max-width: 736px) {
+    .super-admin-console .dashboard-filter-grid-wide,
+    .super-admin-console .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .super-admin-console .super-admin-actions {
+        flex-direction: column;
+    }
+
+    .super-admin-console .super-admin-actions .button {
+        width: 100%;
+    }
+}

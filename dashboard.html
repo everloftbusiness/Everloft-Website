@@ -1,15 +1,318 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html>
 	<head>
-		<title>Everloft Dashboard Redirect</title>
+		<title>Everloft Dashboard | Super Admin</title>
+		<meta name="description" content="Super admin dashboard for full Everloft governance, controls, and cross-team visibility." />
 		<meta charset="utf-8" />
-		<meta http-equiv="refresh" content="0; url=/dashboard/" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<script>
-			window.location.replace("/dashboard/");
-		</script>
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="/assets/css/main.css" />
+		<link rel="stylesheet" href="/css/dashboard.css" />
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+		<script src="/js/helpers.js" defer></script>
+		<script src="/js/sheets.config.js" defer></script>
+		<script src="/js/sheets.js" defer></script>
+		<script src="/js/charts.js" defer></script>
+		<script src="/js/dashboard.js" defer></script>
 	</head>
-	<body>
-		<p>Redirecting to <a href="/dashboard/">/dashboard/</a>...</p>
+	<body class="dashboard-page role-dashboard-page role-super-admin-page">
+
+		<header id="header">
+			<a href="/" class="title">Everloft</a>
+			<nav>
+				<ul>
+					<li><a href="/"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+					<li><a href="/owner-program/"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+					<li><a href="/investor-program/"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+					<li><a href="/dashboard/" class="active"><span class="icon solid fa-th-large" aria-hidden="true"></span> Dashboard</a></li>
+					<li><a href="/login/" id="dashboard-logout"><span class="icon solid fa-sign-out-alt" aria-hidden="true"></span> Logout</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<div id="wrapper">
+			<section id="main" class="wrapper">
+				<div class="inner">
+					<div class="everloft-dashboard super-admin-console">
+						<header class="dashboard-hero">
+							<p class="eyebrow">Secure Portfolio Console</p>
+							<h1>Welcome, <span id="dashboard-user-name">Super Admin</span></h1>
+							<p id="dashboard-hero-description">Oversee bookings, finance, maintenance, approvals, notes, and new asset pipeline activity from one governance workspace.</p>
+						</header>
+
+						<div id="dashboard-loading" class="dashboard-loading">
+							<div class="loader"></div>
+							<p>Loading dashboard data...</p>
+						</div>
+						<div id="dashboard-warning" class="dashboard-warning" hidden></div>
+
+						<section class="dashboard-alert-strip" aria-label="Portfolio alerts">
+							<div class="alert-strip-head">
+								<h2>Alerts &amp; Risk Signals</h2>
+								<p id="alert-context">All Assets | All Months</p>
+							</div>
+							<ul class="alert-strip-list" id="dashboard-alert-list">
+								<li class="alert-item is-info"><span class="icon solid fa-info-circle" aria-hidden="true"></span>Loading latest alerts...</li>
+							</ul>
+						</section>
+
+						<section class="dashboard-section dashboard-controls">
+							<h2>Global Filters</h2>
+							<div class="dashboard-filter-grid dashboard-filter-grid-wide">
+								<div class="filter-field">
+									<label for="global-month-filter">Month</label>
+									<select id="global-month-filter" aria-label="Select month filter"></select>
+								</div>
+								<div class="filter-field">
+									<label for="global-asset-filter">Asset</label>
+									<select id="global-asset-filter" aria-label="Select asset filter"></select>
+								</div>
+								<div class="filter-field">
+									<label for="global-city-filter">City</label>
+									<select id="global-city-filter" aria-label="Select city filter"></select>
+								</div>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Overview</h2>
+							<p class="dashboard-meta"><span id="overview-freshness">Live data</span><span id="overview-source">Source: Google Sheets</span></p>
+							<div class="summary-grid" id="overview-cards">
+								<article class="summary-card">
+									<p class="summary-label">Loading overview</p>
+									<p class="summary-value">--</p>
+									<p class="summary-note">Please wait</p>
+								</article>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Performance Overview</h2>
+							<p class="dashboard-meta"><span id="performance-freshness">Updated from live data</span><span id="performance-source">Source: Revenue + Bookings sheets</span></p>
+							<div class="kpi-row">
+								<article class="kpi-card">
+									<p>Nights Booked</p>
+									<strong id="perf-kpi-nights">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Average Daily Rate</p>
+									<strong id="perf-kpi-adr">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Occupancy Rate</p>
+									<strong id="perf-kpi-occupancy">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Gross Revenue</p>
+									<strong id="perf-kpi-revenue">--</strong>
+								</article>
+							</div>
+							<div class="chart-grid">
+								<article class="chart-card">
+									<h3>Revenue Trend</h3>
+									<p class="chart-meta" id="revenue-chart-meta">Loading chart...</p>
+									<div class="chart-canvas-wrap">
+										<canvas id="revenue-chart" aria-label="Revenue trend chart"></canvas>
+									</div>
+									<p class="chart-note" id="chart-note">Loading insight...</p>
+								</article>
+								<article class="chart-card">
+									<h3>Occupancy Trend</h3>
+									<p class="chart-meta" id="occupancy-chart-meta">Loading chart...</p>
+									<div class="chart-canvas-wrap">
+										<canvas id="occupancy-chart" aria-label="Occupancy trend chart"></canvas>
+									</div>
+									<div class="ytd-grid" id="period-summary">
+										<p><strong>Total Revenue:</strong> --</p>
+										<p><strong>Average Occupancy:</strong> --</p>
+										<p><strong>Tracked Months:</strong> --</p>
+									</div>
+								</article>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Revenue Breakdown</h2>
+							<div class="revenue-stack">
+								<p><span>Revenue Generated</span><strong id="revenue-generated-total">INR 0</strong></p>
+								<p><span>Operational Expenses</span><strong class="is-minus" id="revenue-expense-total">INR 0</strong></p>
+								<p><span>Profit Margin</span><strong id="revenue-margin-total">0%</strong></p>
+								<p class="net-row"><span>Net Performance</span><strong id="revenue-net-total">INR 0</strong></p>
+							</div>
+							<div class="table-wrap">
+								<table class="dashboard-table">
+									<thead>
+										<tr>
+											<th>Asset</th>
+											<th>Revenue</th>
+											<th>Expenses</th>
+											<th>Net profit</th>
+										</tr>
+									</thead>
+									<tbody id="revenue-table-body">
+										<tr>
+											<td data-label="Asset">Loading revenue data...</td>
+											<td data-label="Revenue">-</td>
+											<td data-label="Expenses">-</td>
+											<td data-label="Net profit">-</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Executive Command Center</h2>
+							<p class="dashboard-meta"><span>Approval queues synced from sheet data</span><span>Source: Admin_Signups + Payouts</span></p>
+							<div class="payout-grid">
+								<article class="history-panel">
+									<h3>Pending admin signups</h3>
+									<div class="table-wrap">
+										<table class="dashboard-table">
+											<thead>
+												<tr>
+													<th>Name</th>
+													<th>Email</th>
+													<th>Role</th>
+													<th>Status</th>
+													<th>Actions</th>
+												</tr>
+											</thead>
+											<tbody id="admin-signups-body">
+												<tr>
+													<td data-label="Name">Loading admin requests...</td>
+													<td data-label="Email">-</td>
+													<td data-label="Role">-</td>
+													<td data-label="Status">-</td>
+													<td data-label="Actions">-</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</article>
+								<article class="history-panel">
+									<h3>Pending payout approvals</h3>
+									<div class="table-wrap">
+										<table class="dashboard-table">
+											<thead>
+												<tr>
+													<th>Name</th>
+													<th>Email</th>
+													<th>Role</th>
+													<th>Status</th>
+													<th>Actions</th>
+												</tr>
+											</thead>
+											<tbody id="payout-approvals-body">
+												<tr>
+													<td data-label="Name">Loading payout approvals...</td>
+													<td data-label="Email">-</td>
+													<td data-label="Role">-</td>
+													<td data-label="Status">-</td>
+													<td data-label="Actions">-</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</article>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Maintenance Dashboard</h2>
+							<div class="dashboard-filter-grid">
+								<div class="filter-field">
+									<label for="maintenance-month-filter">Month</label>
+									<select id="maintenance-month-filter" aria-label="Select maintenance month"></select>
+								</div>
+								<div class="filter-field">
+									<label for="maintenance-status-filter">Status</label>
+									<select id="maintenance-status-filter" aria-label="Select maintenance status"></select>
+								</div>
+							</div>
+							<div class="table-wrap">
+								<table class="dashboard-table">
+									<thead>
+										<tr>
+											<th>Asset</th>
+											<th>Task description</th>
+											<th>Priority</th>
+											<th>Assigned staff</th>
+											<th>Status</th>
+										</tr>
+									</thead>
+									<tbody id="maintenance-table-body">
+										<tr>
+											<td data-label="Asset">Loading maintenance tasks...</td>
+											<td data-label="Task description">-</td>
+											<td data-label="Priority">-</td>
+											<td data-label="Assigned staff">-</td>
+											<td data-label="Status">-</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Notes</h2>
+							<p class="dashboard-meta"><span>Internal annotations</span><span>Source: Notes sheet</span></p>
+							<div class="super-admin-actions">
+								<a id="notes-form-link" href="#" class="button small" target="_blank" rel="noopener">Open Note Form</a>
+								<button id="notes-add-btn" class="button small primary" type="button">Add local note</button>
+							</div>
+							<div class="insight-grid" id="notes-list">
+								<article>
+									<h3>Loading notes...</h3>
+									<p>Fetching notes from Google Sheets.</p>
+								</article>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>New Asset Opportunities</h2>
+							<p class="dashboard-meta"><span>Pipeline view</span><span>Source: New_Assets sheet</span></p>
+							<div class="table-wrap opportunity-table">
+								<table class="dashboard-table">
+									<thead>
+										<tr>
+											<th>Asset name</th>
+											<th>City</th>
+											<th>Estimated investment</th>
+											<th>Expected return</th>
+											<th>Status</th>
+										</tr>
+									</thead>
+									<tbody id="opportunities-body">
+										<tr>
+											<td data-label="Asset name">Loading opportunities...</td>
+											<td data-label="City">-</td>
+											<td data-label="Estimated investment">-</td>
+											<td data-label="Expected return">-</td>
+											<td data-label="Status">-</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						<section class="dashboard-section security-panel">
+							<h2>Security &amp; Access Controls</h2>
+							<ul>
+								<li><span class="icon solid fa-shield-alt" aria-hidden="true"></span> Role-based access controls are active for this super-admin session.</li>
+								<li><span class="icon solid fa-user-clock" aria-hidden="true"></span> Last successful login (this device): <strong id="security-last-login">Not available</strong></li>
+								<li><span class="icon solid fa-sign-in-alt" aria-hidden="true"></span> Current session started: <strong id="security-session-start">Not available</strong></li>
+								<li><span class="icon solid fa-database" aria-hidden="true"></span> Data source: <strong>Google Sheets live sync</strong></li>
+							</ul>
+						</section>
+					</div>
+				</div>
+			</section>
+		</div>
 	</body>
 </html>
