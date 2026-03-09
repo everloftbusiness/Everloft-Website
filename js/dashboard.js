@@ -220,6 +220,221 @@
             .join('');
     }
 
+    function fetchSheet(sheetName) {
+        if (Object.prototype.hasOwnProperty.call(state.raw, sheetName)) {
+            return Promise.resolve(state.raw[sheetName] || []);
+        }
+        return Sheets.fetchSheetData(sheetName).then(function (rows) {
+            state.raw[sheetName] = rows;
+            return rows;
+        });
+    }
+
+    function startOfDay(value) {
+        var date = parseDate(value || new Date());
+        if (!date) {
+            return null;
+        }
+        date = new Date(date.getTime());
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    function currentMonthKey() {
+        var today = startOfDay(new Date());
+        return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    }
+
+    function revenueMonthKey(row) {
+        var month = toNumber(readField(row, ['Month'], 0));
+        var year = toNumber(readField(row, ['Year'], 0));
+
+        if (month && year) {
+            return year + '-' + String(month).padStart(2, '0');
+        }
+
+        return toMonthKey(readField(row, ['Date', 'Period'], null));
+    }
+
+    function formatShortDate(value) {
+        var date = parseDate(value);
+        if (!date) {
+            return '-';
+        }
+        return date.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short'
+        });
+    }
+
+    function buildPropertyStatusMarkup(value) {
+        var label = value || 'Unknown';
+        var normalized = String(label).toLowerCase();
+        var chipClass = normalized.indexOf('active') !== -1 ? 'is-done' : 'is-pending';
+        return '<span class="status-chip ' + chipClass + '">' + escapeHtml(label) + '</span>';
+    }
+
+    function buildPropertyDetailsUrl(assetId) {
+        return 'property-details.html?id=' + encodeURIComponent(assetId);
+    }
+
+    function calculateOccupancy(bookings) {
+        var monthStart = startOfDay(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+        var monthEnd = startOfDay(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
+        var totalDays = Math.max(1, Math.round((monthEnd - monthStart) / 86400000));
+        var occupiedDays = bookings.reduce(function (sum, booking) {
+            var checkin = startOfDay(readField(booking, ['Checkin_Date', 'CheckIn_Date', 'CheckinDate', 'CheckIn', 'ArrivalDate'], null));
+            var checkout = startOfDay(readField(booking, ['Checkout_Date', 'CheckOut_Date', 'CheckoutDate', 'CheckOut', 'DepartureDate'], null));
+            var overlapStart;
+            var overlapEnd;
+            var days;
+
+            if (!checkin || !checkout || checkout <= monthStart || checkin >= monthEnd) {
+                return sum;
+            }
+
+            overlapStart = checkin > monthStart ? checkin : monthStart;
+            overlapEnd = checkout < monthEnd ? checkout : monthEnd;
+            days = Math.max(0, Math.round((overlapEnd - overlapStart) / 86400000));
+            return sum + days;
+        }, 0);
+
+        return Math.min(100, Math.round((occupiedDays / totalDays) * 100));
+    }
+
+    function getNextCheckin(bookings) {
+        var today = startOfDay(new Date());
+        var upcoming = bookings
+            .map(function (booking) {
+                return startOfDay(readField(booking, ['Checkin_Date', 'CheckIn_Date', 'CheckinDate', 'CheckIn', 'ArrivalDate'], null));
+            })
+            .filter(function (date) {
+                return date && date >= today;
+            })
+            .sort(function (left, right) {
+                return left - right;
+            });
+
+        return upcoming.length ? upcoming[0] : null;
+    }
+
+    function renderPropertyTable(rows) {
+        var body = document.getElementById('managing-properties-body');
+
+        if (!body) {
+            return;
+        }
+
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="7">No managed properties found.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = rows
+            .map(function (row) {
+                return [
+                    '<tr data-property-url="' + escapeHtml(row.url) + '" tabindex="0" role="link" style="cursor:pointer">',
+                    '<td data-label="Property"><strong>' + escapeHtml(row.property) + '</strong></td>',
+                    '<td data-label="City">' + escapeHtml(row.city) + '</td>',
+                    '<td data-label="Status">' + row.status + '</td>',
+                    '<td data-label="Occupancy">' + escapeHtml(row.occupancy) + '</td>',
+                    '<td data-label="Revenue">' + escapeHtml(row.revenue) + '</td>',
+                    '<td data-label="Next Checkin">' + escapeHtml(row.nextCheckin) + '</td>',
+                    '<td data-label="Action"><a class="button small primary" href="' + escapeHtml(row.url) + '">View</a></td>',
+                    '</tr>'
+                ].join('');
+            })
+            .join('');
+
+        Array.prototype.forEach.call(body.querySelectorAll('tr[data-property-url]'), function (rowNode) {
+            var targetUrl = rowNode.getAttribute('data-property-url');
+            rowNode.addEventListener('click', function (event) {
+                if (event.target && event.target.closest && event.target.closest('a, button')) {
+                    return;
+                }
+                window.location.href = targetUrl;
+            });
+            rowNode.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    window.location.href = targetUrl;
+                }
+            });
+        });
+    }
+
+    function loadManagingProperties() {
+        var body = document.getElementById('managing-properties-body');
+        var selectedAsset = state.filters.asset;
+        var selectedCity = state.filters.city;
+        var activeRevenueMonth = currentMonthKey();
+
+        if (body) {
+            body.innerHTML = '<tr><td colspan="7">Loading properties...</td></tr>';
+        }
+        setNodeText('managing-properties-count', 'Loading properties...');
+
+        return Promise.all([fetchSheet('Assets'), fetchSheet('Bookings'), fetchSheet('Revenue')])
+            .then(function (results) {
+                var assets = results[0] || [];
+                var bookings = results[1] || [];
+                var revenueRows = results[2] || [];
+                var visibleAssets = assets.filter(function (asset) {
+                    var assetId = String(readField(asset, ['Asset_ID', 'AssetId', 'ID'], '')).trim();
+                    var propertyName = readField(asset, ['Property_Name', 'PropertyName', 'Asset', 'AssetName', 'Name'], 'Unnamed Property');
+                    var city = readField(asset, ['City', 'city', 'Location'], '-');
+                    var assetMatches = selectedAsset === 'all' || selectedAsset === propertyName || selectedAsset === assetId;
+                    var cityMatches = selectedCity === 'all' || selectedCity === city;
+                    return Boolean(assetId) && assetMatches && cityMatches;
+                });
+
+                var rows = visibleAssets
+                    .map(function (asset) {
+                        var assetId = String(readField(asset, ['Asset_ID', 'AssetId', 'ID'], '')).trim();
+                        var assetBookings = bookings.filter(function (booking) {
+                            return String(readField(booking, ['Asset_ID', 'AssetId', 'Property_ID'], '')).trim() === assetId;
+                        });
+                        var currentRevenue = revenueRows.reduce(function (sum, row) {
+                            var rowAssetId = String(readField(row, ['Asset_ID', 'AssetId', 'Property_ID'], '')).trim();
+                            if (rowAssetId !== assetId || revenueMonthKey(row) !== activeRevenueMonth) {
+                                return sum;
+                            }
+                            return sum + toNumber(readField(row, ['Net_Amount', 'NetAmount', 'Net'], 0));
+                        }, 0);
+                        var nextCheckin = getNextCheckin(assetBookings);
+
+                        return {
+                            assetId: assetId,
+                            property: readField(asset, ['Property_Name', 'PropertyName', 'Asset', 'AssetName', 'Name'], 'Unnamed Property'),
+                            city: readField(asset, ['City', 'city', 'Location'], '-'),
+                            status: buildPropertyStatusMarkup(readField(asset, ['Status', 'status'], 'Unknown')),
+                            occupancy: calculateOccupancy(assetBookings) + '%',
+                            revenue: Helpers.formatCurrency(currentRevenue),
+                            nextCheckin: nextCheckin ? formatShortDate(nextCheckin) : 'No upcoming check-in',
+                            url: buildPropertyDetailsUrl(assetId)
+                        };
+                    })
+                    .sort(function (left, right) {
+                        return String(left.property).localeCompare(String(right.property));
+                    });
+
+                setNodeText(
+                    'managing-properties-count',
+                    rows.length === 1 ? '1 property visible' : rows.length + ' properties visible'
+                );
+                renderPropertyTable(rows);
+            })
+            .catch(function (error) {
+                if (body) {
+                    body.innerHTML =
+                        '<tr><td colspan="7">' +
+                        escapeHtml(error && error.message ? error.message : 'Unable to load properties.') +
+                        '</td></tr>';
+                }
+                setNodeText('managing-properties-count', 'Unable to load properties');
+            });
+    }
+
     function collectFilterOptions() {
         var bookings = state.raw.Bookings || [];
         var revenue = state.raw.Revenue || [];
@@ -1098,6 +1313,7 @@
         showDataWarning();
         loadAlerts();
         loadOverview();
+        loadManagingProperties();
         loadPerformance();
         loadRevenue();
         loadExecutive();

@@ -1,0 +1,130 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Everloft Dashboard | Property Details</title>
+		<meta name="description" content="Property details and performance view for Everloft managed assets." />
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<meta name="theme-color" content="#312450" />
+		<link rel="stylesheet" href="/assets/css/main.css" />
+		<link rel="stylesheet" href="/css/dashboard.css" />
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+		<script src="/js/helpers.js" defer></script>
+		<script src="/js/sheets.config.js" defer></script>
+		<script src="/js/sheets.js" defer></script>
+		<script src="/js/property-details.js" defer></script>
+	</head>
+	<body class="dashboard-page role-dashboard-page role-super-admin-page">
+		<header id="header">
+			<a href="/" class="title">Everloft</a>
+			<nav>
+				<ul>
+					<li><a href="/"><span class="icon solid fa-home" aria-hidden="true"></span> Home</a></li>
+					<li><a href="/owner-program/"><span class="icon solid fa-key" aria-hidden="true"></span> Owner Program</a></li>
+					<li><a href="/investor-program/"><span class="icon solid fa-chart-line" aria-hidden="true"></span> Investor Program</a></li>
+					<li><a href="/dashboard.html" class="active"><span class="icon solid fa-th-large" aria-hidden="true"></span> Dashboard</a></li>
+					<li><a href="/login/" id="property-dashboard-logout"><span class="icon solid fa-sign-out-alt" aria-hidden="true"></span> Logout</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<div id="wrapper">
+			<section id="main" class="wrapper">
+				<div class="inner">
+					<div class="everloft-dashboard super-admin-console">
+						<header class="dashboard-hero">
+							<p class="eyebrow">Property Details</p>
+							<h1 id="property-title">Loading property...</h1>
+							<p id="property-subtitle">Fetching property details from Google Sheets.</p>
+							<div class="super-admin-actions">
+								<a href="/dashboard.html" class="button small"><span class="icon solid fa-arrow-left" aria-hidden="true"></span> Back to Dashboard</a>
+							</div>
+						</header>
+
+						<div id="property-details-loading" class="dashboard-loading">
+							<div class="loader"></div>
+							<p>Loading property details...</p>
+						</div>
+						<div id="property-details-warning" class="dashboard-warning" hidden></div>
+
+						<section class="dashboard-section">
+							<h2>Property Information</h2>
+							<p class="dashboard-meta"><span id="property-info-meta">Source: Assets sheet</span><span id="property-info-id">Asset ID: --</span></p>
+							<div class="summary-grid" id="property-summary-cards">
+								<article class="summary-card">
+									<p class="summary-label">Loading property</p>
+									<p class="summary-value">--</p>
+									<p class="summary-note">Please wait</p>
+								</article>
+							</div>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Property Revenue Summary</h2>
+							<div class="kpi-row">
+								<article class="kpi-card">
+									<p>Current Month Revenue</p>
+									<strong id="property-revenue-current">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Total Net Revenue</p>
+									<strong id="property-revenue-total">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Tracked Months</p>
+									<strong id="property-revenue-months">--</strong>
+								</article>
+								<article class="kpi-card">
+									<p>Latest Revenue Month</p>
+									<strong id="property-revenue-latest">--</strong>
+								</article>
+							</div>
+							<article class="chart-card">
+								<h3>Monthly Net Revenue</h3>
+								<p class="chart-meta" id="property-revenue-chart-meta">Loading revenue trend...</p>
+								<div class="chart-canvas-wrap">
+									<canvas id="property-revenue-chart" aria-label="Property revenue chart"></canvas>
+								</div>
+								<p class="chart-note" id="property-revenue-chart-note">Revenue data will appear after the sheet loads.</p>
+							</article>
+						</section>
+
+						<section class="dashboard-section">
+							<h2>Property Bookings</h2>
+							<p class="dashboard-meta"><span id="property-bookings-meta">Loading bookings...</span><span>Source: Bookings sheet</span></p>
+							<div class="table-wrap">
+								<table class="dashboard-table">
+									<thead>
+										<tr>
+											<th>Guest Name</th>
+											<th>Checkin Date</th>
+											<th>Checkout Date</th>
+											<th>Source</th>
+											<th>Amount</th>
+											<th>Status</th>
+										</tr>
+									</thead>
+									<tbody id="property-bookings-body">
+										<tr>
+											<td data-label="Guest Name">Loading bookings...</td>
+											<td data-label="Checkin Date">-</td>
+											<td data-label="Checkout Date">-</td>
+											<td data-label="Source">-</td>
+											<td data-label="Amount">-</td>
+											<td data-label="Status">-</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</section>
+					</div>
+				</div>
+			</section>
+		</div>
+	</body>
+</html>
