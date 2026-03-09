@@ -584,6 +584,8 @@
 	const kpiAdr = document.getElementById("kpi-adr");
 	const kpiOcc = document.getElementById("kpi-occupancy");
 	const kpiRev = document.getElementById("kpi-revenue");
+	const managingPropertiesCountNode = document.getElementById("managing-properties-count");
+	const managingPropertiesBodyNode = document.getElementById("managing-properties-body");
 	const assetCards = Array.prototype.slice.call(document.querySelectorAll(".asset-card[data-asset-key]"));
 	const roleWorkspaceTitleNode = document.getElementById("role-workspace-title");
 	const roleLevelTextNode = document.getElementById("role-level-text");
@@ -735,6 +737,253 @@
 			.replace(/>/g, "&gt;")
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#39;");
+	};
+
+	const readSheetField = function (row, keys, fallback) {
+		if (!row) {
+			return fallback;
+		}
+		for (let index = 0; index < keys.length; index += 1) {
+			const key = keys[index];
+			if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+				return row[key];
+			}
+		}
+		return fallback;
+	};
+
+	const toNumberSafe = function (value) {
+		const parsedValue = Number(value);
+		return Number.isNaN(parsedValue) ? 0 : parsedValue;
+	};
+
+	const parseSheetDate = function (value) {
+		const parsedDate = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+		return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+	};
+
+	const startOfDay = function (value) {
+		const date = parseSheetDate(value || new Date());
+		if (!date) {
+			return null;
+		}
+		date.setHours(0, 0, 0, 0);
+		return date;
+	};
+
+	const formatShortDate = function (value) {
+		const date = parseSheetDate(value);
+		if (!date) {
+			return "-";
+		}
+		return date.toLocaleDateString("en-IN", {
+			day: "2-digit",
+			month: "short"
+		});
+	};
+
+	const currentMonthKey = function () {
+		const today = startOfDay(new Date());
+		return today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0");
+	};
+
+	const revenueMonthKey = function (row) {
+		const month = toNumberSafe(readSheetField(row, ["Month"], 0));
+		const year = toNumberSafe(readSheetField(row, ["Year"], 0));
+		if (month && year) {
+			return year + "-" + String(month).padStart(2, "0");
+		}
+		const parsedDate = parseSheetDate(readSheetField(row, ["Date", "Period"], null));
+		if (!parsedDate) {
+			return null;
+		}
+		return parsedDate.getFullYear() + "-" + String(parsedDate.getMonth() + 1).padStart(2, "0");
+	};
+
+	const calculateManagingOccupancy = function (bookings) {
+		const monthStart = startOfDay(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+		const monthEnd = startOfDay(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
+		const totalDays = Math.max(1, Math.round((monthEnd - monthStart) / 86400000));
+		const occupiedDays = bookings.reduce(function (sum, booking) {
+			const checkin = startOfDay(readSheetField(booking, ["Checkin_Date", "CheckIn_Date", "CheckinDate", "CheckIn", "ArrivalDate"], null));
+			const checkout = startOfDay(readSheetField(booking, ["Checkout_Date", "CheckOut_Date", "CheckoutDate", "CheckOut", "DepartureDate"], null));
+			if (!checkin || !checkout || checkout <= monthStart || checkin >= monthEnd) {
+				return sum;
+			}
+			const overlapStart = checkin > monthStart ? checkin : monthStart;
+			const overlapEnd = checkout < monthEnd ? checkout : monthEnd;
+			return sum + Math.max(0, Math.round((overlapEnd - overlapStart) / 86400000));
+		}, 0);
+		return Math.min(100, Math.round((occupiedDays / totalDays) * 100));
+	};
+
+	const getManagingNextCheckin = function (bookings) {
+		const today = startOfDay(new Date());
+		const upcomingDates = bookings
+			.map(function (booking) {
+				return startOfDay(readSheetField(booking, ["Checkin_Date", "CheckIn_Date", "CheckinDate", "CheckIn", "ArrivalDate"], null));
+			})
+			.filter(function (date) {
+				return date && date >= today;
+			})
+			.sort(function (left, right) {
+				return left - right;
+			});
+		return upcomingDates.length ? upcomingDates[0] : null;
+	};
+
+	const buildManagingPropertyStatus = function (value) {
+		const label = value || "Unknown";
+		const normalized = String(label).toLowerCase();
+		const chipClass = normalized.indexOf("active") !== -1 ? "is-done" : "is-pending";
+		return "<span class=\"status-chip " + chipClass + "\">" + escapeHtml(label) + "</span>";
+	};
+
+	const buildPropertyDetailsUrl = function (assetId) {
+		return "/property-details.html?id=" + encodeURIComponent(assetId);
+	};
+
+	const managingPropertiesState = {
+		hasLoaded: false,
+		loadingPromise: null,
+		rows: [],
+		error: ""
+	};
+
+	const renderManagingProperties = function (rows, metaText) {
+		if (!managingPropertiesBodyNode) {
+			return;
+		}
+
+		if (managingPropertiesCountNode) {
+			managingPropertiesCountNode.textContent = metaText;
+		}
+
+		if (!rows.length) {
+			managingPropertiesBodyNode.innerHTML = "<tr><td data-label=\"Property\" colspan=\"7\">" + escapeHtml(metaText) + "</td></tr>";
+			return;
+		}
+
+		managingPropertiesBodyNode.innerHTML = rows.map(function (row) {
+			return "<tr data-property-url=\"" + escapeHtml(row.url) + "\" tabindex=\"0\" role=\"link\">" +
+				"<td data-label=\"Property\"><strong>" + escapeHtml(row.property) + "</strong></td>" +
+				"<td data-label=\"City\">" + escapeHtml(row.city) + "</td>" +
+				"<td data-label=\"Status\">" + row.status + "</td>" +
+				"<td data-label=\"Occupancy\">" + escapeHtml(row.occupancy) + "</td>" +
+				"<td data-label=\"Revenue\">" + escapeHtml(row.revenue) + "</td>" +
+				"<td data-label=\"Next Checkin\">" + escapeHtml(row.nextCheckin) + "</td>" +
+				"<td data-label=\"Action\"><a href=\"" + escapeHtml(row.url) + "\" class=\"button small primary\">View</a></td>" +
+			"</tr>";
+		}).join("");
+
+		Array.prototype.slice.call(managingPropertiesBodyNode.querySelectorAll("tr[data-property-url]")).forEach(function (rowNode) {
+			const targetUrl = rowNode.getAttribute("data-property-url");
+			rowNode.style.cursor = "pointer";
+			rowNode.addEventListener("click", function (event) {
+				if (event.target && event.target.closest && event.target.closest("a, button")) {
+					return;
+				}
+				window.location.href = targetUrl;
+			});
+			rowNode.addEventListener("keydown", function (event) {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					window.location.href = targetUrl;
+				}
+			});
+		});
+	};
+
+	const fetchManagingSheet = function (sheetName) {
+		const sheetsApi = global.SuperAdminDashboard && global.SuperAdminDashboard.Sheets;
+		if (!sheetsApi || typeof sheetsApi.fetchSheetData !== "function") {
+			return Promise.reject(new Error("Google Sheets integration is not available on this page."));
+		}
+		return sheetsApi.fetchSheetData(sheetName);
+	};
+
+	const loadManagingProperties = function () {
+		if (!managingPropertiesBodyNode) {
+			return Promise.resolve([]);
+		}
+
+		if (managingPropertiesState.hasLoaded) {
+			const loadedText = managingPropertiesState.rows.length === 1
+				? "1 property visible"
+				: managingPropertiesState.rows.length + " properties visible";
+			renderManagingProperties(managingPropertiesState.rows, loadedText);
+			return Promise.resolve(managingPropertiesState.rows);
+		}
+
+		if (managingPropertiesState.error) {
+			renderManagingProperties([], managingPropertiesState.error);
+			return Promise.resolve([]);
+		}
+
+		if (managingPropertiesState.loadingPromise) {
+			return managingPropertiesState.loadingPromise;
+		}
+
+		renderManagingProperties([], "Loading properties...");
+		managingPropertiesState.loadingPromise = Promise.all([
+			fetchManagingSheet("Assets"),
+			fetchManagingSheet("Bookings"),
+			fetchManagingSheet("Revenue")
+		]).then(function (results) {
+			const assets = Array.isArray(results[0]) ? results[0] : [];
+			const bookings = Array.isArray(results[1]) ? results[1] : [];
+			const revenueRows = Array.isArray(results[2]) ? results[2] : [];
+			const currentRevenueMonth = currentMonthKey();
+
+			managingPropertiesState.rows = assets
+				.filter(function (asset) {
+					const assetId = String(readSheetField(asset, ["Asset_ID", "AssetId", "ID"], "")).trim();
+					return Boolean(assetId);
+				})
+				.map(function (asset) {
+					const assetId = String(readSheetField(asset, ["Asset_ID", "AssetId", "ID"], "")).trim();
+					const assetBookings = bookings.filter(function (booking) {
+						return String(readSheetField(booking, ["Asset_ID", "AssetId", "Property_ID"], "")).trim() === assetId;
+					});
+					const currentRevenue = revenueRows.reduce(function (sum, row) {
+						const rowAssetId = String(readSheetField(row, ["Asset_ID", "AssetId", "Property_ID"], "")).trim();
+						if (rowAssetId !== assetId || revenueMonthKey(row) !== currentRevenueMonth) {
+							return sum;
+						}
+						return sum + toNumberSafe(readSheetField(row, ["Net_Amount", "NetAmount", "Net"], 0));
+					}, 0);
+					const nextCheckin = getManagingNextCheckin(assetBookings);
+					return {
+						property: readSheetField(asset, ["Property_Name", "PropertyName", "Asset", "AssetName", "Name"], "Unnamed Property"),
+						city: readSheetField(asset, ["City", "city", "Location"], "-"),
+						status: buildManagingPropertyStatus(readSheetField(asset, ["Status", "status"], "Unknown")),
+						occupancy: calculateManagingOccupancy(assetBookings) + "%",
+						revenue: formatInr(currentRevenue),
+						nextCheckin: nextCheckin ? formatShortDate(nextCheckin) : "No upcoming check-in",
+						url: buildPropertyDetailsUrl(assetId)
+					};
+				})
+				.sort(function (left, right) {
+					return String(left.property).localeCompare(String(right.property));
+				});
+
+			managingPropertiesState.hasLoaded = true;
+			const loadedText = managingPropertiesState.rows.length === 1
+				? "1 property visible"
+				: managingPropertiesState.rows.length + " properties visible";
+			renderManagingProperties(managingPropertiesState.rows, loadedText);
+			return managingPropertiesState.rows;
+		}).catch(function (error) {
+			managingPropertiesState.error = error && error.message
+				? error.message
+				: "Unable to load properties from Google Sheets.";
+			renderManagingProperties([], managingPropertiesState.error);
+			return [];
+		}).finally(function () {
+			managingPropertiesState.loadingPromise = null;
+		});
+
+		return managingPropertiesState.loadingPromise;
 	};
 
 	const readExpenseClaims = function () {
@@ -1783,6 +2032,7 @@
 			renderDistributionHistory(payload);
 			renderDrilldown(payload, state.selectedPeriodIndex);
 		}
+		loadManagingProperties();
 		renderFreshness();
 		renderSecuritySummary();
 

@@ -318,6 +318,31 @@
 							</section>
 
 							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
+								<h2>Managing Properties</h2>
+								<p class="dashboard-meta"><span id="managing-properties-count">Loading properties...</span><span>Source: Google Sheets</span></p>
+								<div class="table-wrap">
+									<table class="dashboard-table">
+										<thead>
+											<tr>
+												<th>Property</th>
+												<th>City</th>
+												<th>Status</th>
+												<th>Occupancy</th>
+												<th>Revenue</th>
+												<th>Next Checkin</th>
+												<th>Action</th>
+											</tr>
+										</thead>
+										<tbody id="managing-properties-body">
+											<tr>
+												<td data-label="Property" colspan="7">Loading properties...</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</section>
+
+							<section class="dashboard-section" data-permissions="view_property" data-hide-for-role="maintenance">
 								<h2>Asset Portfolio</h2>
 								<div class="asset-list">
 									<article class="asset-card" data-asset-key="marari">
@@ -611,6 +636,9 @@
 			<script src="/assets/js/main.js"></script>
 			<script src="/screens/core/code/namespace.js"></script>
 			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+			<script src="/js/helpers.js?v=20260309"></script>
+			<script src="/js/sheets.config.js?v=20260309"></script>
+			<script src="/js/sheets.js?v=20260309"></script>
 			<script src="/screens/dashboard/code/widgets/dashboard-shell.widget.js?v=20260226"></script>
 			<script src="/screens/dashboard/code/widgets/roles/super-admin.widget.js?v=20260226"></script>
 			<script src="/screens/dashboard/code/widgets/roles/finance-admin.widget.js?v=20260226"></script>
@@ -623,7 +651,7 @@
 			<script src="/screens/dashboard/code/widgets/roles/property-owner.widget.js?v=20260226"></script>
 			<script src="/screens/dashboard/code/widgets/roles/guest.widget.js?v=20260227"></script>
 			<script src="/screens/dashboard/code/widgets/roles/investor.widget.js?v=20260226"></script>
-			<script src="/screens/dashboard/code/screen/dashboard.presenter.js?v=20260227"></script>
+			<script src="/screens/dashboard/code/screen/dashboard.presenter.js?v=20260309"></script>
 			<script src="/screens/core/code/app.js"></script>
 
 	</body>
