@@ -1,0 +1,424 @@
+import "server-only";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getSignedDownloadUrl, type Bucket } from "@/lib/storage/r2";
+import type { Database } from "@/lib/supabase/types";
+import type {
+  PropertyListItem,
+  PropertyDetail,
+  LookupOption,
+  OwnerOption,
+  PublicPropertyListItem,
+  PublicPropertyDetail,
+} from "@/features/properties/types/property.types";
+
+type PropertiesUpdate = Database["public"]["Tables"]["properties"]["Update"];
+
+/**
+ * Guest-facing collection for the marketing site. The service role is used
+ * deliberately because public visitors have no Supabase session and RLS keeps
+ * operational property/file data private. This function selects only active
+ * listings and the small set of display-safe fields below.
+ */
+export async function listPublicActiveProperties(limit = 6): Promise<PublicPropertyListItem[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+
+  const supabase = createAdminClient();
+  const { data: activeStatus, error: statusError } = await supabase
+    .from("property_status")
+    .select("id")
+    .eq("slug", "active")
+    .maybeSingle();
+  if (statusError) throw statusError;
+  if (!activeStatus) return [];
+
+  const { data: properties, error: propertiesError } = await supabase
+    .from("properties")
+    .select("id, slug, name, city, area, type_id, bedrooms, bathrooms, max_guests, currency")
+    .eq("status_id", activeStatus.id)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (propertiesError) throw propertiesError;
+  if (!properties?.length) return [];
+
+  const propertyIds = properties.map((property) => property.id);
+  const typeIds = [...new Set(properties.map((property) => property.type_id).filter((id): id is string => Boolean(id)))];
+  const [{ data: types, error: typesError }, { data: pricing, error: pricingError }, { data: photos, error: photosError }] = await Promise.all([
+    typeIds.length > 0
+      ? supabase.from("property_types").select("id, name").in("id", typeIds)
+      : Promise.resolve({ data: [], error: null }),
+    // property_pricing is a one-to-one rate card and has no soft-delete column.
+    supabase.from("property_pricing").select("property_id, base_price").in("property_id", propertyIds),
+    supabase
+      .from("property_photos")
+      .select("property_id, file_id")
+      .in("property_id", propertyIds)
+      .eq("is_cover", true)
+      .is("deleted_at", null),
+  ]);
+  if (typesError) throw typesError;
+  if (pricingError) throw pricingError;
+  if (photosError) throw photosError;
+
+  const fileIds = (photos ?? []).map((photo) => photo.file_id);
+  const { data: files, error: filesError } = fileIds.length > 0
+    ? await supabase.from("files").select("id, public_url, bucket, object_key").in("id", fileIds).is("deleted_at", null)
+    : { data: [], error: null };
+  if (filesError) throw filesError;
+
+  const typeNames = new Map((types ?? []).map((type) => [type.id, type.name]));
+  const prices = new Map((pricing ?? []).map((row) => [row.property_id, Number(row.base_price)]));
+  // Property-image buckets can be public, but a custom R2 public domain is
+  // optional. Use a short-lived signed URL when no permanent URL exists.
+  const filesById = new Map(
+    await Promise.all(
+      (files ?? []).map(async (file) => {
+        if (file.public_url) return [file.id, file.public_url] as const;
+        try {
+          return [file.id, await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 })] as const;
+        } catch {
+          return [file.id, null] as const;
+        }
+      })
+    )
+  );
+  const coverFileByProperty = new Map((photos ?? []).map((photo) => [photo.property_id, photo.file_id]));
+
+  return properties.map((property) => ({
+    id: property.id,
+    slug: property.slug,
+    name: property.name,
+    city: property.city,
+    area: property.area,
+    typeName: property.type_id ? (typeNames.get(property.type_id) ?? null) : null,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    maxGuests: property.max_guests,
+    currency: property.currency,
+    nightlyPrice: prices.get(property.id) ?? null,
+    coverImageUrl: filesById.get(coverFileByProperty.get(property.id) ?? "") ?? null,
+  }));
+}
+
+export async function getPublicActivePropertyBySlug(slug: string): Promise<PublicPropertyDetail | null> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+
+  const supabase = createAdminClient();
+  const { data: activeStatus, error: statusError } = await supabase
+    .from("property_status")
+    .select("id")
+    .eq("slug", "active")
+    .maybeSingle();
+  if (statusError) throw statusError;
+  if (!activeStatus) return null;
+
+  const { data: property, error: propertyError } = await supabase
+    .from("properties")
+    .select("id, slug, name, city, area, address, description, highlights, property_area_sqft, type_id, bedrooms, bathrooms, max_guests, currency")
+    .eq("slug", slug)
+    .eq("status_id", activeStatus.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (propertyError) throw propertyError;
+  if (!property) return null;
+
+  const [{ data: type, error: typeError }, { data: pricing, error: pricingError }, { data: amenityRows, error: amenitiesError }, { data: photoRows, error: photosError }] = await Promise.all([
+    property.type_id ? supabase.from("property_types").select("name").eq("id", property.type_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    supabase.from("property_pricing").select("base_price").eq("property_id", property.id).maybeSingle(),
+    supabase.from("property_amenities").select("amenity_id").eq("property_id", property.id).is("deleted_at", null),
+    supabase.from("property_photos").select("file_id, is_cover, sort_order").eq("property_id", property.id).is("deleted_at", null).order("sort_order"),
+  ]);
+  if (typeError) throw typeError;
+  if (pricingError) throw pricingError;
+  if (amenitiesError) throw amenitiesError;
+  if (photosError) throw photosError;
+
+  const amenityIds = (amenityRows ?? []).map((row) => row.amenity_id);
+  const fileIds = (photoRows ?? []).map((row) => row.file_id);
+  const [{ data: amenities, error: amenityNamesError }, { data: files, error: filesError }] = await Promise.all([
+    amenityIds.length > 0 ? supabase.from("amenity_master").select("id, name").in("id", amenityIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
+    fileIds.length > 0 ? supabase.from("files").select("id, public_url, bucket, object_key").in("id", fileIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (amenityNamesError) throw amenityNamesError;
+  if (filesError) throw filesError;
+
+  const fileUrls = new Map(await Promise.all((files ?? []).map(async (file) => {
+    if (file.public_url) return [file.id, file.public_url] as const;
+    try {
+      return [file.id, await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 })] as const;
+    } catch {
+      return [file.id, null] as const;
+    }
+  })));
+  const photos = (photoRows ?? [])
+    .map((photo) => fileUrls.get(photo.file_id))
+    .filter((url): url is string => Boolean(url))
+    .map((url) => ({ url, alt: property.name }));
+
+  return {
+    id: property.id,
+    slug: property.slug,
+    name: property.name,
+    city: property.city,
+    area: property.area,
+    typeName: type?.name ?? null,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    maxGuests: property.max_guests,
+    currency: property.currency,
+    nightlyPrice: pricing?.base_price ? Number(pricing.base_price) : null,
+    coverImageUrl: photos[0]?.url ?? null,
+    address: property.address,
+    description: property.description,
+    highlights: property.highlights ?? [],
+    propertyAreaSqft: property.property_area_sqft,
+    amenities: (amenities ?? []).map((amenity) => amenity.name),
+    photos,
+  };
+}
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function uniqueSlug(supabase: Awaited<ReturnType<typeof createClient>>, name: string): Promise<string> {
+  const base = slugify(name) || "property";
+  let candidate = base;
+  let attempt = 0;
+  while (true) {
+    const { data } = await supabase.from("properties").select("id").eq("slug", candidate).maybeSingle();
+    if (!data) return candidate;
+    attempt += 1;
+    candidate = `${base}-${attempt + 1}`;
+  }
+}
+
+async function describeOwners(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: { owner_id: string | null; managed_by: string | null }[]
+) {
+  const ids = [...new Set(rows.flatMap((r) => [r.owner_id, r.managed_by]).filter((id): id is string => Boolean(id)))];
+  const map = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+    for (const p of data ?? []) map.set(p.id, p.full_name || p.email || "Unknown");
+  }
+  return map;
+}
+
+export async function listProperties(filters: {
+  search?: string;
+  statusSlug?: string;
+  typeId?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ properties: PropertyListItem[]; total: number; page: number; pageSize: number }> {
+  const supabase = await createClient();
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 25;
+
+  const [{ data: types }, { data: statuses }] = await Promise.all([
+    supabase.from("property_types").select("id, slug, name"),
+    supabase.from("property_status").select("id, slug, name"),
+  ]);
+  const typeMap = new Map((types ?? []).map((t) => [t.id, t.name]));
+  const statusMap = new Map((statuses ?? []).map((s) => [s.id, { slug: s.slug, name: s.name }]));
+
+  let query = supabase
+    .from("properties")
+    .select("id, name, slug, internal_code, city, type_id, status_id, owner_id, managed_by, max_guests", {
+      count: "exact",
+    })
+    .is("deleted_at", null);
+
+  if (filters.search) query = query.ilike("name", `%${filters.search}%`);
+  if (filters.typeId) query = query.eq("type_id", filters.typeId);
+  if (filters.statusSlug) {
+    const statusId = [...statusMap.entries()].find(([, v]) => v.slug === filters.statusSlug)?.[0];
+    if (statusId) query = query.eq("status_id", statusId);
+  }
+
+  const from = (page - 1) * pageSize;
+  const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, from + pageSize - 1);
+  if (error) throw error;
+
+  const ownerMap = await describeOwners(supabase, data ?? []);
+
+  const properties: PropertyListItem[] = (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    internalCode: row.internal_code,
+    city: row.city,
+    typeName: row.type_id ? (typeMap.get(row.type_id) ?? null) : null,
+    statusSlug: row.status_id ? (statusMap.get(row.status_id)?.slug ?? null) : null,
+    statusName: row.status_id ? (statusMap.get(row.status_id)?.name ?? null) : null,
+    ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
+    managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
+    maxGuests: row.max_guests,
+  }));
+
+  return { properties, total: count ?? 0, page, pageSize };
+}
+
+export async function getProperty(id: string): Promise<PropertyDetail | null> {
+  const supabase = await createClient();
+  const { data: row, error } = await supabase.from("properties").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  if (!row) return null;
+
+  const [{ data: type }, { data: status }, ownerMap] = await Promise.all([
+    row.type_id ? supabase.from("property_types").select("name").eq("id", row.type_id).maybeSingle() : Promise.resolve({ data: null }),
+    row.status_id
+      ? supabase.from("property_status").select("slug, name").eq("id", row.status_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    describeOwners(supabase, [row]),
+  ]);
+
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    internalCode: row.internal_code,
+    city: row.city,
+    typeName: type?.name ?? null,
+    statusSlug: status?.slug ?? null,
+    statusName: status?.name ?? null,
+    ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
+    managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
+    maxGuests: row.max_guests,
+    country: row.country,
+    state: row.state,
+    address: row.address,
+    description: row.description,
+    shortDescription: row.short_description,
+    bedrooms: row.bedrooms,
+    bathrooms: row.bathrooms,
+    currency: row.currency,
+    typeId: row.type_id,
+    statusId: row.status_id,
+    categoryId: row.category_id,
+    ownerId: row.owner_id,
+    managedBy: row.managed_by,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getPropertyLookups(): Promise<{
+  types: LookupOption[];
+  statuses: LookupOption[];
+  categories: LookupOption[];
+}> {
+  const supabase = await createClient();
+  const [{ data: types }, { data: statuses }, { data: categories }] = await Promise.all([
+    supabase.from("property_types").select("id, slug, name").order("sort_order"),
+    supabase.from("property_status").select("id, slug, name").order("sort_order"),
+    supabase.from("property_categories").select("id, slug, name").order("sort_order"),
+  ]);
+  return {
+    types: (types ?? []) as LookupOption[],
+    statuses: (statuses ?? []) as LookupOption[],
+    categories: (categories ?? []) as LookupOption[],
+  };
+}
+
+export async function getOwnerOptions(): Promise<OwnerOption[]> {
+  const supabase = await createClient();
+  const { data: role } = await supabase.from("roles").select("id").eq("slug", "property_owner").maybeSingle();
+  if (!role) return [];
+
+  const { data: assignments } = await supabase.from("user_roles").select("user_id").eq("role_id", role.id).is("deleted_at", null);
+  const ownerIds = [...new Set((assignments ?? []).map((a) => a.user_id))];
+  if (ownerIds.length === 0) return [];
+
+  const { data: owners } = await supabase.from("profiles").select("id, full_name, email").in("id", ownerIds);
+  return (owners ?? []).map((o) => ({ id: o.id, name: o.full_name || o.email || "Unknown owner" }));
+}
+
+/**
+ * Minimal "Add Property" entry point — just a name. Everything else
+ * (type, location, specs, ...) is filled in through the Setup Dashboard
+ * (docs/PROPERTY_ONBOARDING_EXPERIENCE.md), not a big form up front. All
+ * other property columns are nullable precisely so this works.
+ */
+export async function createDraftProperty(name: string, userId: string): Promise<{ id: string }> {
+  const supabase = await createClient();
+  const slug = await uniqueSlug(supabase, name);
+
+  const { data: draftStatus } = await supabase.from("property_status").select("id").eq("slug", "draft").maybeSingle();
+  if (!draftStatus) throw new Error("draft status not found.");
+
+  const { data, error } = await supabase
+    .from("properties")
+    .insert({
+      name,
+      slug,
+      status_id: draftStatus.id,
+      country: "India",
+      timezone: "Asia/Kolkata",
+      currency: "INR",
+      created_by: userId,
+      updated_by: userId,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return { id: data.id };
+}
+
+export type CreatePropertyInput = {
+  name: string;
+  typeId: string;
+  statusId: string;
+  categoryId?: string;
+  country: string;
+  state?: string;
+  city: string;
+  address?: string;
+  ownerId?: string;
+  maxGuests?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  description?: string;
+  currency?: string;
+  timezone?: string;
+};
+
+export type UpdatePropertyInput = Partial<CreatePropertyInput>;
+
+export async function updateProperty(id: string, input: UpdatePropertyInput, userId: string) {
+  const supabase = await createClient();
+  const patch: PropertiesUpdate = { updated_by: userId };
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.typeId !== undefined) patch.type_id = input.typeId;
+  if (input.statusId !== undefined) patch.status_id = input.statusId;
+  if (input.categoryId !== undefined) patch.category_id = input.categoryId || null;
+  if (input.country !== undefined) patch.country = input.country;
+  if (input.state !== undefined) patch.state = input.state || null;
+  if (input.city !== undefined) patch.city = input.city;
+  if (input.address !== undefined) patch.address = input.address || null;
+  if (input.ownerId !== undefined) patch.owner_id = input.ownerId || null;
+  if (input.maxGuests !== undefined) patch.max_guests = input.maxGuests;
+  if (input.bedrooms !== undefined) patch.bedrooms = input.bedrooms;
+  if (input.bathrooms !== undefined) patch.bathrooms = input.bathrooms;
+  if (input.description !== undefined) patch.description = input.description || null;
+  if (input.currency !== undefined) patch.currency = input.currency;
+
+  const { error } = await supabase.from("properties").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function softDeleteProperty(id: string, userId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("properties")
+    .update({ deleted_at: new Date().toISOString(), updated_by: userId })
+    .eq("id", id);
+  if (error) throw error;
+}

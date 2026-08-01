@@ -1,0 +1,51 @@
+# Supabase CLI local dev config.
+# Run `supabase init` once to regenerate the full default file if this is ever
+# replaced; this is a trimmed version wired for the Everloft PMS foundation.
+# Docs: https://supabase.com/docs/guides/local-development/cli/config
+
+project_id = "everloft-pms"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = false # accounts are provisioned by admins, not self-serve
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = true
+
+# Google OAuth — future ready. Fill in real values in the Supabase dashboard
+# (Auth > Providers) or via env-substituted secrets; do not commit real keys.
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+
+# MFA — future ready, off until the UI for enrollment is built.
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = false
+verify_enabled = false
