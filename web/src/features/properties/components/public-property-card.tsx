@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Bath, BedDouble, MapPin, Users } from "lucide-react";
@@ -6,13 +9,21 @@ import { formatCurrency } from "@/lib/format";
 import type { PublicPropertyListItem } from "@/features/properties/types/property.types";
 
 export function PublicPropertyCard({ property }: { property: PublicPropertyListItem }) {
+  const [imgError, setImgError] = useState(false);
   const typeName = property.typeName ?? "Everloft stay";
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_-20px_rgba(15,23,42,0.25)]">
       <Link href={`/properties/${property.slug}`} className="relative block aspect-[4/3] overflow-hidden">
-        {property.coverImageUrl ? (
-          <Image src={property.coverImageUrl} alt={property.name} fill className="object-cover transition-transform duration-700 group-hover:scale-[1.06]" unoptimized />
+        {property.coverImageUrl && !imgError ? (
+          <Image
+            src={property.coverImageUrl}
+            alt={property.name}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+            unoptimized
+            onError={() => setImgError(true)}
+          />
         ) : (
           <PropertyMedia seed={property.id} type={typeName} label={property.name} />
         )}
