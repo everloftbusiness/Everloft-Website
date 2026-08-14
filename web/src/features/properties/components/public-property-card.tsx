@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Bath, BedDouble, MapPin, Users, Heart, Star, Sparkles } from "lucide-react";
+import { Bath, BedDouble, MapPin, Users, Heart, Sparkles } from "lucide-react";
 import { PropertyMedia } from "@/components/media/property-media";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -95,10 +95,6 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
               {property.bathrooms} Baths
             </span>
           )}
-          <span className="ml-auto flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-            <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-            4.95
-          </span>
         </div>
 
         {/* Price & Action */}

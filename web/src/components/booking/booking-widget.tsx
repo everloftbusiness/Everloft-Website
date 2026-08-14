@@ -54,11 +54,17 @@ export function BookingWidget({
           <span className="text-2xl font-bold text-primary">{formatCurrency(pricePerNight, currency)}</span>
           <span className="text-sm text-muted-foreground"> / night <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
         </div>
-        <div className="flex items-center gap-1 text-sm font-semibold text-primary">
-          <Star className="h-4 w-4 fill-gold text-gold" />
-          {rating.toFixed(2)}
-          <span className="font-normal text-muted-foreground">({reviewCount})</span>
-        </div>
+        {reviewCount > 0 ? (
+          <div className="flex items-center gap-1 text-sm font-semibold text-primary">
+            <Star className="h-4 w-4 fill-gold text-gold" />
+            {rating.toFixed(2)}
+            <span className="font-normal text-muted-foreground">({reviewCount})</span>
+          </div>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
+            Verified Stay
+          </span>
+        )}
       </div>
 
       <div className="space-y-2.5">

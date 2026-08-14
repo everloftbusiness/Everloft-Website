@@ -64,10 +64,6 @@ export function PropertyCard({
       <Link href={`/properties/${property.slug}`} className="flex flex-1 flex-col p-5">
         <div className="mb-1.5 flex items-start justify-between gap-3">
           <h3 className="text-[1.05rem] font-bold leading-snug text-primary">{property.name}</h3>
-          <div className="flex shrink-0 items-center gap-1 pt-0.5 text-sm font-semibold text-primary">
-            <Star className="h-3.5 w-3.5 fill-gold text-gold" />
-            {property.rating.toFixed(2)}
-          </div>
         </div>
         <p className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" />

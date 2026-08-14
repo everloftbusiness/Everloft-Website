@@ -25,12 +25,10 @@ import { HeroSearchBar } from "@/components/site/hero-search-bar";
 import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FeatureCard } from "@/components/marketing/feature-card";
-import { ReviewCard } from "@/components/marketing/review-card";
 import { StatCard } from "@/components/marketing/stat-card";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
-import { NewsletterForm } from "@/components/site/newsletter-form";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
-import { getCities, getTopReviews, getProperties } from "@/lib/properties";
+import { getCities, getProperties } from "@/lib/properties";
 import { PublicPropertyCard, listPublicActiveProperties } from "@/features/properties";
 import { homepageFaqs } from "@/lib/data/faqs";
 
@@ -108,11 +106,10 @@ const WHAT_MAKES_EVERLOFT = [
 ];
 
 export default async function HomePage() {
-  const [supabaseProperties, prismaProperties, cities, reviews] = await Promise.all([
+  const [supabaseProperties, prismaProperties, cities] = await Promise.all([
     listPublicActiveProperties(8).catch(() => []),
     getProperties().catch(() => []),
     getCities().catch(() => []),
-    getTopReviews(6).catch(() => []),
   ]);
 
   // Combine listings: active supabase properties or prisma fallback
@@ -285,49 +282,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 5. What Our Guests Say (Horizontal snap carousel on mobile) */}
-      {reviews.length > 0 && (
-        <section className="section-padding bg-slate-50/70 border-t border-border/60">
-          <div className="site-container">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
-                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                  <span>4.9/5 from 500+ verified reviews</span>
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground mt-0.5">
-                  What Our Guests Say
-                </h2>
-              </div>
-              <Link
-                href="/properties"
-                className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 hover:underline shrink-0"
-              >
-                View all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-4 sm:gap-6 snap-x snap-mandatory no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid-cols-2 lg:grid-cols-3 pb-2">
-              {reviews.map((review) => (
-                <div key={review.id} className="snap-center shrink-0 w-[290px] sm:w-auto">
-                  <ReviewCard
-                    guestName={review.guestName}
-                    rating={review.rating}
-                    title={review.title}
-                    comment={review.comment}
-                    stayMonth={review.stayMonth}
-                    propertyName={review.property.name}
-                    guestCity={review.property.city || "Bangalore"}
-                    propertyImage={review.property.images?.[0]?.url}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 6. More Reasons to Love Everloft (Amenities & Standards) */}
+      {/* 5. More Reasons to Love Everloft (Amenities & Standards) */}
       <section className="section-padding bg-background border-t border-border/60">
         <div className="site-container">
           <SectionHeading
@@ -555,21 +510,6 @@ export default async function HomePage() {
               </Link>
             </Button>
           </Reveal>
-        </div>
-      </section>
-
-      {/* 16. Newsletter Banner */}
-      <section className="section-padding-tight bg-emerald-950 text-white border-t border-white/10">
-        <div className="site-container">
-          <div className="mx-auto max-w-xl text-center">
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-              Everloft stories, in your inbox
-            </h3>
-            <p className="mt-2 text-sm text-white/70">
-              New properties, seasonal features, and hospitality notes — zero spam.
-            </p>
-            <NewsletterForm className="mx-auto mt-6 max-w-md" />
-          </div>
         </div>
       </section>
     </>
