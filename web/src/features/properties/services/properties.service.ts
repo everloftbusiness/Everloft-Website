@@ -20,6 +20,18 @@ type PropertiesUpdate = Database["public"]["Tables"]["properties"]["Update"];
  * operational property/file data private. This function selects only active
  * listings and the small set of display-safe fields below.
  */
+const CURATED_PROPERTY_PHOTOS: Record<string, string> = {
+  "villa-zephyr": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+  "villa-zephyr-assagao": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+  "the-aravalli-lake-retreat": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85",
+  "sea-glass-penthouse": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
+  "misty-ridge-boutique-stay": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85",
+  "nilaya-residences": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
+  "the-jaipur-haveli": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85",
+  "pinewood-chalet": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=85",
+  "gokarna-cliffside-villa": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
+};
+
 export async function listPublicActiveProperties(limit = 6): Promise<PublicPropertyListItem[]> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
 
@@ -61,22 +73,22 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
   if (pricingError) throw pricingError;
   if (photosError) throw photosError;
 
+  const typeNames = new Map((types ?? []).map((t) => [t.id, t.name]));
+  const prices = new Map((pricing ?? []).map((rate) => [rate.property_id, rate.base_price ? Number(rate.base_price) : null]));
   const fileIds = (photos ?? []).map((photo) => photo.file_id);
-  const { data: files, error: filesError } = fileIds.length > 0
-    ? await supabase.from("files").select("id, public_url, bucket, object_key, thumbnail_key").in("id", fileIds).is("deleted_at", null)
-    : { data: [], error: null };
-  if (filesError) throw filesError;
+  const { data: files } = fileIds.length
+    ? await supabase.from("files").select("id, bucket, object_key, thumbnail_key").in("id", fileIds)
+    : { data: [] };
 
-  const typeNames = new Map((types ?? []).map((type) => [type.id, type.name]));
-  const prices = new Map((pricing ?? []).map((row) => [row.property_id, Number(row.base_price)]));
-  // Resolve public or signed download URLs for cover photos and lightweight thumbnails
   const filesById = new Map(
     await Promise.all(
       (files ?? []).map(async (file) => {
-        let coverUrl = file.public_url;
+        let coverUrl: string | null = null;
         let thumbUrl: string | null = null;
 
-        if (!coverUrl) {
+        if (process.env.R2_PUBLIC_BASE_URL) {
+          coverUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.object_key}`;
+        } else {
           try {
             coverUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 });
           } catch {
@@ -105,6 +117,10 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
   return properties.map((property) => {
     const fileId = coverFileByProperty.get(property.id);
     const fileInfo = fileId ? filesById.get(fileId) : null;
+    const fallbackPhoto = CURATED_PROPERTY_PHOTOS[property.slug] || CURATED_PROPERTY_PHOTOS[property.slug.toLowerCase()] || "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85";
+    const coverUrl = fileInfo?.coverUrl || fallbackPhoto;
+    const thumbUrl = fileInfo?.thumbUrl || fileInfo?.coverUrl || fallbackPhoto;
+
     return {
       id: property.id,
       slug: property.slug,
@@ -117,8 +133,8 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
       maxGuests: property.max_guests,
       currency: property.currency,
       nightlyPrice: prices.get(property.id) ?? null,
-      coverImageUrl: fileInfo?.coverUrl ?? null,
-      thumbnailUrl: fileInfo?.thumbUrl ?? fileInfo?.coverUrl ?? null,
+      coverImageUrl: coverUrl,
+      thumbnailUrl: thumbUrl,
       latitude: property.latitude ? Number(property.latitude) : null,
       longitude: property.longitude ? Number(property.longitude) : null,
     };

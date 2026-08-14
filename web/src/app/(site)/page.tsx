@@ -92,6 +92,18 @@ const WHAT_MAKES_EVERLOFT = [
   },
 ];
 
+const HOMEPAGE_PHOTO_MAP: Record<string, string> = {
+  "villa-zephyr": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+  "villa-zephyr-assagao": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+  "the-aravalli-lake-retreat": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85",
+  "sea-glass-penthouse": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
+  "misty-ridge-boutique-stay": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85",
+  "nilaya-residences": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
+  "the-jaipur-haveli": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85",
+  "pinewood-chalet": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=85",
+  "gokarna-cliffside-villa": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
+};
+
 export default async function HomePage() {
   const [supabaseProperties, prismaProperties, cities, reviews] = await Promise.all([
     listPublicActiveProperties(8).catch(() => []),
@@ -100,21 +112,26 @@ export default async function HomePage() {
     getTopReviews(6).catch(() => []),
   ]);
 
-  // Combine listings or fallback to prisma properties if supabase list is empty
-  const activeProperties = supabaseProperties.length > 0 ? supabaseProperties : prismaProperties.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    city: p.city,
-    area: p.area,
-    typeName: p.type,
-    bedrooms: p.bedrooms,
-    bathrooms: p.bathrooms,
-    maxGuests: p.guests,
-    currency: p.currency,
-    nightlyPrice: p.pricePerNight,
-    coverImageUrl: p.images?.[0]?.url ?? p.heroImage ?? null,
-  }));
+  // Combine listings with guaranteed high-resolution luxury photos
+  const activeProperties = supabaseProperties.length > 0 ? supabaseProperties : prismaProperties.map((p) => {
+    const fallback = HOMEPAGE_PHOTO_MAP[p.slug] || HOMEPAGE_PHOTO_MAP[p.slug.toLowerCase()] || "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85";
+    const imgUrl = (p.images?.[0]?.url && p.images[0].url.startsWith("http")) ? p.images[0].url : fallback;
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      city: p.city,
+      area: p.area,
+      typeName: p.type,
+      bedrooms: p.bedrooms,
+      bathrooms: p.bathrooms,
+      maxGuests: p.guests,
+      currency: p.currency,
+      nightlyPrice: p.pricePerNight,
+      coverImageUrl: imgUrl,
+      thumbnailUrl: imgUrl,
+    };
+  });
 
   // Derive dynamic location counts from actual properties
   const locationMap = new Map<string, number>();

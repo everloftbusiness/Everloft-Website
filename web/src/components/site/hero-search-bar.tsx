@@ -31,15 +31,15 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
   }
 
   return (
-    <div className="w-full rounded-2xl sm:rounded-full border border-white/20 bg-white/95 p-2 sm:p-2.5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.3fr_auto_1.4fr_auto_1fr_auto] sm:items-center">
+    <div className="w-full rounded-3xl sm:rounded-full border border-white/25 bg-white/95 p-3 sm:p-2.5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-2 sm:grid-cols-[1.3fr_auto_1.4fr_auto_1fr_auto] sm:items-center">
         {/* City Selector */}
-        <div className="flex flex-col px-3 py-1">
-          <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <div className="flex flex-col rounded-2xl sm:rounded-none bg-slate-100/70 sm:bg-transparent px-3.5 py-2 sm:py-1">
+          <span className="text-[11px] sm:text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
             Where are you going?
           </span>
           <Select value={city} onValueChange={setCity}>
-            <SelectTrigger className="h-9 w-full border-0 bg-transparent p-0 text-sm font-medium text-foreground shadow-none focus-visible:ring-0 [&>span]:flex [&>span]:items-center [&>span]:gap-2">
+            <SelectTrigger className="h-9 sm:h-9 w-full border-0 bg-transparent p-0 text-sm sm:text-base font-bold text-foreground shadow-none focus-visible:ring-0 [&>span]:flex [&>span]:items-center [&>span]:gap-2">
               <MapPin className="h-4 w-4 text-emerald-700 shrink-0" />
               <SelectValue placeholder="All Destinations" />
             </SelectTrigger>
@@ -57,8 +57,8 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
         <div className="hidden h-10 w-px bg-border sm:block" />
 
         {/* Date Picker */}
-        <div className="flex flex-col px-3 py-1">
-          <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <div className="flex flex-col rounded-2xl sm:rounded-none bg-slate-100/70 sm:bg-transparent px-3.5 py-2 sm:py-1">
+          <span className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
             Check-in / Check-out
           </span>
           <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
             <DateRangePicker
               range={range}
               onChange={setRange}
-              className="h-9 w-full border-0 bg-transparent p-0 text-left text-sm font-medium transition-colors focus-visible:ring-0 [&>span:first-child]:hidden"
+              className="h-9 sm:h-9 w-full border-0 bg-transparent p-0 text-left text-sm sm:text-base font-bold transition-colors focus-visible:ring-0 [&>span:first-child]:hidden"
             />
           </div>
         </div>
@@ -74,8 +74,8 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
         <div className="hidden h-10 w-px bg-border sm:block" />
 
         {/* Guests Selector */}
-        <div className="flex flex-col px-3 py-1">
-          <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <div className="flex flex-col rounded-2xl sm:rounded-none bg-slate-100/70 sm:bg-transparent px-3.5 py-2 sm:py-1">
+          <span className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
             Guests
           </span>
           <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
               guests={guests}
               onChange={setGuests}
               maxGuests={16}
-              className="h-9 w-full border-0 bg-transparent p-0 text-left text-sm font-medium transition-colors focus-visible:ring-0 [&>span:first-child]:hidden"
+              className="h-9 sm:h-9 w-full border-0 bg-transparent p-0 text-left text-sm sm:text-base font-bold transition-colors focus-visible:ring-0 [&>span:first-child]:hidden"
             />
           </div>
         </div>
@@ -94,7 +94,7 @@ export function HeroSearchBar({ cities }: { cities: string[] }) {
           type="button"
           size="lg"
           onClick={handleSearch}
-          className="h-12 w-full rounded-xl sm:rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-semibold px-7 shadow-md transition-all hover:scale-[1.02] sm:w-auto"
+          className="h-12 w-full rounded-2xl sm:rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-bold text-sm sm:text-base px-7 shadow-lg transition-all hover:scale-[1.02] sm:w-auto"
         >
           <Search className="h-4 w-4 mr-2" />
           Search Stays

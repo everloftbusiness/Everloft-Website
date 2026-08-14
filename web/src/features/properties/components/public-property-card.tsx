@@ -17,9 +17,9 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
   const displayImageUrl = property.thumbnailUrl || property.coverImageUrl;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-700/40 hover:shadow-[0_20px_45px_-15px_rgba(15,23,42,0.18)]">
+    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-700/40 hover:shadow-[0_20px_45px_-15px_rgba(15,23,42,0.18)]">
       {/* Image container */}
-      <div className="relative block aspect-[16/10] overflow-hidden bg-muted">
+      <div className="relative block aspect-[16/10] min-h-[210px] sm:min-h-[190px] overflow-hidden bg-slate-900">
         <Link href={`/properties/${property.slug}`} className="block h-full w-full">
           {displayImageUrl && !imgError ? (
             <Image
@@ -31,14 +31,14 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
               onError={() => setImgError(true)}
             />
           ) : (
-            <PropertyMedia seed={property.id} type={typeName} label={property.name} />
+            <PropertyMedia seed={property.slug || property.id} type={typeName} label={property.name} />
           )}
         </Link>
 
         {/* Top Badges */}
-        <div className="absolute inset-x-3 top-3 flex items-center justify-between pointer-events-none">
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white shadow-sm backdrop-blur-md">
-            <Sparkles className="h-3 w-3" />
+        <div className="absolute inset-x-3.5 top-3.5 flex items-center justify-between pointer-events-none">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/85 px-3 py-1 text-xs font-bold tracking-wide text-white shadow-md backdrop-blur-md border border-white/20">
+            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
             {typeName}
           </span>
 
@@ -49,7 +49,7 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
               setIsLiked(!isLiked);
             }}
             aria-label="Add to wishlist"
-            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-transform hover:scale-110 hover:bg-black/60 active:scale-95"
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/60 text-white backdrop-blur-md transition-transform hover:scale-110 hover:bg-slate-950/90 active:scale-95 border border-white/10"
           >
             <Heart className={`h-4 w-4 ${isLiked ? "fill-red-500 text-red-500" : "text-white"}`} />
           </button>
@@ -57,58 +57,58 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
           <Link
             href={`/properties/${property.slug}`}
-            className="line-clamp-1 font-serif text-lg font-bold text-foreground transition-colors hover:text-emerald-800"
+            className="line-clamp-1 font-serif text-lg sm:text-xl font-bold text-foreground transition-colors hover:text-emerald-800"
           >
             {property.name}
           </Link>
         </div>
 
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+        <p className="mt-1 flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 text-emerald-700 shrink-0" />
           <span className="line-clamp-1">
             {property.area ? `${property.area}, ` : ""}{property.city ?? "Karnataka, India"}
           </span>
         </p>
 
         {/* Specs row */}
-        <div className="my-3.5 flex flex-wrap items-center gap-3 border-y border-border/60 py-2.5 text-xs text-muted-foreground">
+        <div className="my-3 flex flex-wrap items-center gap-3 border-y border-border/60 py-2.5 text-xs sm:text-sm text-muted-foreground">
           {property.bedrooms !== null && (
-            <span className="flex items-center gap-1">
-              <BedDouble className="h-3.5 w-3.5 text-foreground/70" />
+            <span className="flex items-center gap-1.5">
+              <BedDouble className="h-4 w-4 text-foreground/70" />
               {property.bedrooms} BHK
             </span>
           )}
           {property.maxGuests !== null && (
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5 text-foreground/70" />
+            <span className="flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-foreground/70" />
               {property.maxGuests} Guests
             </span>
           )}
           {property.bathrooms !== null && (
-            <span className="flex items-center gap-1">
-              <Bath className="h-3.5 w-3.5 text-foreground/70" />
+            <span className="flex items-center gap-1.5">
+              <Bath className="h-4 w-4 text-foreground/70" />
               {property.bathrooms} Baths
             </span>
           )}
-          <span className="ml-auto flex items-center gap-1 font-semibold text-amber-600">
+          <span className="ml-auto flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
             <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-            4.9
+            4.95
           </span>
         </div>
 
         {/* Price & Action */}
-        <div className="mt-auto flex items-center justify-between gap-3 pt-1">
+        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
           <div>
-            <span className="text-[11px] text-muted-foreground block">From</span>
-            <div className="text-base font-bold text-foreground">
+            <span className="text-[11px] font-medium text-muted-foreground block">From</span>
+            <div className="text-lg sm:text-xl font-extrabold text-foreground">
               {property.nightlyPrice !== null ? (
                 <>
                   {formatCurrency(property.nightlyPrice, property.currency)}
-                  <span className="text-xs font-normal text-muted-foreground"> / night <span className="font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
+                  <span className="text-xs font-normal text-muted-foreground"> / night <span className="font-bold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
                 </>
               ) : (
                 <span className="text-xs font-medium text-muted-foreground">Pricing on request</span>
@@ -119,7 +119,7 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
           <Button
             asChild
             size="sm"
-            className="rounded-full bg-emerald-900 hover:bg-emerald-950 text-white text-xs font-medium px-4 h-9 shadow-sm"
+            className="rounded-full bg-emerald-900 hover:bg-emerald-950 text-white text-xs sm:text-sm font-bold px-4 sm:px-5 h-9 sm:h-10 shadow-sm"
           >
             <Link href={`/properties/${property.slug}`}>
               View Stay
@@ -128,9 +128,9 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
         </div>
 
         {/* Trust badge */}
-        <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50/80 px-2.5 py-1 text-[11px] font-medium text-emerald-800">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-          Professionally Managed • Verified Standards
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 text-xs font-semibold text-emerald-900 dark:text-emerald-300 border border-emerald-500/20">
+          <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+          <span>Professionally Managed by Everloft</span>
         </div>
       </div>
     </article>

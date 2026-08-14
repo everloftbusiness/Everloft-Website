@@ -1,22 +1,37 @@
-import { Building2, Gem, Home, Sparkles, TreePalm, Building } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const GRADIENTS = [
-  "linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #33261200 100%), radial-gradient(circle at 85% 15%, rgba(212,175,55,0.35), transparent 55%)",
-  "linear-gradient(150deg, #10192f 0%, #1d2b4a 60%, #0f172a 100%), radial-gradient(circle at 10% 90%, rgba(37,99,235,0.35), transparent 55%)",
-  "linear-gradient(140deg, #142032 0%, #0f172a 55%, #1a1206 100%), radial-gradient(circle at 90% 85%, rgba(212,175,55,0.25), transparent 60%)",
-  "linear-gradient(160deg, #0b1220 0%, #16233d 50%, #0f172a 100%), radial-gradient(circle at 20% 20%, rgba(148,163,184,0.25), transparent 55%)",
-  "linear-gradient(145deg, #1a2440 0%, #0f172a 60%, #241a08 100%), radial-gradient(circle at 75% 25%, rgba(212,175,55,0.3), transparent 55%)",
-  "linear-gradient(155deg, #0f172a 0%, #1e293b 40%, #102a43 100%), radial-gradient(circle at 15% 80%, rgba(37,99,235,0.3), transparent 55%)",
-];
-
-const TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
-  Villa: Home,
-  Apartment: Building2,
-  "Holiday Home": TreePalm,
-  "Boutique Stay": Sparkles,
-  Penthouse: Building,
-  "Luxury Home": Gem,
+const LUXURY_FALLBACK_IMAGES: Record<string, string[]> = {
+  Villa: [
+    "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
+  ],
+  Apartment: [
+    "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=85",
+  ],
+  "Holiday Home": [
+    "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85",
+  ],
+  "Boutique Stay": [
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=85",
+  ],
+  Penthouse: [
+    "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
+  ],
+  "Luxury Home": [
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
+  ],
+  Bedroom: [
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=85",
+    "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=85",
+  ],
 };
 
 function hashSeed(seed: string) {
@@ -30,10 +45,9 @@ function hashSeed(seed: string) {
 
 export function PropertyMedia({
   seed,
-  type,
+  type = "Villa",
   label,
   className,
-  showIcon = true,
 }: {
   seed: string;
   type?: string;
@@ -41,30 +55,20 @@ export function PropertyMedia({
   className?: string;
   showIcon?: boolean;
 }) {
-  const gradient = GRADIENTS[hashSeed(seed) % GRADIENTS.length];
-  const Icon = (type && TYPE_ICON[type]) || Home;
+  const images = LUXURY_FALLBACK_IMAGES[type] || LUXURY_FALLBACK_IMAGES.Villa;
+  const imageUrl = images[hashSeed(seed) % images.length];
 
   return (
-    <div
-      className={cn(
-        "relative flex h-full w-full items-center justify-center overflow-hidden",
-        className
-      )}
-      style={{ backgroundImage: gradient }}
-      aria-hidden={!label}
-      role={label ? "img" : undefined}
-      aria-label={label}
-    >
-      <svg className="absolute inset-0 h-full w-full opacity-[0.05] mix-blend-overlay" aria-hidden>
-        <filter id={`grain-${seed}`}>
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} stitchTiles="stitch" />
-        </filter>
-        <rect width="100%" height="100%" filter={`url(#grain-${seed})`} />
-      </svg>
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent" />
-      {showIcon && (
-        <Icon className="relative h-9 w-9 text-white/25" strokeWidth={1.25} />
-      )}
+    <div className={cn("relative h-full w-full overflow-hidden bg-slate-900", className)}>
+      <Image
+        src={imageUrl}
+        alt={label || `${type} view`}
+        fill
+        unoptimized
+        className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
     </div>
   );
 }
