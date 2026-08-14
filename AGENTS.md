@@ -14,3 +14,30 @@ This repo contains **two separate frontends**. Don't confuse them.
 
 If a task is about the website, layout, dashboard, booking flow, or any page — the work happens
 in `web/`. Scope file searches to `web/` by default.
+
+---
+
+## Quick Reference Cheat Sheet
+
+### 1. Dev Server & URLs
+- **Start Dev Server (Windows/PowerShell):** `npm.cmd run dev` (run inside `web/`)
+- **Local Site URL:** [http://localhost:3000](http://localhost:3000)
+- **Login Page:** [http://localhost:3000/login](http://localhost:3000/login)
+- **Properties List:** [http://localhost:3000/dashboard/properties](http://localhost:3000/dashboard/properties)
+- **Add Property:** [http://localhost:3000/dashboard/properties/new](http://localhost:3000/dashboard/properties/new)
+- **Super Admin Workspace:** [http://localhost:3000/dashboard/super-admin](http://localhost:3000/dashboard/super-admin)
+- **Platform Overview:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+
+### 2. Seeded Test Accounts (Supabase Auth)
+| Role | Email / Username | Password | Notes |
+|---|---|---|---|
+| **Super Admin** | `superadmin@everloft.co.in` | `Ever@123` | Full system access, property setup, financials |
+| **Operations Manager** | `opsadmin@everloft.co.in` | *(same / reset)* | Operations & bookings overview |
+| **Property Owner** | `owner01@everloft.co.in` | *(same / reset)* | Revenue waterfall, bookings, owner statements |
+| **Investor** | `investor01@everloft.co.in` | *(same / reset)* | Portfolio value, returns, equity distribution |
+| **Housekeeping** | `housekeep01@everloft.co.in` | *(same / reset)* | Cleaning tasks & room readiness |
+| **Maintenance** | `maint01@everloft.co.in` | *(same / reset)* | Repair tickets & work orders |
+| **Guest** | `guest01@everloft.co.in` | *(same / reset)* | Stay details, digital key, concierge |
+
+*Password recovery / resets can be done via [http://localhost:3000/forgot-password](http://localhost:3000/forgot-password) or the Supabase project dashboard (`cvgrwujjaakqrxasixyf`).*
+

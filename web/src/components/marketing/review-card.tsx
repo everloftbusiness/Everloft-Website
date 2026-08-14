@@ -1,4 +1,4 @@
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ReviewCard({
@@ -27,31 +27,40 @@ export function ReviewCard({
   return (
     <div
       className={cn(
-        "flex h-full flex-col rounded-2xl border border-border bg-card p-8 shadow-[0_8px_30px_-20px_rgba(15,23,42,0.25)]",
+        "flex h-full flex-col rounded-2xl border border-border/80 bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-700/30 hover:shadow-md",
         className
       )}
     >
-      <Quote className="mb-4 h-7 w-7 text-gold/70" strokeWidth={1.5} />
-      <div className="mb-3 flex gap-0.5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star
-            key={i}
-            className={cn("h-4 w-4", i < rating ? "fill-gold text-gold" : "text-border")}
-          />
-        ))}
-      </div>
-      {title && <h3 className="mb-2 text-base font-bold text-primary">{title}</h3>}
-      <p className="flex-1 text-[15px] leading-relaxed text-muted-foreground">{comment}</p>
-      <div className="mt-6 flex items-center gap-3 border-t border-border pt-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-          {initials}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star
+              key={i}
+              className={cn("h-4 w-4", i < rating ? "fill-amber-500 text-amber-500" : "text-border")}
+            />
+          ))}
         </div>
-        <div>
-          <p className="text-sm font-semibold text-primary">{guestName}</p>
-          <p className="text-xs text-muted-foreground">
-            {propertyName ? `${propertyName} · ` : ""}
-            {stayMonth}
-          </p>
+        <Quote className="h-5 w-5 text-emerald-800/30" />
+      </div>
+
+      {title && <h4 className="mb-1.5 text-base font-bold text-foreground">{title}</h4>}
+      <p className="flex-1 text-sm leading-relaxed text-muted-foreground italic">&ldquo;{comment}&rdquo;</p>
+
+      <div className="mt-5 flex items-center justify-between border-t border-border/60 pt-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white shadow-sm">
+            {initials}
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-bold text-foreground">{guestName}</p>
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {propertyName ? `${propertyName}` : "Everloft Guest"}
+              {stayMonth ? ` • ${stayMonth}` : ""}
+            </p>
+          </div>
         </div>
       </div>
     </div>

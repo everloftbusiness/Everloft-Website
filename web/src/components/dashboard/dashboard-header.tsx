@@ -38,9 +38,20 @@ export function DashboardHeader({ session }: { session: DashboardSession }) {
           <Link href="/investor-program" className="flex items-center gap-1.5 hover:text-primary">
             <LineChart className="h-3.5 w-3.5" /> Investor Program
           </Link>
-          <span className="flex items-center gap-1.5 text-primary">
-            <LayoutGrid className="h-3.5 w-3.5" /> Dashboard
-          </span>
+          {session.role === "super_admin" || session.role === "tech_admin" ? (
+            <>
+              <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-primary">
+                <LayoutGrid className="h-3.5 w-3.5" /> Overview
+              </Link>
+              <Link href={`/dashboard/${session.roleSlug}`} className="flex items-center gap-1.5 hover:text-primary">
+                <LayoutGrid className="h-3.5 w-3.5" /> Workspace
+              </Link>
+            </>
+          ) : (
+            <Link href={`/dashboard/${session.roleSlug}`} className="flex items-center gap-1.5 text-primary">
+              <LayoutGrid className="h-3.5 w-3.5" /> Dashboard
+            </Link>
+          )}
         </nav>
         <div className="flex items-center gap-4">
           <span className="hidden text-xs font-medium text-muted-foreground sm:block">{session.roleLabel}</span>

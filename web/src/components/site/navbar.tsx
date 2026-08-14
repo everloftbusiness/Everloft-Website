@@ -82,6 +82,19 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-5 lg:flex">
+          <a
+            href="tel:+917483270264"
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-semibold tracking-wide transition-colors",
+              solid ? "text-emerald-950 hover:text-emerald-700" : "text-white/90 hover:text-white"
+            )}
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              📞
+            </span>
+            (+91) 748-327-0264
+          </a>
+
           {session ? (
             <>
               <Link
@@ -109,8 +122,8 @@ export function Navbar() {
               >
                 Login
               </Link>
-              <Button asChild variant="gold" size="lg" className="rounded-full px-6">
-                <Link href="/properties">Book Now</Link>
+              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-medium shadow-sm">
+                <Link href="/properties">Explore Stays</Link>
               </Button>
             </>
           )}
@@ -128,60 +141,64 @@ export function Navbar() {
               <Menu className="h-6 w-6" />
             </button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] sm:w-[340px]">
-            <SheetHeader>
-              <SheetTitle>
-                <Logo variant="dark" />
-              </SheetTitle>
-            </SheetHeader>
-            <nav className="mt-6 flex flex-col gap-1 px-4">
-              {NAV_LINKS.map((link) => (
+          <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 flex flex-col justify-between bg-white">
+            <div>
+              <SheetHeader className="p-6 border-b border-border/80 text-left">
+                <SheetTitle className="text-left">
+                  <Logo variant="dark" />
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 p-4">
+                {NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl px-3.5 py-3 text-sm font-semibold text-foreground/90 transition-colors hover:bg-slate-100 hover:text-emerald-900"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
                 <Link
-                  key={link.href}
-                  href={link.href}
+                  href="/faq"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3.5 text-base font-medium text-foreground/85 transition-colors hover:bg-muted hover:text-primary"
+                  className="rounded-xl px-3.5 py-3 text-sm font-semibold text-foreground/90 transition-colors hover:bg-slate-100 hover:text-emerald-900"
                 >
-                  {link.label}
+                  FAQs
                 </Link>
-              ))}
-              <Link
-                href="/faq"
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-3.5 text-base font-medium text-foreground/85 transition-colors hover:bg-muted hover:text-primary"
-              >
-                FAQ
-              </Link>
-              {session ? (
-                <Link
-                  href={`/dashboard/${session.roleSlug}`}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-3.5 text-base font-medium text-foreground/85 transition-colors hover:bg-muted hover:text-primary"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  {session.name}
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3.5 text-base font-medium text-foreground/85 transition-colors hover:bg-muted hover:text-primary"
-                >
-                  Login
-                </Link>
-              )}
-            </nav>
-            <div className="mt-4 px-4">
-              <Button asChild variant="gold" size="xl" className="w-full rounded-full">
                 {session ? (
-                  <Link href={`/dashboard/${session.roleSlug}`} onClick={() => setOpen(false)}>
-                    Go to Dashboard
+                  <Link
+                    href={`/dashboard/${session.roleSlug}`}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-3.5 py-3 text-sm font-semibold text-emerald-900 bg-emerald-50"
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-emerald-700" />
+                    Dashboard ({session.name})
                   </Link>
                 ) : (
-                  <Link href="/properties" onClick={() => setOpen(false)}>
-                    Book Now
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl px-3.5 py-3 text-sm font-semibold text-foreground/90 transition-colors hover:bg-slate-100 hover:text-emerald-900"
+                  >
+                    Login
                   </Link>
                 )}
+              </nav>
+            </div>
+
+            {/* Bottom Support & CTA in Mobile Sheet */}
+            <div className="p-5 border-t border-border/80 space-y-3 bg-slate-50">
+              <a
+                href="tel:+917483270264"
+                className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground py-2"
+              >
+                📞 (+91) 748-327-0264
+              </a>
+              <Button asChild size="lg" className="w-full rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-bold shadow-md">
+                <Link href="/properties" onClick={() => setOpen(false)}>
+                  Explore Stays
+                </Link>
               </Button>
             </div>
           </SheetContent>

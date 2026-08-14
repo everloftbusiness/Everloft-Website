@@ -22,6 +22,43 @@ SQLite, backing the public marketing site's property listings/reviews/leads.
 That's intentional for now — see `CLAUDE.md` → "Two databases, on purpose
 (for now)" before touching either.
 
+---
+
+## ⚡ Quick Reference
+
+### Running the App
+```bash
+# Inside web/ directory:
+npm.cmd run dev   # (Windows / PowerShell)
+# or: npm run dev
+```
+Open **[http://localhost:3000](http://localhost:3000)**.
+
+### Navigation & Key URLs
+| Destination | URL | Description |
+|---|---|---|
+| **Public Site** | `/` | Marketing landing page |
+| **Login** | `/login` | Email/password sign in |
+| **Platform Overview** | `/dashboard` | System status, user counts, DB metrics (Super Admin / Tech Admin) |
+| **Super Admin Workspace** | `/dashboard/super-admin` | Full operational console, KPIs, charts, managing properties |
+| **Properties List** | `/dashboard/properties` | Portfolio table with status, search, and edit links |
+| **Add New Property** | `/dashboard/properties/new` | Multi-step property onboarding wizard |
+| **Password Reset** | `/forgot-password` | Self-service password recovery flow |
+
+### Seeded Test Accounts (Supabase Auth)
+| Role | Email / Username | Password |
+|---|---|---|
+| **Super Admin** | `superadmin@everloft.co.in` | `Ever@123` |
+| **Operations Manager** | `opsadmin@everloft.co.in` | *(same / reset)* |
+| **Property Owner** | `owner01@everloft.co.in` | *(same / reset)* |
+| **Investor** | `investor01@everloft.co.in` | *(same / reset)* |
+| **Housekeeping** | `housekeep01@everloft.co.in` | *(same / reset)* |
+| **Maintenance** | `maint01@everloft.co.in` | *(same / reset)* |
+| **Guest** | `guest01@everloft.co.in` | *(same / reset)* |
+
+---
+
+
 ## First-time setup
 
 ### 1. Install dependencies

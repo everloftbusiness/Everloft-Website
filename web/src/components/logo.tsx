@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function Logo({
@@ -5,30 +6,49 @@ export function Logo({
   markClassName,
   wordmarkClassName,
   variant = "dark",
+  showWordmark = true,
 }: {
   className?: string;
   markClassName?: string;
   wordmarkClassName?: string;
   variant?: "dark" | "light";
+  showWordmark?: boolean;
 }) {
-  const textColor = variant === "light" ? "text-white" : "text-primary";
+  const isLight = variant === "light";
 
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <svg
-        viewBox="0 0 32 32"
-        className={cn("h-7 w-7 shrink-0", markClassName)}
-        aria-hidden
-      >
-        <rect x="1" y="1" width="30" height="30" rx="8" className={variant === "light" ? "fill-white/10" : "fill-primary"} />
-        <path
-          d="M16 7L23.5 13.2V24H19.6V17.4H12.4V24H8.5V13.2L16 7Z"
-          className="fill-gold"
+      <div className={cn("relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg", markClassName)}>
+        <Image
+          src="/images/everloft-logo-mark.png"
+          alt="Everloft"
+          width={32}
+          height={32}
+          className="object-contain"
+          priority
         />
-      </svg>
-      <span className={cn("font-sans text-lg font-bold tracking-tight leading-none", textColor, wordmarkClassName)}>
-        Everloft
-      </span>
+      </div>
+      {showWordmark && (
+        <div className="flex flex-col">
+          <span
+            className={cn(
+              "font-serif text-xl font-bold tracking-tight leading-none",
+              isLight ? "text-white" : "text-primary",
+              wordmarkClassName
+            )}
+          >
+            EVERLOFT
+          </span>
+          <span
+            className={cn(
+              "text-[9px] font-medium tracking-wider uppercase",
+              isLight ? "text-white/60" : "text-muted-foreground"
+            )}
+          >
+            Handled with Purpose
+          </span>
+        </div>
+      )}
     </span>
   );
 }
