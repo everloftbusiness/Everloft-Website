@@ -91,7 +91,7 @@ export function PropertyCard({
             <span className="text-lg font-bold text-primary">
               {formatCurrency(property.pricePerNight, property.currency)}
             </span>
-            <span className="text-sm text-muted-foreground"> / night</span>
+            <span className="text-xs text-muted-foreground"> / night <span className="font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
           </div>
           <span className="text-xs text-muted-foreground">{property.reviewCount} reviews</span>
         </div>

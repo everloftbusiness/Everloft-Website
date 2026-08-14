@@ -19,16 +19,24 @@ in `web/`. Scope file searches to `web/` by default.
 
 ## Quick Reference Cheat Sheet
 
-### 1. Dev Server & URLs
-- **Start Dev Server (Windows/PowerShell):** `npm.cmd run dev` (run inside `web/`)
+### 1. Dev Server & Build Commands
+- **Dev Server (Windows/PowerShell):** `npm.cmd run dev` (run inside `web/`)
+- **Typecheck:** `npx.cmd tsc --noEmit` (run inside `web/`)
+- **Production Build:** `npm.cmd run build` (run inside `web/`)
+
+### 2. Key URLs
 - **Local Site URL:** [http://localhost:3000](http://localhost:3000)
+- **Browse Properties (Grid & Map):** [http://localhost:3000/properties](http://localhost:3000/properties)
+- **Properties Map View:** [http://localhost:3000/properties?view=map](http://localhost:3000/properties?view=map)
+- **Property Details Sample:** [http://localhost:3000/properties/villa-zephyr](http://localhost:3000/properties/villa-zephyr)
+- **Contact & Inquiries:** [http://localhost:3000/contact](http://localhost:3000/contact)
 - **Login Page:** [http://localhost:3000/login](http://localhost:3000/login)
-- **Properties List:** [http://localhost:3000/dashboard/properties](http://localhost:3000/dashboard/properties)
+- **Properties List (Dashboard):** [http://localhost:3000/dashboard/properties](http://localhost:3000/dashboard/properties)
 - **Add Property:** [http://localhost:3000/dashboard/properties/new](http://localhost:3000/dashboard/properties/new)
 - **Super Admin Workspace:** [http://localhost:3000/dashboard/super-admin](http://localhost:3000/dashboard/super-admin)
 - **Platform Overview:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
-### 2. Seeded Test Accounts (Supabase Auth)
+### 3. Seeded Test Accounts (Supabase Auth)
 | Role | Email / Username | Password | Notes |
 |---|---|---|---|
 | **Super Admin** | `superadmin@everloft.co.in` | `Ever@123` | Full system access, property setup, financials |
@@ -41,3 +49,28 @@ in `web/`. Scope file searches to `web/` by default.
 
 *Password recovery / resets can be done via [http://localhost:3000/forgot-password](http://localhost:3000/forgot-password) or the Supabase project dashboard (`cvgrwujjaakqrxasixyf`).*
 
+---
+
+## Key Core Architectural Conventions (Do Not Violate)
+
+1. **Pricing & Tax Transparency (+ GST)**:
+   - Base nightly rates are displayed with **`+ GST`** badge across all cards, listings, and details pages.
+   - Interactive booking breakdowns explicitly itemize **`GST & Taxes (18%)`** and total as **`Total (inc. GST)`**.
+   - Dashboard setup pricing inputs are labeled `(excl. 18% GST)`.
+
+2. **Storage Physical Deletion**:
+   - Deleting a photo or video removes both the database record AND permanently deletes the binary object from Cloudflare R2 / physical bucket via `deleteObject(fileRow.bucket, fileRow.object_key)`.
+
+3. **Live Interactive Maps (Leaflet)**:
+   - No static wireframe placeholders. All maps are live Leaflet instances (CartoDB Voyager + Google Satellite Hybrid):
+     - `PropertyLocationMap` (`web/src/components/property/property-location-map.tsx`) — Guest property page (`/properties/[slug]`).
+     - `PropertiesMapView` (`web/src/components/property/properties-map-view.tsx`) — All properties browse page (`/properties?view=map`).
+     - `ContactOfficeMap` (`web/src/components/contact/contact-office-map.tsx`) — HQ contact page (`/contact`).
+     - `InteractiveLocationMap` (`web/src/components/dashboard/properties/setup/interactive-location-map.tsx`) — Onboarding setup step.
+
+4. **Navbar Transparency Rule**:
+   - `solid = !isHomePage || scrolled || open` in `navbar.tsx`.
+   - Only `pathname === "/"` is transparent at the very top. All inner pages enforce dark text and dark logo against frosted backdrop.
+
+5. **Property Page Section Sequence**:
+   - `Gallery` ➔ `Key Specs (BHK, Max Guests, Baths, Sqft)` ➔ `Managed Guarantee` ➔ `About & Highlights` ➔ `What This Place Offers (Amenities)` ➔ `Where You'll Sleep (Bedrooms)` ➔ `Location Map` ➔ `House Rules` ➔ `Spaces Tour` ➔ `Video Tour`.

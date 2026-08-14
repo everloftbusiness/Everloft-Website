@@ -15,3 +15,19 @@ This repo contains **two separate frontends**. Don't confuse them.
 
 If a task is about the website, layout, dashboard, booking flow, or any page — the work happens
 in `web/`. Scope file searches to `web/` by default.
+
+---
+
+## Quick Reference Commands
+- **Dev Server:** `npm.cmd run dev` (run inside `web/`)
+- **Typecheck:** `npx.cmd tsc --noEmit` (run inside `web/`)
+- **Production Build:** `npm.cmd run build` (run inside `web/`)
+
+## Key Seeded Accounts (Supabase Auth)
+- **Super Admin:** `superadmin@everloft.co.in` / `Ever@123`
+- **Operations Manager:** `opsadmin@everloft.co.in` / `Ever@123`
+- **Property Owner:** `owner01@everloft.co.in` / `Ever@123`
+- **Investor:** `investor01@everloft.co.in` / `Ever@123`
+- **Housekeeping:** `housekeep01@everloft.co.in` / `Ever@123`
+- **Maintenance:** `maint01@everloft.co.in` / `Ever@123`
+- **Guest:** `guest01@everloft.co.in` / `Ever@123`

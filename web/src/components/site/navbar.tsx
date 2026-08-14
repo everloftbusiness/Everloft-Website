@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutDashboard } from "lucide-react";
+import { Menu, LayoutDashboard, Phone } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,19 +49,20 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const solid = scrolled || open;
+  const isHomePage = pathname === "/";
+  const solid = !isHomePage || scrolled || open;
 
   return (
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         solid
-          ? "bg-background/95 backdrop-blur-md border-b border-border shadow-[0_1px_0_0_rgba(15,23,42,0.04)]"
+          ? "bg-background/95 backdrop-blur-md border-b border-border/80 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)]"
           : "bg-transparent"
       )}
     >
       <div className="site-container flex h-18 items-center justify-between py-3.5">
-        <Link href="/" className="shrink-0">
+        <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
           <Logo variant={solid ? "dark" : "light"} />
         </Link>
 
@@ -72,8 +73,8 @@ export function Navbar() {
               href={link.href}
               className={cn(
                 "text-sm font-medium transition-colors",
-                solid ? "text-foreground/80 hover:text-primary" : "text-white/85 hover:text-white",
-                pathname === link.href && (solid ? "text-primary" : "text-white")
+                solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white",
+                pathname === link.href && (solid ? "text-emerald-800 dark:text-emerald-400 font-bold" : "text-white font-bold")
               )}
             >
               {link.label}
@@ -85,12 +86,12 @@ export function Navbar() {
           <a
             href="tel:+917483270264"
             className={cn(
-              "flex items-center gap-1.5 text-xs font-semibold tracking-wide transition-colors",
-              solid ? "text-emerald-950 hover:text-emerald-700" : "text-white/90 hover:text-white"
+              "flex items-center gap-2 text-xs font-semibold tracking-wide transition-colors",
+              solid ? "text-foreground hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/90 hover:text-white"
             )}
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-              📞
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+              <Phone className="h-3.5 w-3.5" />
             </span>
             (+91) 748-327-0264
           </a>
@@ -101,13 +102,13 @@ export function Navbar() {
                 href={`/dashboard/${session.roleSlug}`}
                 className={cn(
                   "flex items-center gap-2 text-sm font-medium transition-colors",
-                  solid ? "text-foreground/80 hover:text-primary" : "text-white/85 hover:text-white"
+                  solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white"
                 )}
               >
                 <LayoutDashboard className="h-4 w-4" />
                 {session.name}
               </Link>
-              <Button asChild variant="gold" size="lg" className="rounded-full px-6">
+              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm">
                 <Link href={`/dashboard/${session.roleSlug}`}>Dashboard</Link>
               </Button>
             </>
@@ -117,12 +118,12 @@ export function Navbar() {
                 href="/login"
                 className={cn(
                   "text-sm font-medium transition-colors",
-                  solid ? "text-foreground/80 hover:text-primary" : "text-white/85 hover:text-white"
+                  solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white"
                 )}
               >
                 Login
               </Link>
-              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-medium shadow-sm">
+              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm">
                 <Link href="/properties">Explore Stays</Link>
               </Button>
             </>

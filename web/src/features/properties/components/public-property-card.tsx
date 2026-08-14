@@ -14,18 +14,20 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
   const [isLiked, setIsLiked] = useState(false);
   const typeName = property.typeName ?? "Curated Stay";
 
+  const displayImageUrl = property.thumbnailUrl || property.coverImageUrl;
+
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-700/40 hover:shadow-[0_20px_45px_-15px_rgba(15,23,42,0.18)]">
       {/* Image container */}
       <div className="relative block aspect-[16/10] overflow-hidden bg-muted">
         <Link href={`/properties/${property.slug}`} className="block h-full w-full">
-          {property.coverImageUrl && !imgError ? (
+          {displayImageUrl && !imgError ? (
             <Image
-              src={property.coverImageUrl}
+              src={displayImageUrl}
               alt={property.name}
               fill
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              unoptimized
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               onError={() => setImgError(true)}
             />
           ) : (
@@ -106,7 +108,7 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
               {property.nightlyPrice !== null ? (
                 <>
                   {formatCurrency(property.nightlyPrice, property.currency)}
-                  <span className="text-xs font-normal text-muted-foreground"> / night</span>
+                  <span className="text-xs font-normal text-muted-foreground"> / night <span className="font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
                 </>
               ) : (
                 <span className="text-xs font-medium text-muted-foreground">Pricing on request</span>

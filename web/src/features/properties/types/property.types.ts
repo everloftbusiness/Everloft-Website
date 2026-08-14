@@ -46,13 +46,48 @@ export type PublicPropertyListItem = {
   currency: string;
   nightlyPrice: number | null;
   coverImageUrl: string | null;
+  thumbnailUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
+
+export type PropertyPhotoItem = {
+  id?: string;
+  url: string;
+  alt: string;
+  caption?: string | null;
+  spaceTag?: string | null;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+
+export type RoomSpec = {
+  bedType: string;
+  hasAc: boolean;
+  bathroomType: "attached" | "common" | "dedicated";
+  hasBalcony?: boolean;
+  hasWorkDesk?: boolean;
+  hasTv?: boolean;
+  hasWardrobe?: boolean;
+  viewType?: string;
+  amenities?: string[];
+};
+
+export type PropertyRoomSpecs = Record<string, RoomSpec>;
 
 export type PublicPropertyDetail = PublicPropertyListItem & {
   address: string | null;
+  state?: string | null;
+  country?: string | null;
+  pinCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  googleMapsUrl?: string | null;
   description: string | null;
   highlights: string[];
   propertyAreaSqft: number | null;
   amenities: string[];
-  photos: { url: string; alt: string }[];
+  photos: PropertyPhotoItem[];
+  videos: { id: string; url: string; videoType: string; caption: string | null }[];
+  roomSpecs?: PropertyRoomSpecs;
 };

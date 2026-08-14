@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Phone, Mail, MapPin, MessageCircle, Clock, ArrowRight } from "lucide-react";
 import { ContactForm } from "@/components/contact/contact-form";
+import { ContactOfficeMap } from "@/components/contact/contact-office-map";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 
@@ -98,8 +99,8 @@ export default function ContactPage() {
         </Reveal>
       </div>
 
-      <Reveal className="mt-16 flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-border bg-soft text-sm text-muted-foreground">
-        Illustrative map — connect Google Maps API for a live embed.
+      <Reveal>
+        <ContactOfficeMap />
       </Reveal>
     </div>
   );

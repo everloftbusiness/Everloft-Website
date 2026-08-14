@@ -5,6 +5,7 @@ export type SectionKey =
   | "basics"
   | "location"
   | "photos"
+  | "videos"
   | "title"
   | "description"
   | "amenities"
@@ -89,6 +90,7 @@ export async function getOnboardingFormData(propertyId: string) {
     { data: rules },
     { data: propertyAmenities },
     { data: photos },
+    { data: videos },
     { data: types },
     { data: categories },
     { data: amenityMaster },
@@ -103,7 +105,13 @@ export async function getOnboardingFormData(propertyId: string) {
     supabase.from("property_amenities").select("amenity_id").eq("property_id", propertyId).is("deleted_at", null),
     supabase
       .from("property_photos")
-      .select("id, file_id, is_cover, sort_order")
+      .select("id, file_id, is_cover, sort_order, caption, tags")
+      .eq("property_id", propertyId)
+      .is("deleted_at", null)
+      .order("sort_order"),
+    supabase
+      .from("property_videos")
+      .select("id, file_id, video_type, caption, sort_order")
       .eq("property_id", propertyId)
       .is("deleted_at", null)
       .order("sort_order"),
@@ -117,10 +125,13 @@ export async function getOnboardingFormData(propertyId: string) {
 
   if (!property) return null;
 
-  const fileIds = (photos ?? []).map((p) => p.file_id);
+  const photoFileIds = (photos ?? []).map((p) => p.file_id);
+  const videoFileIds = (videos ?? []).map((v) => v.file_id);
+  const allFileIds = [...new Set([...photoFileIds, ...videoFileIds])];
+
   let fileMap = new Map<string, { public_url: string | null; bucket: string; object_key: string }>();
-  if (fileIds.length > 0) {
-    const { data: files } = await supabase.from("files").select("id, public_url, bucket, object_key").in("id", fileIds);
+  if (allFileIds.length > 0) {
+    const { data: files } = await supabase.from("files").select("id, public_url, bucket, object_key").in("id", allFileIds);
     fileMap = new Map((files ?? []).map((f) => [f.id, { public_url: f.public_url, bucket: f.bucket, object_key: f.object_key }]));
   }
 
@@ -142,26 +153,84 @@ export async function getOnboardingFormData(propertyId: string) {
   const ruleMap = new Map((rules ?? []).map((r) => [r.rule_key, r.rule_text]));
 
   const photosWithPreview = await Promise.all(
-    (photos ?? []).map(async (p) => ({ id: p.id, isCover: p.is_cover, publicUrl: await resolvePreviewUrl(p.file_id) }))
+    (photos ?? []).map(async (p) => {
+      const spaceTag = (p.tags && p.tags.length > 0 ? p.tags[0] : null) || p.caption || "Living Room";
+      return {
+        id: p.id,
+        isCover: p.is_cover,
+        caption: p.caption,
+        tags: p.tags ?? [],
+        spaceTag,
+        sortOrder: p.sort_order,
+        publicUrl: await resolvePreviewUrl(p.file_id),
+      };
+    })
+  );
+  const videosWithPreview = await Promise.all(
+    (videos ?? []).map(async (v) => ({
+      id: v.id,
+      videoType: v.video_type,
+      caption: v.caption,
+      publicUrl: await resolvePreviewUrl(v.file_id),
+    }))
   );
   const coverPhoto = (photos ?? []).find((p) => p.is_cover);
   const coverPhotoUrl = coverPhoto ? await resolvePreviewUrl(coverPhoto.file_id) : null;
+
+  let roomSpecs: import("@/features/properties/types/property.types").PropertyRoomSpecs = {};
+  const roomSpecsRule = (rules ?? []).find((r) => r.rule_key === "room_specs");
+  if (roomSpecsRule?.rule_text) {
+    try {
+      roomSpecs = JSON.parse(roomSpecsRule.rule_text);
+    } catch {}
+  }
+
+  let savedCustomSpaces: string[] = [];
+  const customSpacesRule = (rules ?? []).find((r) => r.rule_key === "custom_spaces");
+  if (customSpacesRule?.rule_text) {
+    try {
+      savedCustomSpaces = JSON.parse(customSpacesRule.rule_text);
+    } catch {}
+  }
+
+  const customAmenitiesFromRules = (rules ?? [])
+    .filter((r) => r.rule_key === "custom_amenity")
+    .map((r, idx) => ({
+      id: `custom_rule_${r.rule_text}`,
+      slug: `custom_amenity_${idx}`,
+      name: r.rule_text,
+      category: "entertainment",
+      isCustom: true,
+    }));
+
+  const allAmenityMaster = [
+    ...(amenityMaster ?? []).map((a) => ({ ...a, isCustom: false })),
+    ...customAmenitiesFromRules,
+  ];
+
+  const selectedAmenityIds = [
+    ...(propertyAmenities ?? []).map((a) => a.amenity_id),
+    ...customAmenitiesFromRules.map((c) => c.id),
+  ];
 
   return {
     property,
     pricing: pricing ?? null,
     settings: settings ?? null,
+    roomSpecs,
+    savedCustomSpaces,
     smokingAllowed: (ruleMap.get("smoking") ?? "").includes("allowed") && !(ruleMap.get("smoking") ?? "").startsWith("No"),
     petsAllowed: (ruleMap.get("pets") ?? "").includes("allowed") && !(ruleMap.get("pets") ?? "").startsWith("No"),
     partiesAllowed: (ruleMap.get("parties") ?? "").includes("allowed") && !(ruleMap.get("parties") ?? "").startsWith("No"),
     presetRuleTexts: (rules ?? []).filter((r) => r.rule_key === "preset").map((r) => r.rule_text),
     customRuleTexts: (rules ?? []).filter((r) => r.rule_key === "custom").map((r) => r.rule_text),
-    selectedAmenityIds: (propertyAmenities ?? []).map((a) => a.amenity_id),
+    selectedAmenityIds,
     photos: photosWithPreview,
+    videos: videosWithPreview,
     coverPhotoUrl,
     types: types ?? [],
     categories: categories ?? [],
-    amenityMaster: amenityMaster ?? [],
+    amenityMaster: allAmenityMaster,
     discounts: (discounts ?? []).map((d) => ({
       id: d.id,
       discountType: d.discount_type,
@@ -185,8 +254,9 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
   const { data: property } = await supabase.from("properties").select("*").eq("id", propertyId).is("deleted_at", null).maybeSingle();
   if (!property) return null;
 
-  const [{ data: photos }, { data: amenities }, { data: rules }, { data: pricing }, { data: settings }] = await Promise.all([
+  const [{ data: photos }, { data: videos }, { data: amenities }, { data: rules }, { data: pricing }, { data: settings }] = await Promise.all([
     supabase.from("property_photos").select("id, is_cover").eq("property_id", propertyId).is("deleted_at", null),
+    supabase.from("property_videos").select("id").eq("property_id", propertyId).is("deleted_at", null),
     supabase.from("property_amenities").select("id").eq("property_id", propertyId).is("deleted_at", null),
     supabase.from("property_rules").select("rule_key, rule_text").eq("property_id", propertyId).is("deleted_at", null),
     supabase.from("property_pricing").select("*").eq("property_id", propertyId).maybeSingle(),
@@ -194,6 +264,7 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
   ]);
 
   const photoCount = photos?.length ?? 0;
+  const videoCount = videos?.length ?? 0;
   const hasCover = (photos ?? []).some((p) => p.is_cover);
   const amenityCount = amenities?.length ?? 0;
   const ruleKeys = new Set((rules ?? []).map((r) => r.rule_key));
@@ -223,6 +294,9 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
     { filled: photoCount >= 5, required: true },
     { filled: photoCount >= 20, required: false },
   ]);
+
+  // --- Section: Videos (recommended bonus) ---
+  const videosSection = scoreFields([{ filled: videoCount >= 1, required: false }]);
 
   // --- Section: Title ---
   const title = scoreFields([
@@ -272,6 +346,7 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
     { key: "basics", label: "Property Basics", description: "Property type, guest capacity, bedrooms, beds and bathrooms.", required: true, result: basics },
     { key: "location", label: "Location", description: "Address, map location, and guest visibility.", required: true, result: location },
     { key: "photos", label: "Photos", description: "Upload photos of your property, and set a cover photo.", required: true, result: photosSection },
+    { key: "videos", label: "Video Tour", description: "Upload a walkthrough video, drone view, or virtual tour.", required: false, result: videosSection },
     { key: "title", label: "Title", description: "Create a title that stands out.", required: true, result: title },
     { key: "description", label: "Description", description: "About this place, guest access, neighborhood & more.", required: false, result: description },
     { key: "amenities", label: "Amenities", description: "Select all amenities available at your property.", required: false, result: amenitiesSection },

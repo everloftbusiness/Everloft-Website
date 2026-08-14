@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { Home, MapPin, ImageIcon, Type, FileText, Sparkles, ShieldCheck, IndianRupee, CalendarClock, Users } from "lucide-react";
+import { Home, MapPin, ImageIcon, Video, Type, FileText, Sparkles, ShieldCheck, IndianRupee, CalendarClock, Users } from "lucide-react";
 import { getDashboardSession } from "@/lib/dashboard/session";
 import { getOnboardingSnapshot, getOnboardingFormData } from "@/features/properties/services/onboarding.service";
 import { ProgressRing } from "@/components/dashboard/properties/setup/progress-ring";
@@ -12,6 +12,7 @@ import { RequiredVsRecommendedCard } from "@/components/dashboard/properties/set
 import { SetupHeaderActions } from "@/components/dashboard/properties/setup/setup-header-actions";
 import { EditableTitle } from "@/components/dashboard/properties/setup/editable-title";
 import { PhotosManager } from "@/components/dashboard/properties/setup/photos-manager";
+import { VideosManager } from "@/components/dashboard/properties/setup/videos-manager";
 import { AmenitiesForm } from "@/components/dashboard/properties/setup/amenities-form";
 import { HouseRulesPresets } from "@/components/dashboard/properties/setup/house-rules-presets";
 import { DiscountsManager, FeesManager, TaxesManager } from "@/components/dashboard/properties/setup/pricing-extras";
@@ -30,6 +31,7 @@ const SECTION_ICONS = {
   basics: <Home className="h-5 w-5" />,
   location: <MapPin className="h-5 w-5" />,
   photos: <ImageIcon className="h-5 w-5" />,
+  videos: <Video className="h-5 w-5" />,
   title: <Type className="h-5 w-5" />,
   description: <FileText className="h-5 w-5" />,
   amenities: <Sparkles className="h-5 w-5" />,
@@ -59,6 +61,7 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
     partiesAllowed,
     selectedAmenityIds,
     photos,
+    videos,
     coverPhotoUrl,
     types,
     categories,
@@ -90,13 +93,24 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
           state: property.state,
           city: property.city,
           address: property.address,
+          pinCode: property.pin_code,
           latitude: property.latitude,
           longitude: property.longitude,
           googleMapsUrl: property.google_maps_url,
         }}
       />
     ),
-    photos: <PhotosManager propertyId={id} photos={photos} />,
+    photos: (
+      <PhotosManager
+        propertyId={id}
+        photos={photos}
+        bedrooms={property.bedrooms ?? 1}
+        bathrooms={property.bathrooms ?? 1}
+        initialRoomSpecs={formData.roomSpecs}
+        savedCustomSpaces={formData.savedCustomSpaces}
+      />
+    ),
+    videos: <VideosManager propertyId={id} videos={videos} />,
     title: <TitleForm propertyId={id} initial={{ name: property.name, shortName: property.short_name }} />,
     description: <DescriptionForm propertyId={id} initial={{ description: property.description, shortDescription: property.short_description }} />,
     amenities: <AmenitiesForm propertyId={id} allAmenities={amenityMaster} selectedIds={selectedAmenityIds} />,
@@ -227,8 +241,12 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
         <LivePreviewCard
           coverPhotoUrl={coverPhotoUrl}
           name={property.name}
+          typeName={types.find((t) => t.id === property.type_id)?.name ?? null}
+          categoryName={categories.find((c) => c.id === property.category_id)?.name ?? null}
           city={property.city}
+          state={property.state}
           country={property.country}
+          pinCode={property.pin_code}
           maxGuests={property.max_guests}
           bedrooms={property.bedrooms}
           bathrooms={property.bathrooms}

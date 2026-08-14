@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import {
   ChevronLeft,
@@ -13,23 +13,66 @@ import {
   Sparkles,
   MapPin,
   Check,
+  Video,
 } from "lucide-react";
 import { PropertyMedia } from "@/components/media/property-media";
 import { cn } from "@/lib/utils";
 
 export type GalleryImage = {
+  id?: string;
   url: string;
   alt?: string;
-  caption?: string;
+  caption?: string | null;
+  spaceTag?: string | null;
+  isCover?: boolean;
 };
+
+export type GalleryVideo = {
+  id: string;
+  url: string;
+  videoType: string;
+  caption: string | null;
+};
+
+function getSpaceRank(spaceTag: string | null | undefined): number {
+  if (!spaceTag) return 999;
+  const tag = spaceTag.toLowerCase().trim();
+  if (tag.includes("living")) return 10;
+  if (tag.startsWith("bedroom 1")) return 20;
+  if (tag.startsWith("bedroom 2")) return 21;
+  if (tag.startsWith("bedroom 3")) return 22;
+  if (tag.startsWith("bedroom 4")) return 23;
+  if (tag.startsWith("bedroom 5")) return 24;
+  if (tag.startsWith("bedroom")) return 29;
+  if (tag.includes("kitchen")) return 30;
+  if (tag.includes("dining")) return 35;
+  if (tag.startsWith("bathroom 1")) return 40;
+  if (tag.startsWith("bathroom 2")) return 41;
+  if (tag.startsWith("bathroom 3")) return 42;
+  if (tag.startsWith("bathroom")) return 49;
+  if (tag.includes("balcony")) return 50;
+  if (tag.includes("terrace") || tag.includes("rooftop")) return 55;
+  if (tag.includes("pool") || tag.includes("swimming") || tag.includes("jacuzzi")) return 60;
+  if (tag.includes("garden") || tag.includes("lawn")) return 65;
+  if (tag.includes("entertainment") || tag.includes("game")) return 70;
+  if (tag.includes("gym") || tag.includes("fitness")) return 75;
+  if (tag.includes("work") || tag.includes("study") || tag.includes("workspace")) return 80;
+  if (tag.includes("parking") || tag.includes("car")) return 85;
+  if (tag.includes("laundry") || tag.includes("utility")) return 90;
+  if (tag.includes("exterior") || tag.includes("entrance")) return 95;
+  if (tag.includes("view") || tag.includes("surrounding")) return 100;
+  return 150;
+}
 
 export function PropertyGallery({
   images,
+  videos,
   type,
   name,
   location,
 }: {
   images: GalleryImage[];
+  videos?: GalleryVideo[];
   type: string;
   name: string;
   location?: string;
@@ -40,19 +83,38 @@ export function PropertyGallery({
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Sort photos into natural architectural flow: Cover -> Living Room -> Bedroom 1 -> Bedroom 2 -> Kitchen -> Dining -> Bathrooms -> Outdoor/Pool -> Exterior
+  const sortedImages = useMemo(() => {
+    if (!images || images.length === 0) return [];
+    return [...images].sort((a, b) => {
+      // 1. Cover photo always first
+      if (a.isCover && !b.isCover) return -1;
+      if (!a.isCover && b.isCover) return 1;
+
+      // 2. Space category sequence
+      const rankA = getSpaceRank(a.spaceTag);
+      const rankB = getSpaceRank(b.spaceTag);
+      if (rankA !== rankB) return rankA - rankB;
+
+      return 0;
+    });
+  }, [images]);
+
+  const displayImages = sortedImages.length > 0 ? sortedImages : images;
+
   // Safe fallback if images array is empty
-  const hasImages = images && images.length > 0;
-  const totalPhotos = hasImages ? images.length : 1;
+  const hasImages = displayImages && displayImages.length > 0;
+  const totalPhotos = hasImages ? displayImages.length : 1;
 
   const nextPhoto = useCallback(() => {
     if (!hasImages) return;
-    setActiveIndex((prev) => (prev + 1) % images.length);
-  }, [hasImages, images.length]);
+    setActiveIndex((prev) => (prev + 1) % displayImages.length);
+  }, [hasImages, displayImages.length]);
 
   const prevPhoto = useCallback(() => {
     if (!hasImages) return;
-    setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
-  }, [hasImages, images.length]);
+    setActiveIndex((prev) => (prev - 1 + displayImages.length) % displayImages.length);
+  }, [hasImages, displayImages.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -101,34 +163,25 @@ export function PropertyGallery({
 
   return (
     <div className="site-container">
-      {/* Top action strip */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-            {type}
-          </span>
-        </div>
+      {/* Top Action Strip */}
+      <div className="mb-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-2xs transition-all hover:bg-muted active:scale-95"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="h-3.5 w-3.5 text-muted-foreground" />}
+          {copied ? "Link Copied!" : "Share"}
+        </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-white px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm transition-all hover:bg-slate-50 hover:scale-105 active:scale-95"
-          >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Share2 className="h-3.5 w-3.5 text-muted-foreground" />}
-            {copied ? "Link Copied!" : "Share"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsSaved(!isSaved)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-white px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm transition-all hover:bg-slate-50 hover:scale-105 active:scale-95"
-          >
-            <Heart className={cn("h-3.5 w-3.5", isSaved ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
-            {isSaved ? "Saved" : "Save"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsSaved(!isSaved)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-2xs transition-all hover:bg-muted active:scale-95"
+        >
+          <Heart className={cn("h-3.5 w-3.5", isSaved ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
+          {isSaved ? "Saved" : "Save"}
+        </button>
       </div>
 
       {/* 5-Photo Luxury Bento Grid */}
@@ -139,10 +192,10 @@ export function PropertyGallery({
             onClick={() => openAt(0)}
             className="group relative col-span-1 row-span-2 h-full cursor-pointer overflow-hidden sm:col-span-2"
           >
-            {hasImages && images[0] ? (
+            {hasImages && displayImages[0] ? (
               <Image
-                src={images[0].url}
-                alt={images[0].alt || name}
+                src={displayImages[0].url}
+                alt={displayImages[0].alt || name}
                 fill
                 priority
                 unoptimized
@@ -156,7 +209,7 @@ export function PropertyGallery({
 
           {/* 4 Secondary Photos (Right side 2x2 grid) */}
           {[1, 2, 3, 4].map((idx) => {
-            const img = hasImages && images[idx] ? images[idx] : null;
+            const img = hasImages && displayImages[idx] ? displayImages[idx] : null;
             return (
               <div
                 key={idx}
@@ -180,14 +233,25 @@ export function PropertyGallery({
           })}
         </div>
 
-        {/* Floating "Show all photos" Pill Button */}
+        {/* Floating "Watch Video Tour" Button (Left) */}
+        {videos && videos.length > 0 && (
+          <a
+            href="#video-tour"
+            className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/25 bg-slate-950/85 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all hover:bg-slate-900 active:scale-95"
+          >
+            <Video className="h-3.5 w-3.5 text-amber-400" />
+            <span>Watch Video</span>
+          </a>
+        )}
+
+        {/* Floating "Show all photos" Pill Button (Right) */}
         <button
           type="button"
           onClick={openGridView}
-          className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full border border-black/10 bg-white/95 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xl backdrop-blur-md transition-all hover:bg-white hover:scale-105 active:scale-95"
+          className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-black/10 bg-white/95 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-slate-900 shadow-xl backdrop-blur-md transition-all hover:bg-white active:scale-95"
         >
-          <Grid className="h-4 w-4 text-emerald-800" />
-          Show all {totalPhotos} photos
+          <Grid className="h-3.5 w-3.5 text-emerald-800" />
+          <span>{totalPhotos} Photos</span>
         </button>
       </div>
 
@@ -234,7 +298,7 @@ export function PropertyGallery({
               {/* Main Photo Viewport */}
               <div className="relative flex flex-1 items-center justify-center">
                 {/* Previous Button */}
-                {hasImages && images.length > 1 && (
+                {hasImages && displayImages.length > 1 && (
                   <button
                     type="button"
                     onClick={prevPhoto}
@@ -247,10 +311,10 @@ export function PropertyGallery({
 
                 {/* Pleasant Photo Frame Card */}
                 <div className="relative h-[58vh] sm:h-[68vh] lg:h-[72vh] w-full max-w-6xl rounded-3xl bg-white p-2 sm:p-4 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.35)] border border-white/80 flex items-center justify-center overflow-hidden">
-                  {hasImages && images[activeIndex] ? (
+                  {hasImages && displayImages[activeIndex] ? (
                     <Image
-                      src={images[activeIndex].url}
-                      alt={images[activeIndex].alt || `${name} photo ${activeIndex + 1}`}
+                      src={displayImages[activeIndex].url}
+                      alt={displayImages[activeIndex].alt || `${name} photo ${activeIndex + 1}`}
                       fill
                       priority
                       unoptimized
@@ -262,7 +326,7 @@ export function PropertyGallery({
                 </div>
 
                 {/* Next Button */}
-                {hasImages && images.length > 1 && (
+                {hasImages && displayImages.length > 1 && (
                   <button
                     type="button"
                     onClick={nextPhoto}
@@ -275,9 +339,9 @@ export function PropertyGallery({
               </div>
 
               {/* Bottom Thumbnail Strip on Pleasant Light Bar */}
-              {hasImages && images.length > 1 && (
+              {hasImages && displayImages.length > 1 && (
                 <div className="mt-3 mx-auto flex h-20 max-w-4xl shrink-0 items-center justify-center gap-2.5 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg backdrop-blur-md border border-white/60">
-                  {images.map((img, i) => (
+                  {displayImages.map((img, i) => (
                     <button
                       key={img.url + i}
                       type="button"
@@ -322,7 +386,7 @@ export function PropertyGallery({
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {images.map((img, idx) => (
+                  {displayImages.map((img, idx) => (
                     <div
                       key={img.url + idx}
                       onClick={() => {

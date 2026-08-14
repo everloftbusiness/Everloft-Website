@@ -52,7 +52,7 @@ export function BookingWidget({
       <div className="mb-5 flex items-end justify-between">
         <div>
           <span className="text-2xl font-bold text-primary">{formatCurrency(pricePerNight, currency)}</span>
-          <span className="text-sm text-muted-foreground"> / night</span>
+          <span className="text-sm text-muted-foreground"> / night <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
         </div>
         <div className="flex items-center gap-1 text-sm font-semibold text-primary">
           <Star className="h-4 w-4 fill-gold text-gold" />
@@ -92,9 +92,13 @@ export function BookingWidget({
             <span>Service fee</span>
             <span>{formatCurrency(serviceFee, currency)}</span>
           </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>GST & Taxes (18%)</span>
+            <span>{formatCurrency(Math.round(subtotal * 0.18), currency)}</span>
+          </div>
           <div className="flex justify-between border-t border-border pt-3 text-base font-bold text-primary">
-            <span>Total</span>
-            <span>{formatCurrency(total, currency)}</span>
+            <span>Total (inc. GST)</span>
+            <span>{formatCurrency(total + Math.round(subtotal * 0.18), currency)}</span>
           </div>
         </div>
       )}

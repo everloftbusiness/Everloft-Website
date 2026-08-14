@@ -419,6 +419,39 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["property_rooms"]["Row"]>;
         Relationships: [];
       };
+
+      property_videos: {
+        Row: AuditColumns & {
+          id: string;
+          property_id: string;
+          file_id: string;
+          video_type: string;
+          caption: string | null;
+          sort_order: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["property_videos"]["Row"]> & {
+          property_id: string;
+          file_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["property_videos"]["Row"]>;
+        Relationships: [];
+      };
+      property_documents: {
+        Row: AuditColumns & {
+          id: string;
+          property_id: string;
+          file_id: string;
+          document_type: string;
+          expiry_date: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["property_documents"]["Row"]> & {
+          property_id: string;
+          file_id: string;
+          document_type: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["property_documents"]["Row"]>;
+        Relationships: [];
+      };
       room_types: {
         Row: AuditColumns & { id: string; slug: string; name: string; sort_order: number };
         Insert: Partial<Database["public"]["Tables"]["room_types"]["Row"]> & { slug: string; name: string };

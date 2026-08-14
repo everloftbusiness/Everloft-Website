@@ -1,13 +1,35 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
   experimental: {
-    // Next.js defaults Server Action request bodies to 1MB, which silently
-    // capped every photo upload (property-images allows up to 25MB per
-    // lib/storage/r2.ts) — this was the real cause of the "1MB limit" bug,
-    // not the storage layer. 30MB covers the 25MB image limit with headroom
-    // for multipart overhead.
-    serverActions: { bodySizeLimit: "30mb" },
+    optimizePackageImports: ["lucide-react", "recharts", "date-fns", "framer-motion"],
+    // Increased to 500mb to support high-definition 4K property walkthrough video uploads
+    serverActions: { bodySizeLimit: "500mb" },
+  },
+  async headers() {
+    return [
+      {
+        source: "/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff2|woff)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
   },
 };
 

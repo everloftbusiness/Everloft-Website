@@ -3,7 +3,7 @@ import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { HeroSearchBar } from "@/components/site/hero-search-bar";
 import { PropertiesToolbar } from "@/components/property/properties-toolbar";
 import { PropertyFilters } from "@/components/property/property-filters";
-import { PropertyMapPlaceholder } from "@/components/property/property-map-placeholder";
+import { PropertiesMapView } from "@/components/property/properties-map-view";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import {
   Pagination,
@@ -108,7 +108,7 @@ export default async function PropertiesPage({
 
             <div className="mt-8">
               {view === "map" ? (
-                <PropertyMapPlaceholder properties={allProperties} />
+                <PropertiesMapView properties={allProperties} />
               ) : pageItems.length > 0 ? (
                 <RevealGroup className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {pageItems.map((property) => (

@@ -323,3 +323,17 @@ from that chrome. If Windows `mv`/git-bash `mv` refuses to move a directory cont
   won't have fired in a screenshot taken immediately after `page.goto()` — programmatically
   scroll through the page first (or the section genuinely won't render) before trusting a
   full-page screenshot for visual QA.
+- **Navbar solid state**: `solid = !isHomePage || scrolled || open`. All non-home pages must have
+  solid headers so text and logo are dark and visible against standard light backgrounds.
+- **Tax disclosure (+ GST)**: All pricing displays across public cards, search results, details pages,
+  and mobile bars must include `+ GST`. Booking widget must calculate and itemize `GST & Taxes (18%)`.
+- **Physical R2 Deletion**: Deleting photos or videos calls `deleteObject(fileRow.bucket, fileRow.object_key)`
+  in `onboarding.actions.ts` to prevent stranded storage assets.
+- **Live Maps**: All maps are live Leaflet instances (CartoDB Voyager + Google Satellite Hybrid):
+  `PropertyLocationMap` (property details), `PropertiesMapView` (`/properties?view=map`),
+  `ContactOfficeMap` (`/contact`), `InteractiveLocationMap` (dashboard setup). No wireframe placeholders.
+- **Property Page Section Sequence**:
+  `Gallery` ➔ `Specs (BHK, Guests, Baths, Sqft)` ➔ `Managed Guarantee` ➔ `About & Highlights` ➔
+  `What This Place Offers (Amenities)` ➔ `Where You'll Sleep (Bedrooms)` ➔ `Location Map` ➔
+  `House Rules` ➔ `Spaces Tour` ➔ `Video Tour`.
+

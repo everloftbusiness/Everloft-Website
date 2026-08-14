@@ -364,7 +364,13 @@ export default async function HomePage() {
         <div className="site-container grid items-center gap-14 lg:grid-cols-2">
           <Reveal direction="right">
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-xl">
-              <Image src="/images/pic01.jpg" alt="A comfortable, professionally managed Everloft living space" fill className="object-cover" />
+              <Image
+                src="/images/pic01.webp"
+                alt="A comfortable, professionally managed Everloft living space"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
             </div>
           </Reveal>
           <div>
@@ -432,7 +438,13 @@ export default async function HomePage() {
           <RevealGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 max-w-2xl mx-auto">
             <RevealItem className="rounded-2xl border border-border/80 bg-card p-6 text-center shadow-sm">
               <div className="relative mx-auto mb-4 h-36 w-full overflow-hidden rounded-xl bg-slate-50">
-                <Image src="/certificates/dpiit-certificate-preview-rotated.png" alt="DPIIT certificate for Everloft" fill className="object-contain p-3" />
+                <Image
+                  src="/certificates/dpiit-certificate-preview-rotated.webp"
+                  alt="DPIIT certificate for Everloft"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 320px"
+                  className="object-contain p-3"
+                />
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <Award className="h-4 w-4 text-emerald-700" />
@@ -443,7 +455,13 @@ export default async function HomePage() {
 
             <RevealItem className="rounded-2xl border border-border/80 bg-card p-6 text-center shadow-sm">
               <div className="relative mx-auto mb-4 h-36 w-full overflow-hidden rounded-xl bg-slate-50">
-                <Image src="/certificates/company-document-preview.png" alt="Kerala Startup Mission certificate for Everloft" fill className="object-contain p-3" />
+                <Image
+                  src="/certificates/company-document-preview.webp"
+                  alt="Kerala Startup Mission certificate for Everloft"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 320px"
+                  className="object-contain p-3"
+                />
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <Award className="h-4 w-4 text-emerald-700" />

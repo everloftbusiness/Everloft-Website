@@ -23,7 +23,7 @@ export function MobileBookingBar({
             {pricePerNight !== null ? (
               <>
                 {formatCurrency(pricePerNight, currency)}
-                <span className="text-xs font-normal text-muted-foreground"> / nt</span>
+                <span className="text-xs font-normal text-muted-foreground"> / nt <span className="font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
               </>
             ) : (
               <span className="text-xs font-medium text-muted-foreground">On request</span>

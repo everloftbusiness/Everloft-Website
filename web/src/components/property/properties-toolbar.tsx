@@ -52,20 +52,22 @@ export function PropertiesToolbar({
         {resultCount === 1 ? "property" : "properties"} found
       </p>
 
-      <div className="flex items-center gap-2">
-        <div className="hidden overflow-hidden rounded-full border border-border sm:flex">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex overflow-hidden rounded-full border border-border bg-card shadow-2xs">
           <button
+            type="button"
             onClick={() => setView("grid")}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors ${
-              view === "grid" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-colors ${
+              view === "grid" ? "bg-emerald-800 text-white shadow-xs" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <LayoutGrid className="h-3.5 w-3.5" /> Grid
           </button>
           <button
+            type="button"
             onClick={() => setView("map")}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors ${
-              view === "map" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-colors ${
+              view === "map" ? "bg-emerald-800 text-white shadow-xs" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <Map className="h-3.5 w-3.5" /> Map
@@ -73,7 +75,7 @@ export function PropertiesToolbar({
         </div>
 
         <Select defaultValue={searchParams.get("sort") ?? "recommended"} onValueChange={setSort}>
-          <SelectTrigger className="w-[170px] rounded-full">
+          <SelectTrigger className="w-[140px] sm:w-[170px] rounded-full text-xs sm:text-sm h-8 sm:h-9">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -85,11 +87,13 @@ export function PropertiesToolbar({
         </Select>
 
         <Button
+          type="button"
           variant="outline"
-          className="rounded-full lg:hidden"
+          size="sm"
+          className="rounded-full lg:hidden h-8 sm:h-9 text-xs font-semibold gap-1.5"
           onClick={() => setOpen(true)}
         >
-          <SlidersHorizontal className="h-4 w-4" /> Filters
+          <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
         </Button>
       </div>
 

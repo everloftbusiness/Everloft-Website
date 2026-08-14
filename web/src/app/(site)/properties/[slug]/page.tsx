@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Bath,
@@ -16,26 +15,28 @@ import {
   Phone,
   MessageCircle,
   ArrowRight,
-  Home,
   Wifi,
-  Utensils,
-  Tv,
+  UtensilsCrossed,
   Car,
+  Waves,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyGallery } from "@/components/property/property-gallery";
+import { PropertyVideoTour } from "@/components/property/property-video-tour";
+import { PropertySpacesTour } from "@/components/property/property-spaces-tour";
+import { PropertyBedroomsShowcase } from "@/components/property/property-bedrooms-showcase";
+import { PropertyAmenitiesShowcase } from "@/components/property/property-amenities-showcase";
+import { PropertyLocationMap } from "@/components/property/property-location-map";
 import { Logo } from "@/components/logo";
-import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { formatCurrency } from "@/lib/format";
 import { getPublicActivePropertyBySlug, listPublicActiveProperties, PublicPropertyCard } from "@/features/properties";
-import { BookingWidget } from "@/components/booking/booking-widget";
 import { MobileBookingBar } from "@/components/booking/mobile-booking-bar";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const property = await getPublicActivePropertyBySlug((await params).slug);
   if (!property) return { title: "Property not found" };
   return {
-    title: `${property.name}${property.city ? ` — ${property.city}` : ""} | Everloft`,
+    title: `${property.name}${property.city ? ` — ${property.city}` : ""} | Everloft Luxury Stays`,
     description: property.description?.slice(0, 155) ?? `Explore ${property.name}, professionally managed by Everloft.`,
   };
 }
@@ -49,48 +50,57 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
   if (!property) notFound();
 
-  const location = [property.area, property.city].filter(Boolean).join(", ") || "India";
+  const location = [property.area, property.city, property.state].filter(Boolean).join(", ") || "India";
   const similarStays = allProperties.filter((p) => p.slug !== slug).slice(0, 3);
 
   return (
     <div className="bg-background">
       {/* 1. Breadcrumbs & Header Section */}
-      <div className="site-container pt-28 pb-4 text-xs font-medium text-muted-foreground">
-        <nav className="flex items-center gap-1.5 flex-wrap">
-          <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-          <span>/</span>
-          <Link href="/properties" className="hover:text-foreground transition-colors">Properties</Link>
+      <div className="site-container pt-24 pb-4 text-xs font-medium text-muted-foreground">
+        <nav className="flex items-center gap-2 flex-wrap">
+          <Link href="/" className="hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">Home</Link>
+          <span className="text-border">/</span>
+          <Link href="/properties" className="hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">Properties</Link>
           {property.city && (
             <>
-              <span>/</span>
-              <Link href={`/properties?city=${encodeURIComponent(property.city)}`} className="hover:text-foreground transition-colors">
+              <span className="text-border">/</span>
+              <Link href={`/properties?city=${encodeURIComponent(property.city)}`} className="hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
                 {property.city}
               </Link>
             </>
           )}
-          <span>/</span>
+          <span className="text-border">/</span>
           <span className="text-foreground font-semibold truncate max-w-[200px] sm:max-w-none">{property.name}</span>
         </nav>
       </div>
 
-      <div className="site-container pb-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              {property.name}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1 font-semibold text-foreground">
-                <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                <span>4.9</span>
-                <span className="text-xs text-muted-foreground font-normal">(Verified Stay)</span>
-              </div>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-foreground/80">
-                <MapPin className="h-4 w-4 text-emerald-700" />
-                {property.address || location}
-              </span>
+      <div className="site-container pb-5">
+        <div className="flex flex-col gap-2.5">
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-[40px] font-bold tracking-tight text-foreground leading-tight">
+            {property.name}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
+              <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              {property.typeName ?? "Curated Stay"}
+            </span>
+
+            <div className="flex items-center gap-1.5 font-bold text-foreground">
+              <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+              <span>4.95</span>
+              <span className="text-xs text-muted-foreground font-normal">(Verified Stay)</span>
             </div>
+
+            <span>•</span>
+
+            <a
+              href="#property-location"
+              className="flex items-center gap-1 font-medium text-emerald-800 dark:text-emerald-400 hover:underline"
+            >
+              <MapPin className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <span>{property.address || location}</span>
+            </a>
           </div>
         </div>
       </div>
@@ -98,6 +108,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
       {/* 2. Luxury Bento Gallery & Fullscreen Modal */}
       <PropertyGallery
         images={property.photos}
+        videos={property.videos}
         type={property.typeName ?? "Curated Stay"}
         name={property.name}
         location={location}
@@ -105,12 +116,12 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
       {/* 3. Main Content Grid (Details on Left + Sticky Booking Sidebar on Right) */}
       <div className="site-container grid gap-12 pb-24 pt-10 lg:grid-cols-[1fr_380px]">
-        <main className="space-y-10">
+        <main className="space-y-12 min-w-0">
           {/* Key Specs Row */}
           <div className="grid grid-cols-2 gap-4 rounded-2xl border border-border/80 bg-card p-5 sm:grid-cols-4 shadow-sm">
             {property.bedrooms !== null && (
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                   <BedDouble className="h-5 w-5" />
                 </div>
                 <div>
@@ -122,7 +133,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
             {property.maxGuests !== null && (
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                   <Users className="h-5 w-5" />
                 </div>
                 <div>
@@ -134,7 +145,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
             {property.bathrooms !== null && (
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                   <Bath className="h-5 w-5" />
                 </div>
                 <div>
@@ -146,7 +157,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
             {property.propertyAreaSqft !== null && (
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                   <Maximize className="h-5 w-5" />
                 </div>
                 <div>
@@ -158,7 +169,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
           </div>
 
           {/* Operational Management Card */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-emerald-800/20 bg-gradient-to-r from-emerald-50/60 to-slate-50/60 p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-emerald-800/20 bg-gradient-to-r from-emerald-50/70 to-slate-50/70 dark:from-emerald-950/40 dark:to-slate-900/40 p-5 shadow-sm">
             <div className="flex items-center gap-3.5">
               <Logo variant="dark" />
               <div>
@@ -166,7 +177,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
                 <p className="text-xs text-muted-foreground">In-house housekeeping, sanitized linens & 24/7 guest concierge support</p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-800 px-3 py-1 text-xs font-semibold text-white shrink-0">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-800 dark:bg-emerald-700 px-3 py-1 text-xs font-semibold text-white shrink-0">
               <ShieldCheck className="h-3.5 w-3.5" />
               Verified Standard
             </span>
@@ -175,8 +186,12 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
           {/* About this property */}
           {property.description && (
             <section className="border-t border-border/80 pt-8">
-              <h2 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-                About this stay
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                <Sparkles className="h-4 w-4" />
+                Overview
+              </div>
+              <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                About This Stay
               </h2>
               <p className="mt-4 leading-relaxed text-muted-foreground text-sm sm:text-base whitespace-pre-line">
                 {property.description}
@@ -187,16 +202,20 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
           {/* Highlights */}
           {property.highlights && property.highlights.length > 0 && (
             <section className="border-t border-border/80 pt-8">
-              <h2 className="font-serif text-2xl font-bold tracking-tight text-foreground">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                <Sparkles className="h-4 w-4" />
+                Key Inclusions
+              </div>
+              <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 Property Highlights
               </h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {property.highlights.map((highlight) => (
                   <div
                     key={highlight}
-                    className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-3.5 shadow-sm"
+                    className="flex items-start gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs"
                   >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
                     <span className="text-sm font-medium text-foreground">{highlight}</span>
                   </div>
                 ))}
@@ -204,84 +223,77 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             </section>
           )}
 
-          {/* Amenities & Inclusions */}
+          {/* 4. What This Place Offers (Categorized Amenities & Modal) */}
           {property.amenities && property.amenities.length > 0 && (
-            <section className="border-t border-border/80 pt-8">
-              <h2 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-                Amenities & Inclusions
-              </h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {property.amenities.map((amenity) => (
-                  <div
-                    key={amenity}
-                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card p-3 text-sm font-medium text-foreground shadow-sm"
-                  >
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" />
-                    <span className="line-clamp-1">{amenity}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <PropertyAmenitiesShowcase
+              amenities={property.amenities}
+              propertyName={property.name}
+            />
           )}
 
-          {/* House Rules & Policies */}
-          <section className="border-t border-border/80 pt-8">
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-              House Rules & Policies
+          {/* 5. Where You'll Sleep (Bedrooms Showcase with Bed Types & Amenities) */}
+          <PropertyBedroomsShowcase
+            bedroomsCount={property.bedrooms}
+            roomSpecs={property.roomSpecs}
+            photos={property.photos}
+            propertyName={property.name}
+          />
+
+          {/* 6. Interactive Location Map with Satellite & Direction links */}
+          <PropertyLocationMap
+            propertyName={property.name}
+            address={property.address}
+            area={property.area}
+            city={property.city}
+            state={property.state}
+            country={property.country}
+            pinCode={property.pinCode}
+            latitude={property.latitude}
+            longitude={property.longitude}
+            googleMapsUrl={property.googleMapsUrl}
+          />
+
+          {/* 7. House Rules & Policies */}
+          <section className="border-t border-border/80 pt-10">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+              <ShieldCheck className="h-4 w-4" />
+              Stay Policies
+            </div>
+            <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              House Rules & Important Information
             </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
-              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3.5">
-                <Clock className="h-4 w-4 text-emerald-700 shrink-0" />
+              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
+                <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
                   <span className="text-xs text-muted-foreground block">Check-in</span>
                   <span className="font-semibold text-foreground">2:00 PM onwards</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3.5">
-                <Clock className="h-4 w-4 text-emerald-700 shrink-0" />
+              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
+                <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
                   <span className="text-xs text-muted-foreground block">Check-out</span>
                   <span className="font-semibold text-foreground">Until 11:00 AM</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3.5">
-                <ShieldCheck className="h-4 w-4 text-emerald-700 shrink-0" />
+              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
+                <ShieldCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
                   <span className="text-xs text-muted-foreground block">Access</span>
-                  <span className="font-semibold text-foreground">Keyless Smart Lock / In-Person</span>
+                  <span className="font-semibold text-foreground">Keyless Smart Lock / In-Person Check-in</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3.5">
-                <Sparkles className="h-4 w-4 text-emerald-700 shrink-0" />
+              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
+                <Sparkles className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
-                  <span className="text-xs text-muted-foreground block">Housekeeping</span>
-                  <span className="font-semibold text-foreground">Sanitized before every arrival</span>
+                  <span className="text-xs text-muted-foreground block">Sanitization</span>
+                  <span className="font-semibold text-foreground">Hospital-grade sanitized before every arrival</span>
                 </div>
               </div>
-            </div>
-          </section>
-
-          {/* Location & Address */}
-          <section className="border-t border-border/80 pt-8">
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-              Location & Neighbourhood
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {property.address || location}
-            </p>
-            <div className="mt-4 rounded-2xl border border-border/80 bg-slate-900 p-6 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <p className="text-base font-bold text-white">Explore around {property.city || "Bangalore"}</p>
-                <p className="text-xs text-white/70">Convenient access to dining, shopping centres, and key transit hubs.</p>
-              </div>
-              <Button asChild size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shrink-0">
-                <Link href="/properties?view=map">
-                  View Map <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
             </div>
           </section>
         </main>
@@ -296,33 +308,25 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
                   {property.nightlyPrice !== null ? (
                     <>
                       {formatCurrency(property.nightlyPrice, property.currency)}
-                      <span className="text-sm font-normal text-muted-foreground"> / night</span>
+                      <span className="text-sm font-normal text-muted-foreground"> / night <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
                     </>
                   ) : (
                     <span className="text-lg font-medium text-muted-foreground">Rate on request</span>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 border border-amber-200">
+              <div className="flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 px-2.5 py-1 text-xs font-bold text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
                 <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-                4.9
+                4.95
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
-              <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 text-xs text-muted-foreground space-y-1.5">
-                <div className="flex items-center justify-between font-medium text-foreground">
-                  <span>Transparent Pricing</span>
-                  <span className="text-emerald-700 font-bold">Zero Extra Surcharges</span>
-                </div>
-                <p>Reserve directly with our operations team for seamless check-in support.</p>
-              </div>
-
+            <div className="mt-5 space-y-3.5">
               {/* Inquiry Action */}
               <Button
                 asChild
                 size="lg"
-                className="w-full rounded-2xl bg-emerald-900 hover:bg-emerald-950 text-white font-bold h-12 shadow-md"
+                className="w-full rounded-2xl bg-emerald-900 hover:bg-emerald-950 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-bold h-12 shadow-md"
               >
                 <Link href={`/contact?property=${encodeURIComponent(property.name)}`}>
                   Enquire for Availability
@@ -334,9 +338,9 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
                 href={`https://wa.me/917483270264?text=${encodeURIComponent(`Hi Everloft, I'm interested in booking ${property.name} (${property.city || ""}). Could you share availability and details?`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-600/30 bg-emerald-50 text-xs sm:text-sm font-bold text-emerald-900 transition-colors hover:bg-emerald-100/80"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/60 text-xs sm:text-sm font-bold text-emerald-900 dark:text-emerald-300 transition-colors hover:bg-emerald-100/80 dark:hover:bg-emerald-900/60"
               >
-                <MessageCircle className="h-4 w-4 text-emerald-700" />
+                <MessageCircle className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 Chat with Concierge on WhatsApp
               </a>
 
@@ -344,18 +348,18 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
                 href="tel:+917483270264"
                 className="flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground pt-1"
               >
-                <Phone className="h-3.5 w-3.5 text-emerald-700" />
+                <Phone className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
                 Call directly: (+91) 748-327-0264
               </a>
             </div>
 
             <div className="mt-6 border-t border-border/80 pt-4 space-y-2 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 Direct coordination with on-ground property manager
               </p>
               <p className="flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 100% Verified stay with professional housekeeping
               </p>
             </div>
@@ -363,13 +367,26 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
         </aside>
       </div>
 
-      {/* 4. Similar Curated Stays */}
+      {/* 8. Airbnb-Style Room-by-Room Spaces Tour */}
+      <PropertySpacesTour
+        photos={property.photos}
+        propertyName={property.name}
+        amenities={property.amenities}
+        roomSpecs={property.roomSpecs}
+      />
+
+      {/* 9. Cinematic Property Video Tour (if uploaded) */}
+      {property.videos && property.videos.length > 0 && (
+        <PropertyVideoTour videos={property.videos} propertyName={property.name} />
+      )}
+
+      {/* 10. Similar Curated Stays */}
       {similarStays.length > 0 && (
-        <section className="border-t border-border/80 bg-slate-50/60 py-16">
+        <section className="border-t border-border/80 bg-slate-50/60 dark:bg-slate-950/40 py-16">
           <div className="site-container">
             <div className="flex items-end justify-between mb-8">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-800">
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">
                   Explore More
                 </span>
                 <h3 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mt-1">
@@ -392,7 +409,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
         </section>
       )}
 
-      {/* 5. Mobile Sticky Booking Bar */}
+      {/* 11. Mobile Sticky Booking Bar */}
       <MobileBookingBar
         pricePerNight={property.nightlyPrice}
         currency={property.currency}

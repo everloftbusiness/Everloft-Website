@@ -34,7 +34,7 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
 
   const { data: properties, error: propertiesError } = await supabase
     .from("properties")
-    .select("id, slug, name, city, area, type_id, bedrooms, bathrooms, max_guests, currency")
+    .select("id, slug, name, city, area, type_id, bedrooms, bathrooms, max_guests, currency, latitude, longitude")
     .eq("status_id", activeStatus.id)
     .is("deleted_at", null)
     .order("updated_at", { ascending: false })
@@ -63,42 +63,66 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
 
   const fileIds = (photos ?? []).map((photo) => photo.file_id);
   const { data: files, error: filesError } = fileIds.length > 0
-    ? await supabase.from("files").select("id, public_url, bucket, object_key").in("id", fileIds).is("deleted_at", null)
+    ? await supabase.from("files").select("id, public_url, bucket, object_key, thumbnail_key").in("id", fileIds).is("deleted_at", null)
     : { data: [], error: null };
   if (filesError) throw filesError;
 
   const typeNames = new Map((types ?? []).map((type) => [type.id, type.name]));
   const prices = new Map((pricing ?? []).map((row) => [row.property_id, Number(row.base_price)]));
-  // Property-image buckets can be public, but a custom R2 public domain is
-  // optional. Use a short-lived signed URL when no permanent URL exists.
+  // Resolve public or signed download URLs for cover photos and lightweight thumbnails
   const filesById = new Map(
     await Promise.all(
       (files ?? []).map(async (file) => {
-        if (file.public_url) return [file.id, file.public_url] as const;
-        try {
-          return [file.id, await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 })] as const;
-        } catch {
-          return [file.id, null] as const;
+        let coverUrl = file.public_url;
+        let thumbUrl: string | null = null;
+
+        if (!coverUrl) {
+          try {
+            coverUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 });
+          } catch {
+            coverUrl = null;
+          }
         }
+
+        if (file.thumbnail_key) {
+          if (process.env.R2_PUBLIC_BASE_URL) {
+            thumbUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.thumbnail_key}`;
+          } else {
+            try {
+              thumbUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.thumbnail_key, { expiresInSeconds: 3600 });
+            } catch {
+              thumbUrl = null;
+            }
+          }
+        }
+
+        return [file.id, { coverUrl, thumbUrl }] as const;
       })
     )
   );
   const coverFileByProperty = new Map((photos ?? []).map((photo) => [photo.property_id, photo.file_id]));
 
-  return properties.map((property) => ({
-    id: property.id,
-    slug: property.slug,
-    name: property.name,
-    city: property.city,
-    area: property.area,
-    typeName: property.type_id ? (typeNames.get(property.type_id) ?? null) : null,
-    bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms,
-    maxGuests: property.max_guests,
-    currency: property.currency,
-    nightlyPrice: prices.get(property.id) ?? null,
-    coverImageUrl: filesById.get(coverFileByProperty.get(property.id) ?? "") ?? null,
-  }));
+  return properties.map((property) => {
+    const fileId = coverFileByProperty.get(property.id);
+    const fileInfo = fileId ? filesById.get(fileId) : null;
+    return {
+      id: property.id,
+      slug: property.slug,
+      name: property.name,
+      city: property.city,
+      area: property.area,
+      typeName: property.type_id ? (typeNames.get(property.type_id) ?? null) : null,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      maxGuests: property.max_guests,
+      currency: property.currency,
+      nightlyPrice: prices.get(property.id) ?? null,
+      coverImageUrl: fileInfo?.coverUrl ?? null,
+      thumbnailUrl: fileInfo?.thumbUrl ?? fileInfo?.coverUrl ?? null,
+      latitude: property.latitude ? Number(property.latitude) : null,
+      longitude: property.longitude ? Number(property.longitude) : null,
+    };
+  });
 }
 
 export async function getPublicActivePropertyBySlug(slug: string): Promise<PublicPropertyDetail | null> {
@@ -115,7 +139,7 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
 
   const { data: property, error: propertyError } = await supabase
     .from("properties")
-    .select("id, slug, name, city, area, address, description, highlights, property_area_sqft, type_id, bedrooms, bathrooms, max_guests, currency")
+    .select("id, slug, name, city, area, address, state, country, pin_code, latitude, longitude, google_maps_url, description, highlights, property_area_sqft, type_id, bedrooms, bathrooms, max_guests, currency")
     .eq("slug", slug)
     .eq("status_id", activeStatus.id)
     .is("deleted_at", null)
@@ -123,25 +147,51 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
   if (propertyError) throw propertyError;
   if (!property) return null;
 
-  const [{ data: type, error: typeError }, { data: pricing, error: pricingError }, { data: amenityRows, error: amenitiesError }, { data: photoRows, error: photosError }] = await Promise.all([
+  const [
+    { data: type, error: typeError },
+    { data: pricing, error: pricingError },
+    { data: amenityRows, error: amenitiesError },
+    { data: photoRows, error: photosError },
+    { data: videoRows, error: videosError },
+    { data: ruleRows, error: rulesError },
+  ] = await Promise.all([
     property.type_id ? supabase.from("property_types").select("name").eq("id", property.type_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("property_pricing").select("base_price").eq("property_id", property.id).maybeSingle(),
     supabase.from("property_amenities").select("amenity_id").eq("property_id", property.id).is("deleted_at", null),
-    supabase.from("property_photos").select("file_id, is_cover, sort_order").eq("property_id", property.id).is("deleted_at", null).order("sort_order"),
+    supabase.from("property_photos").select("id, file_id, is_cover, sort_order, caption, tags").eq("property_id", property.id).is("deleted_at", null).order("sort_order"),
+    supabase.from("property_videos").select("id, file_id, video_type, caption, sort_order").eq("property_id", property.id).is("deleted_at", null).order("sort_order"),
+    supabase.from("property_rules").select("rule_key, rule_text").eq("property_id", property.id).is("deleted_at", null),
   ]);
   if (typeError) throw typeError;
   if (pricingError) throw pricingError;
   if (amenitiesError) throw amenitiesError;
   if (photosError) throw photosError;
+  if (videosError) throw videosError;
+  if (rulesError) throw rulesError;
 
   const amenityIds = (amenityRows ?? []).map((row) => row.amenity_id);
-  const fileIds = (photoRows ?? []).map((row) => row.file_id);
+  const photoFileIds = (photoRows ?? []).map((row) => row.file_id);
+  const videoFileIds = (videoRows ?? []).map((row) => row.file_id);
+  const allFileIds = [...new Set([...photoFileIds, ...videoFileIds])];
+
   const [{ data: amenities, error: amenityNamesError }, { data: files, error: filesError }] = await Promise.all([
     amenityIds.length > 0 ? supabase.from("amenity_master").select("id, name").in("id", amenityIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
-    fileIds.length > 0 ? supabase.from("files").select("id, public_url, bucket, object_key").in("id", fileIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
+    allFileIds.length > 0 ? supabase.from("files").select("id, public_url, bucket, object_key").in("id", allFileIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
   ]);
   if (amenityNamesError) throw amenityNamesError;
   if (filesError) throw filesError;
+
+  let roomSpecs: import("@/features/properties/types/property.types").PropertyRoomSpecs = {};
+  const roomSpecsRule = (ruleRows ?? []).find((r) => r.rule_key === "room_specs");
+  if (roomSpecsRule?.rule_text) {
+    try {
+      roomSpecs = JSON.parse(roomSpecsRule.rule_text);
+    } catch {}
+  }
+
+  const customAmenityNames = (ruleRows ?? [])
+    .filter((r) => r.rule_key === "custom_amenity")
+    .map((r) => r.rule_text);
 
   const fileUrls = new Map(await Promise.all((files ?? []).map(async (file) => {
     if (file.public_url) return [file.id, file.public_url] as const;
@@ -151,10 +201,41 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
       return [file.id, null] as const;
     }
   })));
+
   const photos = (photoRows ?? [])
-    .map((photo) => fileUrls.get(photo.file_id))
-    .filter((url): url is string => Boolean(url))
-    .map((url) => ({ url, alt: property.name }));
+    .map((photo) => {
+      const url = fileUrls.get(photo.file_id);
+      if (!url) return null;
+      const spaceTag = photo.tags && photo.tags.length > 0 ? photo.tags[0] : (photo.caption || "Living Room");
+      return {
+        id: photo.id,
+        url,
+        alt: photo.caption || `${property.name} - ${spaceTag}`,
+        caption: photo.caption,
+        spaceTag,
+        isCover: photo.is_cover,
+        sortOrder: photo.sort_order,
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+
+  const videos = (videoRows ?? [])
+    .map((video) => {
+      const url = fileUrls.get(video.file_id);
+      if (!url) return null;
+      return {
+        id: video.id,
+        url,
+        videoType: video.video_type,
+        caption: video.caption,
+      };
+    })
+    .filter((v): v is { id: string; url: string; videoType: string; caption: string | null } => Boolean(v));
+
+  const allAmenities = [
+    ...(amenities ?? []).map((amenity) => amenity.name),
+    ...customAmenityNames,
+  ];
 
   return {
     id: property.id,
@@ -162,6 +243,12 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
     name: property.name,
     city: property.city,
     area: property.area,
+    state: property.state,
+    country: property.country,
+    pinCode: property.pin_code,
+    latitude: property.latitude ? Number(property.latitude) : null,
+    longitude: property.longitude ? Number(property.longitude) : null,
+    googleMapsUrl: property.google_maps_url,
     typeName: type?.name ?? null,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
@@ -173,8 +260,10 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
     description: property.description,
     highlights: property.highlights ?? [],
     propertyAreaSqft: property.property_area_sqft,
-    amenities: (amenities ?? []).map((amenity) => amenity.name),
+    amenities: allAmenities,
     photos,
+    videos,
+    roomSpecs,
   };
 }
 
