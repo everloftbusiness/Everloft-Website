@@ -104,34 +104,29 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
         {/* Price & Action */}
         <div className="mt-auto flex items-center justify-between gap-3 pt-2">
           <div>
-            <span className="text-[11px] font-medium text-muted-foreground block">From</span>
-            <div className="text-lg sm:text-xl font-extrabold text-foreground">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground block uppercase tracking-wider">From</span>
+            <div className="text-base sm:text-lg lg:text-xl font-extrabold text-foreground">
               {property.nightlyPrice !== null ? (
                 <>
                   {formatCurrency(property.nightlyPrice, property.currency)}
-                  <span className="text-xs font-normal text-muted-foreground"> / night <span className="font-bold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
+                  <span className="text-[11px] sm:text-xs font-normal text-muted-foreground"> / night <span className="font-bold text-emerald-800 dark:text-emerald-400">+ GST</span></span>
                 </>
               ) : (
                 <span className="text-xs font-medium text-muted-foreground">Pricing on request</span>
               )}
             </div>
+            <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-400">Book Direct & Save more!</p>
           </div>
 
           <Button
             asChild
             size="sm"
-            className="rounded-full bg-emerald-900 hover:bg-emerald-950 text-white text-xs sm:text-sm font-bold px-4 sm:px-5 h-9 sm:h-10 shadow-sm"
+            className="rounded-full bg-emerald-900 hover:bg-emerald-950 text-white text-xs font-bold px-4 h-9 shadow-sm shrink-0"
           >
             <Link href={`/properties/${property.slug}`}>
               View Stay
             </Link>
           </Button>
-        </div>
-
-        {/* Trust badge */}
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 text-xs font-semibold text-emerald-900 dark:text-emerald-300 border border-emerald-500/20">
-          <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
-          <span>Professionally Managed by Everloft</span>
         </div>
       </div>
     </article>

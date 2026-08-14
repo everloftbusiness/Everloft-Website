@@ -130,18 +130,30 @@ export function Navbar() {
           )}
         </div>
 
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <button
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:hidden",
-                solid ? "text-primary" : "text-white"
-              )}
-              aria-label="Open menu"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-          </SheetTrigger>
+        <div className="flex items-center gap-1.5 lg:hidden">
+          <a
+            href="tel:+917483270264"
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+              solid ? "text-primary hover:bg-slate-100" : "text-white hover:bg-white/10"
+            )}
+            aria-label="Call Everloft Concierge"
+          >
+            <Phone className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </a>
+
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <button
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                  solid ? "text-primary" : "text-white"
+                )}
+                aria-label="Open menu"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+            </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 flex flex-col justify-between bg-white">
             <div>
               <SheetHeader className="p-6 border-b border-border/80 text-left">
@@ -204,6 +216,7 @@ export function Navbar() {
             </div>
           </SheetContent>
         </Sheet>
+      </div>
       </div>
     </header>
   );

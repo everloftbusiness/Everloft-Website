@@ -129,7 +129,16 @@ export async function getCities() {
 export async function getTopReviews(limit = 6) {
   const reviews = await prisma.review.findMany({
     where: { rating: { gte: 4 } },
-    include: { property: { select: { name: true, slug: true } } },
+    include: {
+      property: {
+        select: {
+          name: true,
+          slug: true,
+          city: true,
+          images: { take: 1, orderBy: { sortOrder: "asc" } },
+        },
+      },
+    },
     orderBy: { rating: "desc" },
     take: limit,
   });

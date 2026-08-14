@@ -41,12 +41,28 @@ import { PopularLocations, type LocationSummary } from "@/components/marketing/p
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { MapBanner } from "@/components/marketing/map-banner";
 
-const TRUST_PILLS = [
-  { icon: Star, label: "4.9/5 Rating (500+ Reviews)" },
-  { icon: ShieldCheck, label: "In-House Management" },
-  { icon: Tag, label: "Transparent Pricing" },
+import {
+  Calendar,
+  CheckCircle,
+  Headphones,
+  Lock,
+  Percent,
+} from "lucide-react";
+
+const HERO_TRUST_PILLS = [
+  { icon: Tag, label: "Best Price Guarantee" },
+  { icon: Percent, label: "No Platform Fees" },
   { icon: Zap, label: "Instant Confirmation" },
-  { icon: Sparkles, label: "Hotel-Grade Cleanliness" },
+  { icon: Calendar, label: "Free Cancellation*" },
+];
+
+const HOSPITALITY_BADGES = [
+  { icon: Tag, label: "Best Price Guaranteed" },
+  { icon: Percent, label: "No Hidden Charges" },
+  { icon: Sparkles, label: "Direct Booking Benefits" },
+  { icon: Calendar, label: "Flexible Cancellation" },
+  { icon: Headphones, label: "24/7 Guest Support" },
+  { icon: Lock, label: "Secure Payments" },
 ];
 
 const COLLECTION = [
@@ -140,156 +156,160 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* 1. Hero Section with Luxury Living Backdrop */}
-      <section className="relative flex min-h-[92vh] items-center overflow-hidden pt-28 pb-16">
+      {/* 1. Hero Section with Luxury Living Backdrop & Mobile Optimized Layout */}
+      <section className="relative flex min-h-[90vh] items-center overflow-hidden pt-24 sm:pt-28 pb-12 sm:pb-16">
         <HeroBackdrop />
         <div className="site-container relative z-10">
           <div className="mx-auto max-w-3xl text-center">
             <Reveal>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-black/40 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                Handled with Purpose • Premium Managed Stays
-              </div>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h1 className="font-serif text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Stay Beyond Expectations
+              <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold leading-[1.12] tracking-tight text-white">
+                Premium Stays.<br />
+                Professionally Managed.<br />
+                <span className="text-emerald-400">Higher Returns.</span>
               </h1>
             </Reveal>
-            <Reveal delay={0.1}>
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
-                Discover premium villas, apartments, and curated boutique stays professionally managed by Everloft.
-              </p>
+            <Reveal delay={0.05}>
+              <div className="mx-auto mt-4 max-w-xl space-y-0.5 text-xs sm:text-base font-medium text-white/85">
+                <p>Luxury stays for guests.</p>
+                <p>Complete management for owners.</p>
+                <p>Smart opportunities for investors.</p>
+              </div>
             </Reveal>
           </div>
 
-          {/* Trust badges strip */}
-          <Reveal delay={0.15} className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-medium text-white/90">
-            {TRUST_PILLS.map((pill) => {
-              const Icon = pill.icon;
-              return (
-                <div key={pill.label} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 backdrop-blur-md border border-white/10">
-                  <Icon className="h-4 w-4 text-amber-400 shrink-0" />
-                  <span>{pill.label}</span>
-                </div>
-              );
-            })}
+          {/* Trust badges strip (2x2 on mobile, flex row on desktop) */}
+          <Reveal delay={0.1} className="mx-auto mt-6 sm:mt-8 max-w-3xl">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-semibold text-white/95">
+              {HERO_TRUST_PILLS.map((pill) => {
+                const Icon = pill.icon;
+                return (
+                  <div key={pill.label} className="flex items-center justify-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md border border-white/15 shadow-sm">
+                    <Icon className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">{pill.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+
+          {/* Dual Action Buttons on Mobile */}
+          <Reveal delay={0.12} className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 sm:hidden">
+            <Button asChild className="flex-1 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs h-11 shadow-md">
+              <Link href="/properties">
+                Explore Stays <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 rounded-xl border-white/30 bg-black/40 hover:bg-black/60 text-white font-bold text-xs h-11 backdrop-blur-md">
+              <Link href="/properties">Book Direct & Save</Link>
+            </Button>
           </Reveal>
 
           {/* Search Bar Widget */}
-          <Reveal delay={0.2} className="mx-auto mt-10 max-w-4xl">
+          <Reveal delay={0.15} className="mx-auto mt-6 sm:mt-10 max-w-4xl">
             <HeroSearchBar cities={cities} />
           </Reveal>
         </div>
       </section>
 
-      {/* 2. Explore Our Homes (Featured Property Listings) */}
+      {/* 2. Featured Properties (Horizontal swipeable on mobile, grid on desktop) */}
       <section className="section-padding bg-background">
         <div className="site-container">
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-emerald-800">
-                Featured Stays
-              </span>
-              <h2 className="mt-1 font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                A Curated Few, Handled with Purpose
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                Featured Properties
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground max-w-lg">
-                Every property on Everloft is directly managed and inspected against rigorous hospitality standards.
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Curated few, directly managed and inspected against rigorous hospitality standards.
               </p>
             </div>
-            <Reveal>
-              <Button asChild variant="outline" size="lg" className="rounded-full shrink-0 border-border hover:border-emerald-800 hover:text-emerald-800">
-                <Link href="/properties">
-                  View all properties <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </Reveal>
+            <Link
+              href="/properties"
+              className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 hover:underline shrink-0"
+            >
+              View all <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
 
           {activeProperties.length > 0 ? (
-            <RevealGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-4 sm:gap-6 snap-x snap-mandatory no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-2">
               {activeProperties.slice(0, 8).map((property) => (
-                <RevealItem key={property.id}>
+                <div key={property.id} className="snap-center shrink-0 w-[290px] sm:w-auto">
                   <PublicPropertyCard property={property} />
-                </RevealItem>
+                </div>
               ))}
-            </RevealGroup>
+            </div>
           ) : (
-            <div className="mt-10 rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-12 text-center">
-              <p className="text-lg font-semibold text-foreground">New stays are being prepared</p>
-              <p className="mt-2 text-sm text-muted-foreground">Our next collection of professionally managed homes will be available soon.</p>
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-12 text-center">
+              <p className="text-base font-semibold text-foreground">New stays are being prepared</p>
+              <p className="mt-1 text-xs text-muted-foreground">Our next collection of luxury homes will be available soon.</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* 3. Our Collection by Property Type (Preserved from Original Site) */}
-      <section className="section-padding bg-slate-50/70 border-t border-border/60">
-        <div className="site-container">
-          <SectionHeading
-            eyebrow="Our Collection"
-            title="Every kind of stay, one consistent standard"
-            description="Explore our diverse range of curated residences designed for leisure, business, and family holidays."
-          />
-          <RevealGroup className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {COLLECTION.map((item) => {
-              const Icon = item.icon;
-              return (
-                <RevealItem key={item.type}>
-                  <Link
-                    href={`/properties?type=${encodeURIComponent(item.type)}`}
-                    className="group flex flex-col items-center gap-3 rounded-2xl border border-border/80 bg-card p-5 text-center transition-all duration-300 hover:-translate-y-1 hover:border-emerald-700/40 hover:shadow-md"
-                  >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-900 transition-colors group-hover:bg-emerald-900 group-hover:text-white">
-                      <Icon className="h-5.5 w-5.5" strokeWidth={1.75} />
-                    </span>
-                    <span className="text-sm font-bold text-foreground">{item.type}</span>
-                    <span className="text-xs text-muted-foreground">{item.description}</span>
-                  </Link>
-                </RevealItem>
-              );
-            })}
-          </RevealGroup>
+      {/* 3. Trust & Hospitality Strip (Ribbon with 6 badges) */}
+      <section className="border-y border-border/60 bg-slate-50/80 dark:bg-card py-4 sm:py-5 overflow-x-auto no-scrollbar">
+        <div className="site-container flex items-center justify-between gap-6 min-w-max sm:min-w-0 sm:grid sm:grid-cols-3 lg:grid-cols-6">
+          {HOSPITALITY_BADGES.map((badge) => {
+            const Icon = badge.icon;
+            return (
+              <div key={badge.label} className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100/70 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span className="whitespace-nowrap">{badge.label}</span>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* 4. The Direct Everloft Advantage (Direct Hospitality Overview) */}
-      <section className="section-padding-tight bg-background border-t border-border/60">
+      {/* 4. Book Direct & Save More Promotional Card */}
+      <section className="section-padding-tight bg-background">
         <div className="site-container">
-          <Reveal>
-            <DirectBookingComparison />
-          </Reveal>
+          <div className="rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-emerald-100/60 to-white dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 p-4 sm:p-7 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 w-full sm:w-auto">
+              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-white shadow-md">
+                <Tag className="h-6 w-6 sm:h-7 sm:w-7" />
+              </div>
+              <div>
+                <h3 className="font-serif text-base sm:text-xl font-bold text-foreground">Book Direct & Save More</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Best price guaranteed when you book direct with Everloft!</p>
+              </div>
+            </div>
+            <Button asChild size="lg" className="w-full sm:w-auto rounded-xl sm:rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-bold text-xs sm:text-sm px-6 h-10 sm:h-11 shadow-sm shrink-0">
+              <Link href="/properties">Explore Stays</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* 5. What Our Guests Say (Real Verified Reviews) */}
+      {/* 5. What Our Guests Say (Horizontal snap carousel on mobile) */}
       {reviews.length > 0 && (
         <section className="section-padding bg-slate-50/70 border-t border-border/60">
           <div className="site-container">
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-700">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
                   <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                  Guest Experiences
+                  <span>4.9/5 from 500+ verified reviews</span>
                 </div>
-                <h2 className="mt-1 font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground mt-0.5">
                   What Our Guests Say
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Authentic reviews from verified stays across the Everloft collection.
-                </p>
               </div>
-              <Button asChild variant="outline" size="lg" className="rounded-full shrink-0">
-                <Link href="/properties">
-                  View all reviews <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              <Link
+                href="/properties"
+                className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 hover:underline shrink-0"
+              >
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
 
-            <RevealGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-4 sm:gap-6 snap-x snap-mandatory no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid-cols-2 lg:grid-cols-3 pb-2">
               {reviews.map((review) => (
-                <RevealItem key={review.id}>
+                <div key={review.id} className="snap-center shrink-0 w-[290px] sm:w-auto">
                   <ReviewCard
                     guestName={review.guestName}
                     rating={review.rating}
@@ -297,10 +317,12 @@ export default async function HomePage() {
                     comment={review.comment}
                     stayMonth={review.stayMonth}
                     propertyName={review.property.name}
+                    guestCity={review.property.city || "Bangalore"}
+                    propertyImage={review.property.images?.[0]?.url}
                   />
-                </RevealItem>
+                </div>
               ))}
-            </RevealGroup>
+            </div>
           </div>
         </section>
       )}
@@ -323,14 +345,23 @@ export default async function HomePage() {
       {locationSummaries.length > 0 && (
         <section className="section-padding bg-slate-50/70 border-t border-border/60">
           <div className="site-container">
-            <SectionHeading
-              eyebrow="Destinations"
-              title="Popular Locations & Retreats"
-              description="Stay close to the best city hubs, tech corridors, and scenic getaways."
-            />
-            <Reveal className="mt-10">
-              <PopularLocations locations={locationSummaries} />
-            </Reveal>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                  Explore Popular Locations
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                  Stay close to the best city hubs, tech corridors, and scenic getaways.
+                </p>
+              </div>
+              <Link
+                href="/properties"
+                className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 hover:underline shrink-0"
+              >
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <PopularLocations locations={locationSummaries} />
           </div>
         </section>
       )}
