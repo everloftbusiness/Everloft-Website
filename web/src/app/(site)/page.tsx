@@ -19,6 +19,7 @@ import {
   Link2,
   Settings,
   Layers,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroSearchBar } from "@/components/site/hero-search-bar";
@@ -189,18 +190,6 @@ export default async function HomePage() {
             </div>
           </Reveal>
 
-          {/* Dual Action Buttons on Mobile */}
-          <Reveal delay={0.12} className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 sm:hidden">
-            <Button asChild className="flex-1 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs h-11 shadow-md">
-              <Link href="/properties">
-                Explore Stays <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="flex-1 rounded-xl border-white/30 bg-black/40 hover:bg-black/60 text-white font-bold text-xs h-11 backdrop-blur-md">
-              <Link href="/properties">Book Direct & Save</Link>
-            </Button>
-          </Reveal>
-
           {/* Search Bar Widget */}
           <Reveal delay={0.15} className="mx-auto mt-6 sm:mt-10 max-w-4xl">
             <HeroSearchBar cities={cities} />
@@ -208,23 +197,20 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 2. Featured Properties (Horizontal swipeable on mobile, grid on desktop) */}
+      {/* 2. Explore Our Homes (Featured Properties) */}
       <section className="section-padding bg-background">
         <div className="site-container">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                Featured Properties
+                Explore Our Homes
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Curated few, directly managed and inspected against rigorous hospitality standards.
-              </p>
             </div>
             <Link
               href="/properties"
               className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 hover:underline shrink-0"
             >
-              View all <ArrowRight className="h-3.5 w-3.5" />
+              View all properties <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
@@ -251,9 +237,9 @@ export default async function HomePage() {
           {HOSPITALITY_BADGES.map((badge) => {
             const Icon = badge.icon;
             return (
-              <div key={badge.label} className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100/70 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-                  <Icon className="h-4 w-4" />
+              <div key={badge.label} className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100/70 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
                 <span className="whitespace-nowrap">{badge.label}</span>
               </div>
@@ -262,35 +248,40 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 4. Book Direct & Save More Promotional Card */}
+      {/* 4. Why Book Direct With Everloft? Promo Card */}
       <section className="section-padding-tight bg-background">
         <div className="site-container">
-          <div className="rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-emerald-100/60 to-white dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-900 p-4 sm:p-7 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="rounded-2xl sm:rounded-3xl border border-emerald-500/20 bg-[#F2F8F3] dark:bg-emerald-950/30 p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3.5 w-full sm:w-auto">
-              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-white shadow-md">
+              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 shadow-sm border border-emerald-200/60">
                 <Tag className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
               <div>
-                <h3 className="font-serif text-base sm:text-xl font-bold text-foreground">Book Direct & Save More</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Best price guaranteed when you book direct with Everloft!</p>
+                <h3 className="font-serif text-base sm:text-xl font-bold text-foreground">Why Book Direct With Everloft?</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Best price guaranteed when you book direct with us!</p>
               </div>
             </div>
-            <Button asChild size="lg" className="w-full sm:w-auto rounded-xl sm:rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-bold text-xs sm:text-sm px-6 h-10 sm:h-11 shadow-sm shrink-0">
-              <Link href="/properties">Explore Stays</Link>
+            <Button asChild size="lg" className="w-full sm:w-auto rounded-xl sm:rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-bold text-xs sm:text-sm px-6 h-11 shadow-sm shrink-0">
+              <Link href="/properties">
+                Book Direct & Save <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* 5. More Reasons to Love Everloft (Amenities & Standards) */}
+      {/* 5. Life at Everloft (Amenities & Standards) */}
       <section className="section-padding bg-background border-t border-border/60">
         <div className="site-container">
-          <SectionHeading
-            eyebrow="The Everloft Standard"
-            title="More Reasons to Love Everloft"
-            description="Experience hotel-grade service, wrapped in the comfort and privacy of a beautifully maintained home."
-          />
-          <Reveal className="mt-10">
+          <div className="mb-8">
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              Life at Everloft
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Designed for comfort. Perfect for every stay.
+            </p>
+          </div>
+          <Reveal>
             <ReasonsToLove />
           </Reveal>
         </div>
@@ -453,42 +444,80 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 14. Partner With Us (Owner & Investor CTAs) */}
+      {/* 14. Own a Property? & Invest Beyond Real Estate (Dual Cards matching mockup) */}
       <section className="section-padding bg-slate-50/70 border-t border-border/60">
-        <div className="site-container grid gap-6 lg:grid-cols-2">
-          <Reveal direction="left" className="relative overflow-hidden rounded-3xl bg-emerald-950 p-8 text-white sm:p-12 shadow-lg">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-300">
-              For Property Owners
-            </span>
-            <h3 className="font-serif text-3xl font-bold text-white mt-4">
-              Let Your Property Earn More
-            </h3>
-            <p className="mt-3 max-w-sm text-sm text-white/80 leading-relaxed">
-              Professional photography, dynamic revenue management, and hotel-grade operations — handled entirely by Everloft.
-            </p>
-            <Button asChild size="lg" className="mt-8 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-7">
-              <Link href="/property-management">
-                Partner With Everloft <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </Reveal>
+        <div className="site-container">
+          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
+            {/* Own a Property */}
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border border-border/70 bg-[#F4EFEA]/80 dark:bg-card p-6 sm:p-8 shadow-sm min-h-[190px]">
+              <div className="relative z-10 max-w-[240px] sm:max-w-xs">
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-foreground">
+                  Own a Property?
+                </h3>
+                <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Earn more with hassle-free management.
+                </p>
+                <div className="mt-6">
+                  <Button asChild variant="outline" size="sm" className="rounded-xl border-border bg-white/90 dark:bg-slate-900/90 text-foreground font-bold text-xs hover:border-emerald-800 shadow-sm">
+                    <Link href="/property-management">
+                      Partner With Us <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="absolute right-0 bottom-0 h-36 w-36 sm:h-44 sm:w-44 opacity-85 pointer-events-none">
+                <Image
+                  src="/images/pic01.webp"
+                  alt="Own a property"
+                  fill
+                  sizes="200px"
+                  className="object-cover rounded-tl-3xl"
+                />
+              </div>
+            </div>
 
-          <Reveal direction="right" className="relative overflow-hidden rounded-3xl border border-border bg-card p-8 sm:p-12 shadow-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
-              For Investors
-            </span>
-            <h3 className="font-serif text-3xl font-bold text-foreground mt-4">
-              Grow With Everloft
-            </h3>
-            <p className="mt-3 max-w-sm text-sm text-muted-foreground leading-relaxed">
-              Structured hospitality investment opportunities with transparent returns across a high-performing property portfolio.
-            </p>
-            <Button asChild size="lg" className="mt-8 rounded-full bg-emerald-900 hover:bg-emerald-950 text-white font-medium px-7">
-              <Link href="/investor-program">
-                Explore Investor Program <ArrowRight className="ml-2 h-4 w-4" />
+            {/* Invest Beyond Real Estate */}
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border border-border/70 bg-[#F4EFEA]/80 dark:bg-card p-6 sm:p-8 shadow-sm min-h-[190px]">
+              <div className="relative z-10 max-w-[240px] sm:max-w-xs">
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-foreground">
+                  Invest Beyond Real Estate
+                </h3>
+                <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Stable returns with professionally managed hospitality assets.
+                </p>
+                <div className="mt-6">
+                  <Button asChild variant="outline" size="sm" className="rounded-xl border-border bg-white/90 dark:bg-slate-900/90 text-foreground font-bold text-xs hover:border-emerald-800 shadow-sm">
+                    <Link href="/investor-program">
+                      Explore Investment <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="absolute right-0 bottom-0 h-36 w-36 sm:h-44 sm:w-44 opacity-85 pointer-events-none">
+                <Image
+                  src="/images/pic02.webp"
+                  alt="Invest Beyond Real Estate"
+                  fill
+                  sizes="200px"
+                  className="object-cover rounded-tl-3xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Have Questions? Bottom Green Banner */}
+          <div className="mt-6 sm:mt-8 rounded-2xl sm:rounded-3xl bg-[#133E23] text-white p-5 sm:p-7 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="font-serif text-lg sm:text-xl font-bold text-white">Have Questions?</h3>
+              <p className="text-xs sm:text-sm text-white/80 mt-0.5">We&apos;re here to help you find the perfect stay.</p>
+            </div>
+            <Button asChild size="lg" className="w-full sm:w-auto rounded-xl bg-white hover:bg-slate-100 text-emerald-950 font-bold text-xs sm:text-sm px-6 h-11 shadow-sm shrink-0">
+              <Link href="/contact" className="flex items-center justify-center gap-2">
+                <span>Contact Us</span>
+                <Phone className="h-4 w-4 text-emerald-800" />
               </Link>
             </Button>
-          </Reveal>
+          </div>
         </div>
       </section>
 

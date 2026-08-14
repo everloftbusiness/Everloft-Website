@@ -130,24 +130,21 @@ export function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 lg:hidden">
+        <div className="flex items-center gap-2.5 lg:hidden">
           <a
             href="tel:+917483270264"
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-              solid ? "text-primary hover:bg-slate-100" : "text-white hover:bg-white/10"
-            )}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border/80 bg-white/90 text-emerald-800 shadow-sm backdrop-blur-md transition-transform active:scale-95 dark:bg-card/90 dark:text-emerald-400"
             aria-label="Call Everloft Concierge"
           >
-            <Phone className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <Phone className="h-5 w-5" />
           </a>
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <button
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                  solid ? "text-primary" : "text-white"
+                  "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
+                  solid ? "text-primary hover:bg-slate-100 dark:hover:bg-slate-800" : "text-white hover:bg-white/10"
                 )}
                 aria-label="Open menu"
               >

@@ -1,53 +1,46 @@
-import { KeyRound, Wifi, UtensilsCrossed, Sparkles, ShieldCheck, Car } from "lucide-react";
+import { Maximize2, Wifi, UtensilsCrossed, Sparkles, ShieldCheck, KeyRound } from "lucide-react";
 
-const REASONS = [
+const LIFE_FEATURES = [
   {
-    icon: KeyRound,
-    title: "Smart Check-in",
-    description: "Keyless digital entry or personal greeting for seamless arrival.",
+    icon: Maximize2,
+    title: "Spacious Living",
   },
   {
     icon: Wifi,
-    title: "High-Speed WiFi",
-    description: "Dedicated high-bandwidth internet tailored for work and leisure.",
+    title: "Fast Wi-Fi",
   },
   {
     icon: UtensilsCrossed,
-    title: "Fully Equipped Kitchens",
-    description: "Complete cookware, appliances, and dining essentials in every home.",
+    title: "Fully Equipped Kitchen",
   },
   {
     icon: Sparkles,
-    title: "Hotel-Grade Cleanliness",
-    description: "Sanitized and prepared by professional in-house housekeeping teams.",
+    title: "Housekeeping Support",
   },
   {
     icon: ShieldCheck,
     title: "Safe & Secure",
-    description: "Verified gated societies, secure access, and round-the-clock team support.",
   },
   {
-    icon: Car,
-    title: "Dedicated Parking",
-    description: "Convenient on-site or reserved parking space for peace of mind.",
+    icon: KeyRound,
+    title: "Self Check-in",
   },
 ];
 
 export function ReasonsToLove() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-      {REASONS.map((reason) => {
-        const Icon = reason.icon;
+    <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-border/60 rounded-2xl border border-border/70 bg-card overflow-hidden shadow-sm">
+      {LIFE_FEATURES.map((item) => {
+        const Icon = item.icon;
         return (
           <div
-            key={reason.title}
-            className="group flex flex-col items-center rounded-2xl border border-border/80 bg-card p-5 text-center transition-all duration-300 hover:-translate-y-1 hover:border-emerald-700/40 hover:shadow-md"
+            key={item.title}
+            className="flex flex-col items-center justify-center p-4 sm:p-5 text-center transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-900/50"
           >
-            <div className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition-colors group-hover:bg-emerald-900 group-hover:text-white">
-              <Icon className="h-6 w-6" strokeWidth={1.75} />
+            <div className="mb-2.5 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <Icon className="h-5 w-5 sm:h-5.5 sm:w-5.5 text-emerald-700 dark:text-emerald-400" strokeWidth={1.75} />
             </div>
-            <h4 className="text-sm font-bold text-foreground">{reason.title}</h4>
-            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{reason.description}</p>
+            <h4 className="text-xs sm:text-sm font-bold text-foreground leading-snug">{item.title}</h4>
           </div>
         );
       })}

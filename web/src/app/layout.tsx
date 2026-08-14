@@ -87,8 +87,6 @@ const organizationJsonLd = {
   ],
 };
 
-import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -96,7 +94,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} data-scroll-behavior="smooth">
-      <body className="min-h-full flex flex-col bg-background text-foreground pb-16 lg:pb-0">
+      <body className="min-h-full flex flex-col bg-background text-foreground">
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>
@@ -105,7 +103,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
-        <MobileBottomNav />
         <Toaster richColors position="top-center" />
       </body>
     </html>
