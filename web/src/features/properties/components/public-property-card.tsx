@@ -19,7 +19,7 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-700/40 hover:shadow-[0_20px_45px_-15px_rgba(15,23,42,0.18)]">
       {/* Image container */}
-      <div className="relative block aspect-[16/10] min-h-[210px] sm:min-h-[190px] overflow-hidden bg-slate-900">
+      <div className="relative block aspect-[16/10] min-h-[210px] sm:min-h-[190px] overflow-hidden bg-slate-100 dark:bg-slate-850">
         <Link href={`/properties/${property.slug}`} className="block h-full w-full">
           {displayImageUrl && !imgError ? (
             <Image

@@ -184,39 +184,38 @@ export function PropertyGallery({
         </button>
       </div>
 
-      {/* 5-Photo Luxury Bento Grid */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-slate-900 shadow-md">
-        <div className="grid h-[320px] grid-cols-1 gap-2 sm:h-[440px] md:h-[480px] lg:h-[520px] sm:grid-cols-4 sm:grid-rows-2">
-          {/* Main Hero Photo (Left 2 cols, 2 rows) */}
-          <div
-            onClick={() => openAt(0)}
-            className="group relative col-span-1 row-span-2 h-full cursor-pointer overflow-hidden sm:col-span-2"
-          >
-            {hasImages && displayImages[0] ? (
-              <Image
-                src={displayImages[0].url}
-                alt={displayImages[0].alt || name}
-                fill
-                priority
-                unoptimized
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-            ) : (
-              <PropertyMedia seed={name} type={type} label={name} className="h-full w-full" />
-            )}
-            <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
-          </div>
+      {/* 5-Photo Luxury Bento Grid (or Single Clean Placeholder Banner if no photos) */}
+      {hasImages ? (
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-slate-900 shadow-md">
+          <div className="grid h-[320px] grid-cols-1 gap-2 sm:h-[440px] md:h-[480px] lg:h-[520px] sm:grid-cols-4 sm:grid-rows-2">
+            {/* Main Hero Photo (Left 2 cols, 2 rows) */}
+            <div
+              onClick={() => openAt(0)}
+              className="group relative col-span-1 row-span-2 h-full cursor-pointer overflow-hidden sm:col-span-2"
+            >
+              {displayImages[0] && (
+                <Image
+                  src={displayImages[0].url}
+                  alt={displayImages[0].alt || name}
+                  fill
+                  priority
+                  unoptimized
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+              )}
+              <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
+            </div>
 
-          {/* 4 Secondary Photos (Right side 2x2 grid) */}
-          {[1, 2, 3, 4].map((idx) => {
-            const img = hasImages && displayImages[idx] ? displayImages[idx] : null;
-            return (
-              <div
-                key={idx}
-                onClick={() => openAt(idx < totalPhotos ? idx : 0)}
-                className="group relative hidden cursor-pointer overflow-hidden sm:block"
-              >
-                {img ? (
+            {/* 4 Secondary Photos (Right side 2x2 grid) */}
+            {[1, 2, 3, 4].map((idx) => {
+              const img = displayImages[idx];
+              if (!img) return null;
+              return (
+                <div
+                  key={idx}
+                  onClick={() => openAt(idx)}
+                  className="group relative hidden cursor-pointer overflow-hidden sm:block"
+                >
                   <Image
                     src={img.url}
                     alt={img.alt || `${name} photo ${idx + 1}`}
@@ -224,162 +223,176 @@ export function PropertyGallery({
                     unoptimized
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
-                ) : (
-                  <PropertyMedia seed={`${name}-${idx}`} type={type} label={name} className="h-full w-full" />
-                )}
-                <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
-              </div>
-            );
-          })}
-        </div>
+                  <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
+                </div>
+              );
+            })}
+          </div>
 
-        {/* Floating "Watch Video Tour" Button (Left) */}
-        {videos && videos.length > 0 && (
-          <a
-            href="#video-tour"
-            className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/25 bg-slate-950/85 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all hover:bg-slate-900 active:scale-95"
+          {/* Floating "Watch Video Tour" Button (Left) */}
+          {videos && videos.length > 0 && (
+            <a
+              href="#video-tour"
+              className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/25 bg-slate-950/85 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-white shadow-xl backdrop-blur-md transition-all hover:bg-slate-900 active:scale-95"
+            >
+              <Video className="h-3.5 w-3.5 text-amber-400" />
+              <span>Watch Video</span>
+            </a>
+          )}
+
+          {/* Floating "Show all photos" Pill Button (Right) */}
+          <button
+            type="button"
+            onClick={openGridView}
+            className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-black/10 bg-white/95 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-slate-900 shadow-xl backdrop-blur-md transition-all hover:bg-white active:scale-95"
           >
-            <Video className="h-3.5 w-3.5 text-amber-400" />
-            <span>Watch Video</span>
-          </a>
-        )}
+            <Grid className="h-3.5 w-3.5 text-emerald-800" />
+            <span>{totalPhotos} Photos</span>
+          </button>
+        </div>
+      ) : (
+        <div className="relative h-[260px] sm:h-[360px] md:h-[400px] overflow-hidden rounded-3xl border border-border/80 bg-slate-100 dark:bg-slate-850 shadow-md flex items-center justify-center">
+          <PropertyMedia label={name} type={type} className="h-full w-full" />
+        </div>
+      )}
 
-        {/* Floating "Show all photos" Pill Button (Right) */}
-        <button
-          type="button"
-          onClick={openGridView}
-          className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-10 flex items-center gap-1.5 sm:gap-2 rounded-full border border-black/10 bg-white/95 px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-slate-900 shadow-xl backdrop-blur-md transition-all hover:bg-white active:scale-95"
-        >
-          <Grid className="h-3.5 w-3.5 text-emerald-800" />
-          <span>{totalPhotos} Photos</span>
-        </button>
-      </div>
-
-      {/* PLEASANT LUXURY LIGHTBOX MODAL */}
+      {/* LUXURY ADAPTIVE LIGHTBOX MODAL */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/70 backdrop-blur-2xl text-slate-900 animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/92 backdrop-blur-2xl text-white animate-in fade-in duration-200 select-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLightboxOpen(false);
+          }}
+        >
           {/* Top Lightbox Header */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/20 bg-white/90 backdrop-blur-xl px-4 sm:px-8 shadow-sm">
+          <div className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-8 border-b border-white/10 bg-black/40 backdrop-blur-md z-30">
             <div className="flex items-center gap-3">
-              <span className="rounded-full bg-emerald-50 px-3.5 py-1 font-mono text-xs font-bold text-emerald-900 border border-emerald-200">
-                {viewMode === "slideshow" ? `${activeIndex + 1} of ${totalPhotos}` : `${totalPhotos} Photos`}
+              <span className="rounded-full bg-white/15 px-3.5 py-1 font-mono text-xs font-bold text-white border border-white/20 backdrop-blur">
+                {viewMode === "slideshow" ? `${activeIndex + 1} / ${totalPhotos}` : `${totalPhotos} Photos`}
               </span>
-              <span className="hidden text-sm font-bold text-foreground md:inline-block line-clamp-1">
-                {name} {location ? `• ${location}` : ""}
-              </span>
+              {viewMode === "slideshow" && hasImages && displayImages[activeIndex]?.spaceTag && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-950/80 px-3 py-1 text-xs font-semibold text-emerald-300 border border-emerald-500/30 backdrop-blur">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  {displayImages[activeIndex].spaceTag}
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               {/* Toggle Grid vs Slideshow */}
               <button
                 type="button"
                 onClick={() => setViewMode(viewMode === "slideshow" ? "grid" : "slideshow")}
-                className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-50 hover:scale-105 active:scale-95"
+                className="flex h-9 sm:h-10 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 sm:px-4 text-xs font-bold text-white backdrop-blur transition-all hover:bg-white/20 active:scale-95"
               >
-                <Grid className="h-4 w-4 text-emerald-700" />
-                <span className="hidden sm:inline">{viewMode === "slideshow" ? "View All Photos" : "Back to Slideshow"}</span>
+                <Grid className="h-4 w-4 text-emerald-400" />
+                <span>{viewMode === "slideshow" ? "All Photos" : "Slideshow"}</span>
+              </button>
+
+              {/* Share button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex h-9 sm:h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 sm:px-4 text-xs font-semibold text-white backdrop-blur transition-all hover:bg-white/20 active:scale-95"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5 text-white/80" />}
+                <span className="hidden sm:inline">{copied ? "Copied" : "Share"}</span>
               </button>
 
               {/* Close Button */}
               <button
                 type="button"
                 onClick={() => setLightboxOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition-all hover:bg-slate-100 hover:scale-105 active:scale-95"
-                aria-label="Close gallery"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur transition-all hover:bg-white/25 active:scale-95"
+                aria-label="Close fullscreen gallery"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          {/* View Mode: SLIDESHOW */}
+          {/* View Mode: SLIDESHOW (Adaptive full-screen view) */}
           {viewMode === "slideshow" && (
-            <div className="relative flex flex-1 flex-col justify-between overflow-hidden p-3 sm:p-6 bg-gradient-to-b from-slate-900/10 to-slate-900/40">
-              {/* Main Photo Viewport */}
-              <div className="relative flex flex-1 items-center justify-center">
-                {/* Previous Button */}
-                {hasImages && displayImages.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={prevPhoto}
-                    aria-label="Previous photo"
-                    className="absolute left-2 sm:left-6 z-20 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-2xl backdrop-blur-md transition-all hover:bg-white hover:scale-110 active:scale-95 border border-slate-200/80"
-                  >
-                    <ChevronLeft className="h-7 w-7 sm:h-8 sm:w-8 text-slate-800" />
-                  </button>
-                )}
+            <div
+              className="relative flex flex-1 items-center justify-center p-3 sm:p-6 overflow-hidden"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setLightboxOpen(false);
+              }}
+            >
+              {/* Previous Button */}
+              {hasImages && displayImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevPhoto();
+                  }}
+                  aria-label="Previous photo"
+                  className="absolute left-3 sm:left-8 z-30 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-black/60 text-white shadow-2xl backdrop-blur-md transition-all hover:bg-black/80 hover:scale-110 active:scale-95 border border-white/20"
+                >
+                  <ChevronLeft className="h-7 w-7 text-white" />
+                </button>
+              )}
 
-                {/* Pleasant Photo Frame Card */}
-                <div className="relative h-[58vh] sm:h-[68vh] lg:h-[72vh] w-full max-w-6xl rounded-3xl bg-white p-2 sm:p-4 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.35)] border border-white/80 flex items-center justify-center overflow-hidden">
+              {/* Adaptive Image Viewport */}
+              <div className="relative flex flex-col items-center justify-center max-h-[82vh] max-w-[94vw] sm:max-w-[88vw] w-full h-full">
+                <div className="relative h-full w-full flex items-center justify-center">
                   {hasImages && displayImages[activeIndex] ? (
-                    <Image
-                      src={displayImages[activeIndex].url}
-                      alt={displayImages[activeIndex].alt || `${name} photo ${activeIndex + 1}`}
-                      fill
-                      priority
-                      unoptimized
-                      className="object-contain rounded-2xl"
-                    />
+                    <div className="relative h-full w-full max-h-[76vh] flex items-center justify-center">
+                      <Image
+                        src={displayImages[activeIndex].url}
+                        alt={displayImages[activeIndex].alt || `${name} photo ${activeIndex + 1}`}
+                        fill
+                        priority
+                        unoptimized
+                        className="object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl"
+                      />
+                    </div>
                   ) : (
-                    <PropertyMedia seed={name} type={type} label={name} className="h-full w-full rounded-2xl" />
+                    <div className="h-[400px] w-[600px] max-w-full rounded-2xl overflow-hidden">
+                      <PropertyMedia seed={name} type={type} label={name} className="h-full w-full" />
+                    </div>
                   )}
                 </div>
 
-                {/* Next Button */}
-                {hasImages && displayImages.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={nextPhoto}
-                    aria-label="Next photo"
-                    className="absolute right-2 sm:right-6 z-20 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-2xl backdrop-blur-md transition-all hover:bg-white hover:scale-110 active:scale-95 border border-slate-200/80"
-                  >
-                    <ChevronRight className="h-7 w-7 sm:h-8 sm:w-8 text-slate-800" />
-                  </button>
+                {/* Floating Caption / Space Pill */}
+                {hasImages && displayImages[activeIndex]?.caption && (
+                  <div className="mt-3 inline-flex max-w-xl items-center justify-center rounded-full bg-black/70 px-4 py-1.5 text-center text-xs font-medium text-white/90 backdrop-blur-md border border-white/10 shadow-lg">
+                    {displayImages[activeIndex].caption}
+                  </div>
                 )}
               </div>
 
-              {/* Bottom Thumbnail Strip on Pleasant Light Bar */}
+              {/* Next Button */}
               {hasImages && displayImages.length > 1 && (
-                <div className="mt-3 mx-auto flex h-20 max-w-4xl shrink-0 items-center justify-center gap-2.5 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg backdrop-blur-md border border-white/60">
-                  {displayImages.map((img, i) => (
-                    <button
-                      key={img.url + i}
-                      type="button"
-                      onClick={() => setActiveIndex(i)}
-                      className={cn(
-                        "relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200",
-                        activeIndex === i
-                          ? "border-emerald-700 ring-2 ring-emerald-700 scale-105 opacity-100 shadow-md"
-                          : "border-transparent opacity-60 hover:opacity-100"
-                      )}
-                    >
-                      <Image
-                        src={img.url}
-                        alt={`Thumbnail ${i + 1}`}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextPhoto();
+                  }}
+                  aria-label="Next photo"
+                  className="absolute right-3 sm:right-8 z-30 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-black/60 text-white shadow-2xl backdrop-blur-md transition-all hover:bg-black/80 hover:scale-110 active:scale-95 border border-white/20"
+                >
+                  <ChevronRight className="h-7 w-7 text-white" />
+                </button>
               )}
             </div>
           )}
 
-          {/* View Mode: FULL PHOTO GRID */}
+          {/* View Mode: FULL PHOTO GRID (Masonry style overview) */}
           {viewMode === "grid" && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#FBFBF9]">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-black/60 backdrop-blur-xl">
               <div className="mx-auto max-w-6xl">
                 <div className="mb-6 flex items-center justify-between">
                   <div>
-                    <h3 className="font-serif text-2xl font-bold text-foreground">Property Photo Gallery</h3>
-                    <p className="text-sm text-muted-foreground">Viewing all {totalPhotos} curated photos of {name}</p>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">All Property Photos</h3>
+                    <p className="text-xs sm:text-sm text-white/70">Viewing all {totalPhotos} curated photos of {name}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setViewMode("slideshow")}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-950"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 hover:bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md transition-all"
                   >
                     Open Slideshow
                   </button>
@@ -393,21 +406,25 @@ export function PropertyGallery({
                         setActiveIndex(idx);
                         setViewMode("slideshow");
                       }}
-                      className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-2xl border border-border/80 bg-white p-2 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-700/40"
+                      className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/60 hover:shadow-2xl"
                     >
-                      <div className="relative h-full w-full overflow-hidden rounded-xl bg-slate-100">
-                        <Image
-                          src={img.url}
-                          alt={img.alt || `${name} photo ${idx + 1}`}
-                          fill
-                          unoptimized
-                          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                        />
-                      </div>
-                      <div className="absolute bottom-4 left-4 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                      <Image
+                        src={img.url}
+                        alt={img.alt || `${name} photo ${idx + 1}`}
+                        fill
+                        unoptimized
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="rounded-md bg-black/80 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                           Photo {idx + 1}
                         </span>
+                        {img.spaceTag && (
+                          <span className="rounded-md bg-emerald-950/80 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 border border-emerald-500/30 backdrop-blur">
+                            {img.spaceTag}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

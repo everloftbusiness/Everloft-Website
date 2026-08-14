@@ -38,7 +38,6 @@ import { homepageFaqs } from "@/lib/data/faqs";
 import { DirectBookingComparison } from "@/components/marketing/direct-booking-comparison";
 import { ReasonsToLove } from "@/components/marketing/reasons-to-love";
 import { PopularLocations, type LocationSummary } from "@/components/marketing/popular-locations";
-import { SpecialOffers } from "@/components/marketing/special-offers";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { MapBanner } from "@/components/marketing/map-banner";
 
@@ -92,18 +91,6 @@ const WHAT_MAKES_EVERLOFT = [
   },
 ];
 
-const HOMEPAGE_PHOTO_MAP: Record<string, string> = {
-  "villa-zephyr": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
-  "villa-zephyr-assagao": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
-  "the-aravalli-lake-retreat": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85",
-  "sea-glass-penthouse": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
-  "misty-ridge-boutique-stay": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85",
-  "nilaya-residences": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
-  "the-jaipur-haveli": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85",
-  "pinewood-chalet": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=85",
-  "gokarna-cliffside-villa": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
-};
-
 export default async function HomePage() {
   const [supabaseProperties, prismaProperties, cities, reviews] = await Promise.all([
     listPublicActiveProperties(8).catch(() => []),
@@ -112,10 +99,9 @@ export default async function HomePage() {
     getTopReviews(6).catch(() => []),
   ]);
 
-  // Combine listings with guaranteed high-resolution luxury photos
+  // Combine listings: active supabase properties or prisma fallback
   const activeProperties = supabaseProperties.length > 0 ? supabaseProperties : prismaProperties.map((p) => {
-    const fallback = HOMEPAGE_PHOTO_MAP[p.slug] || HOMEPAGE_PHOTO_MAP[p.slug.toLowerCase()] || "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85";
-    const imgUrl = (p.images?.[0]?.url && p.images[0].url.startsWith("http")) ? p.images[0].url : fallback;
+    const imgUrl = (p.images?.[0]?.url && p.images[0].url.startsWith("http")) ? p.images[0].url : null;
     return {
       id: p.id,
       slug: p.slug,
@@ -349,16 +335,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* 8. Special Offers for You */}
-      <section className="section-padding-tight bg-background border-t border-border/60">
-        <div className="site-container">
-          <Reveal>
-            <SpecialOffers />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 9. What Makes Everloft (Collaborative Value Pillars) */}
+      {/* 8. What Makes Everloft (Collaborative Value Pillars) */}
       <section className="section-padding bg-slate-50/70 border-t border-border/60">
         <div className="site-container">
           <SectionHeading

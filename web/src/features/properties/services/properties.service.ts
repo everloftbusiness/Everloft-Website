@@ -20,18 +20,6 @@ type PropertiesUpdate = Database["public"]["Tables"]["properties"]["Update"];
  * operational property/file data private. This function selects only active
  * listings and the small set of display-safe fields below.
  */
-const CURATED_PROPERTY_PHOTOS: Record<string, string> = {
-  "villa-zephyr": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
-  "villa-zephyr-assagao": "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
-  "the-aravalli-lake-retreat": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85",
-  "sea-glass-penthouse": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85",
-  "misty-ridge-boutique-stay": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85",
-  "nilaya-residences": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85",
-  "the-jaipur-haveli": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85",
-  "pinewood-chalet": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=85",
-  "gokarna-cliffside-villa": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85",
-};
-
 export async function listPublicActiveProperties(limit = 6): Promise<PublicPropertyListItem[]> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
 
@@ -64,10 +52,11 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
     supabase.from("property_pricing").select("property_id, base_price").in("property_id", propertyIds),
     supabase
       .from("property_photos")
-      .select("property_id, file_id")
+      .select("property_id, file_id, is_cover, sort_order")
       .in("property_id", propertyIds)
-      .eq("is_cover", true)
-      .is("deleted_at", null),
+      .is("deleted_at", null)
+      .order("is_cover", { ascending: false })
+      .order("sort_order", { ascending: true }),
   ]);
   if (typesError) throw typesError;
   if (pricingError) throw pricingError;
@@ -77,22 +66,24 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
   const prices = new Map((pricing ?? []).map((rate) => [rate.property_id, rate.base_price ? Number(rate.base_price) : null]));
   const fileIds = (photos ?? []).map((photo) => photo.file_id);
   const { data: files } = fileIds.length
-    ? await supabase.from("files").select("id, bucket, object_key, thumbnail_key").in("id", fileIds)
+    ? await supabase.from("files").select("id, public_url, bucket, object_key, thumbnail_key").in("id", fileIds)
     : { data: [] };
 
   const filesById = new Map(
     await Promise.all(
       (files ?? []).map(async (file) => {
-        let coverUrl: string | null = null;
+        let coverUrl: string | null = file.public_url || null;
         let thumbUrl: string | null = null;
 
-        if (process.env.R2_PUBLIC_BASE_URL) {
-          coverUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.object_key}`;
-        } else {
-          try {
-            coverUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 });
-          } catch {
-            coverUrl = null;
+        if (!coverUrl) {
+          if (process.env.R2_PUBLIC_BASE_URL) {
+            coverUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.object_key}`;
+          } else {
+            try {
+              coverUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 });
+            } catch {
+              coverUrl = null;
+            }
           }
         }
 
@@ -112,14 +103,19 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
       })
     )
   );
-  const coverFileByProperty = new Map((photos ?? []).map((photo) => [photo.property_id, photo.file_id]));
+  // Map first (or is_cover) photo for each property
+  const coverFileByProperty = new Map<string, string>();
+  for (const photo of photos ?? []) {
+    if (!coverFileByProperty.has(photo.property_id) || photo.is_cover) {
+      coverFileByProperty.set(photo.property_id, photo.file_id);
+    }
+  }
 
   return properties.map((property) => {
     const fileId = coverFileByProperty.get(property.id);
     const fileInfo = fileId ? filesById.get(fileId) : null;
-    const fallbackPhoto = CURATED_PROPERTY_PHOTOS[property.slug] || CURATED_PROPERTY_PHOTOS[property.slug.toLowerCase()] || "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85";
-    const coverUrl = fileInfo?.coverUrl || fallbackPhoto;
-    const thumbUrl = fileInfo?.thumbUrl || fileInfo?.coverUrl || fallbackPhoto;
+    const coverUrl = fileInfo?.coverUrl ?? null;
+    const thumbUrl = fileInfo?.thumbUrl ?? fileInfo?.coverUrl ?? null;
 
     return {
       id: property.id,
