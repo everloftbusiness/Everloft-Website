@@ -88,7 +88,9 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
         }
 
         if (file.thumbnail_key) {
-          if (process.env.R2_PUBLIC_BASE_URL) {
+          if (file.public_url && file.object_key) {
+            thumbUrl = file.public_url.replace(file.object_key, file.thumbnail_key);
+          } else if (process.env.R2_PUBLIC_BASE_URL) {
             thumbUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.thumbnail_key}`;
           } else {
             try {
@@ -99,7 +101,7 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
           }
         }
 
-        return [file.id, { coverUrl, thumbUrl }] as const;
+        return [file.id, { coverUrl, thumbUrl: thumbUrl || coverUrl }] as const;
       })
     )
   );

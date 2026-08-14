@@ -26,6 +26,7 @@ export function PublicPropertyCard({ property }: { property: PublicPropertyListI
               src={displayImageUrl}
               alt={property.name}
               fill
+              unoptimized
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               onError={() => setImgError(true)}
