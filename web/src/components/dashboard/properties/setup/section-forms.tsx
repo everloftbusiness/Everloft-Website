@@ -513,34 +513,72 @@ export function HouseRulesForm({
 }) {
   return (
     <SectionFormShell action={saveHouseRulesAction.bind(null, propertyId)}>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label className="mb-1.5">Check-in Time</Label>
-          <Input name="checkInTime" type="time" required defaultValue={initial.checkInTime ?? "14:00"} />
-        </div>
-        <div>
-          <Label className="mb-1.5">Check-out Time</Label>
-          <Input name="checkOutTime" type="time" required defaultValue={initial.checkOutTime ?? "11:00"} />
-        </div>
-        <div>
-          <Label className="mb-1.5">Security Deposit</Label>
-          <Input name="securityDepositAmount" type="number" min={0} defaultValue={initial.securityDepositAmount ?? undefined} />
-        </div>
-        <div>
-          <Label className="mb-1.5">Currency</Label>
-          <Input name="securityDepositCurrency" maxLength={3} defaultValue={initial.securityDepositCurrency ?? "INR"} />
+      {/* 1. Timings Card */}
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <span>🕒</span> Standard Check-in & Checkout Times
+        </h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="mb-1 text-xs text-muted-foreground">Check-in After</Label>
+            <Input name="checkInTime" type="time" required defaultValue={initial.checkInTime ?? "14:00"} className="font-semibold" />
+          </div>
+          <div>
+            <Label className="mb-1 text-xs text-muted-foreground">Checkout Before</Label>
+            <Input name="checkOutTime" type="time" required defaultValue={initial.checkOutTime ?? "11:00"} className="font-semibold" />
+          </div>
         </div>
       </div>
-      <div className="space-y-2 pt-2">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="smokingAllowed" defaultChecked={initial.smokingAllowed} /> Allow smoking
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="petsAllowed" defaultChecked={initial.petsAllowed} /> Allow pets
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="partiesAllowed" defaultChecked={initial.partiesAllowed} /> Allow parties/events
-        </label>
+
+      {/* 2. Airbnb Core Rules Status Badges */}
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <h4 className="text-sm font-semibold text-foreground flex items-center justify-between">
+          <span className="flex items-center gap-2"><span>📋</span> Core Guest Policies (Auto-Populated)</span>
+          <span className="text-xs font-normal text-emerald-800 dark:text-emerald-400 font-semibold">✓ Active Policies Enforced</span>
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label className={`flex flex-col gap-1.5 rounded-xl border p-3 text-sm font-medium cursor-pointer transition-all ${!initial.smokingAllowed ? 'border-emerald-500/40 bg-amber-500/10 dark:bg-amber-950/30 ring-1 ring-emerald-500/30' : 'border-border bg-accent/30'}`}>
+            <div className="flex items-center gap-2 font-semibold">
+              <Checkbox name="noSmokingEnforced" defaultChecked={!initial.smokingAllowed} />
+              <span>{!initial.smokingAllowed ? "🚭 No Smoking Policy (Active)" : "🚬 Smoking Allowed"}</span>
+            </div>
+            <span className="text-[11px] text-muted-foreground pl-6">
+              {!initial.smokingAllowed ? "Strictly non-smoking home & shared areas" : "Smoking is permitted"}
+            </span>
+          </label>
+
+          <label className={`flex flex-col gap-1.5 rounded-xl border p-3 text-sm font-medium cursor-pointer transition-all ${!initial.petsAllowed ? 'border-emerald-500/40 bg-blue-500/10 dark:bg-blue-950/30 ring-1 ring-emerald-500/30' : 'border-border bg-accent/30'}`}>
+            <div className="flex items-center gap-2 font-semibold">
+              <Checkbox name="noPetsEnforced" defaultChecked={!initial.petsAllowed} />
+              <span>{!initial.petsAllowed ? "🐾 No Pets Policy (Active)" : "🐶 Pets Allowed"}</span>
+            </div>
+            <span className="text-[11px] text-muted-foreground pl-6">
+              {!initial.petsAllowed ? "Pets are not allowed on premises" : "Pets are welcome"}
+            </span>
+          </label>
+
+          <label className={`flex flex-col gap-1.5 rounded-xl border p-3 text-sm font-medium cursor-pointer transition-all ${!initial.partiesAllowed ? 'border-emerald-500/40 bg-purple-500/10 dark:bg-purple-950/30 ring-1 ring-emerald-500/30' : 'border-border bg-accent/30'}`}>
+            <div className="flex items-center gap-2 font-semibold">
+              <Checkbox name="noPartiesEnforced" defaultChecked={!initial.partiesAllowed} />
+              <span>{!initial.partiesAllowed ? "🎉 No Parties Policy (Active)" : "🥳 Parties Allowed"}</span>
+            </div>
+            <span className="text-[11px] text-muted-foreground pl-6">
+              {!initial.partiesAllowed ? "Peaceful residential community (Quiet hours 10PM-8AM)" : "Events permitted"}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {/* 3. Security Deposit */}
+      <div className="grid grid-cols-2 gap-4 pt-1">
+        <div>
+          <Label className="mb-1.5 font-semibold text-foreground">Security Deposit Amount</Label>
+          <Input name="securityDepositAmount" type="number" min={0} placeholder="e.g. 5000" defaultValue={initial.securityDepositAmount ?? undefined} />
+        </div>
+        <div>
+          <Label className="mb-1.5 font-semibold text-foreground">Currency</Label>
+          <Input name="securityDepositCurrency" maxLength={3} defaultValue={initial.securityDepositCurrency ?? "INR"} />
+        </div>
       </div>
     </SectionFormShell>
   );

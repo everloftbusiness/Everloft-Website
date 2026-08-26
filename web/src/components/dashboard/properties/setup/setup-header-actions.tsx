@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveDraftAction, publishPropertyAction } from "@/features/properties/actions/onboarding.actions";
+
+import { AirbnbImportDialog } from "@/components/dashboard/properties/airbnb-import-dialog";
 
 export function SetupHeaderActions({ propertyId, canPublish, publicUrl }: { propertyId: string; canPublish: boolean; publicUrl?: string }) {
   const router = useRouter();
@@ -32,6 +35,12 @@ export function SetupHeaderActions({ propertyId, canPublish, publicUrl }: { prop
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/dashboard/properties">
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to Properties
+        </Link>
+      </Button>
+      <AirbnbImportDialog targetPropertyId={propertyId} />
       {publicUrl && (
         <Button asChild variant="outline" size="sm">
           <a href={publicUrl} target="_blank" rel="noreferrer">

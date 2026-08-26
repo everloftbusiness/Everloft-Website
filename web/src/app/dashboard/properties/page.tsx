@@ -4,6 +4,7 @@ import { getDashboardSession } from "@/lib/dashboard/session";
 import { listProperties } from "@/features/properties/services/properties.service";
 import { DashboardHero, DashboardSection, DataTable, StatusChip } from "@/components/dashboard/dashboard-ui";
 import { Button } from "@/components/ui/button";
+import { AirbnbImportDialog } from "@/components/dashboard/properties/airbnb-import-dialog";
 
 export default async function PropertiesListPage({
   searchParams,
@@ -42,9 +43,12 @@ export default async function PropertiesListPage({
             </Button>
           </form>
           {canCreate && (
-            <Button asChild variant="gold">
-              <Link href="/dashboard/properties/new">Add Property</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <AirbnbImportDialog />
+              <Button asChild variant="gold">
+                <Link href="/dashboard/properties/new">Add Property</Link>
+              </Button>
+            </div>
           )}
         </div>
 

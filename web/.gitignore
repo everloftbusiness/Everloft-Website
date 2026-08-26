@@ -49,5 +49,7 @@ next-env.d.ts
 # supabase local temp
 supabase/.temp
 .temp
-
-
+tmp/
+temp/
+scratch/
+*.tmp

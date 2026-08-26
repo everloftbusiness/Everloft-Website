@@ -74,8 +74,8 @@ function scoreFields(fields: {
   };
 }
 
-function statusFor(percent: number): SectionStatus {
-  if (percent >= 100) return "completed";
+function statusFor(percent: number, allRequiredFilled?: boolean): SectionStatus {
+  if (allRequiredFilled || percent >= 100) return "completed";
   if (percent === 0) return "not_started";
   return "in_progress";
 }
@@ -222,7 +222,12 @@ export async function getOnboardingFormData(propertyId: string) {
     smokingAllowed: (ruleMap.get("smoking") ?? "").includes("allowed") && !(ruleMap.get("smoking") ?? "").startsWith("No"),
     petsAllowed: (ruleMap.get("pets") ?? "").includes("allowed") && !(ruleMap.get("pets") ?? "").startsWith("No"),
     partiesAllowed: (ruleMap.get("parties") ?? "").includes("allowed") && !(ruleMap.get("parties") ?? "").startsWith("No"),
-    presetRuleTexts: (rules ?? []).filter((r) => r.rule_key === "preset").map((r) => r.rule_text),
+    presetRuleTexts: [
+      ...(rules ?? []).filter((r) => r.rule_key === "preset").map((r) => r.rule_text),
+      ...(ruleMap.get("smoking") ? [ruleMap.get("smoking")!] : []),
+      ...(ruleMap.get("pets") ? [ruleMap.get("pets")!] : []),
+      ...(ruleMap.get("parties") ? [ruleMap.get("parties")!] : []),
+    ],
     customRuleTexts: (rules ?? []).filter((r) => r.rule_key === "custom").map((r) => r.rule_text),
     selectedAmenityIds,
     photos: photosWithPreview,
@@ -328,8 +333,6 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
   // --- Section: Pricing ---
   const pricing_ = scoreFields([
     { filled: Boolean(pricing?.base_price), required: true },
-    { filled: Boolean(pricing?.weekend_price), required: false },
-    { filled: Boolean(pricing?.cleaning_fee), required: false },
   ]);
 
   // --- Section: Availability ---
@@ -361,7 +364,7 @@ export async function getOnboardingSnapshot(propertyId: string): Promise<Onboard
     label: s.label,
     description: s.description,
     completionPercent: s.result.percent,
-    status: statusFor(s.result.percent),
+    status: statusFor(s.result.percent, s.result.allRequiredFilled),
     fieldsCompleted: s.result.completed,
     fieldsTotal: s.result.total,
     required: s.required,

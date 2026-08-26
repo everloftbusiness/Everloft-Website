@@ -25,6 +25,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "**.muscache.com",
+      },
+      {
+        protocol: "https",
+        hostname: "a0.muscache.com",
+      },
+      {
+        protocol: "https",
         hostname: "**.amazonaws.com",
       },
     ],

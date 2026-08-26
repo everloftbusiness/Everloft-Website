@@ -26,7 +26,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   cooling: "Cooling",
   laundry: "Laundry & Utility",
   workspace: "Workspace",
-  smart_home: "Smart Home",
+  smart_home: "Power Backup & Utilities",
   essentials: "Essentials",
   kitchen_dining: "Kitchen & Dining",
   internet_office: "Internet & Office",
@@ -65,10 +65,16 @@ export function AmenitiesForm({
     return amenitiesList.filter((a) => a.name.toLowerCase().includes(q));
   }, [amenitiesList, search]);
 
-  const grouped = visibleAmenities.reduce<Record<string, Amenity[]>>((acc, a) => {
-    (acc[a.category] ??= []).push(a);
+  const grouped = useMemo(() => {
+    const acc: Record<string, Amenity[]> = {};
+    for (const a of visibleAmenities) {
+      (acc[a.category] ??= []).push(a);
+    }
+    for (const cat in acc) {
+      acc[cat].sort((x, y) => x.name.localeCompare(y.name));
+    }
     return acc;
-  }, {});
+  }, [visibleAmenities]);
 
   function toggle(id: string) {
     setSelected((prev) => {

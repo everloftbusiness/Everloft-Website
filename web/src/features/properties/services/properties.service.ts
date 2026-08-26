@@ -153,7 +153,7 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
 
   const { data: property, error: propertyError } = await supabase
     .from("properties")
-    .select("id, slug, name, city, area, address, state, country, pin_code, latitude, longitude, google_maps_url, description, highlights, property_area_sqft, type_id, bedrooms, bathrooms, max_guests, currency")
+    .select("id, slug, name, city, area, address, state, country, pin_code, latitude, longitude, google_maps_url, description, highlights, property_area_sqft, type_id, bedrooms, bathrooms, max_guests, currency, check_in_time, check_out_time")
     .eq("slug", slug)
     .eq("status_id", activeStatus.id)
     .is("deleted_at", null)
@@ -207,14 +207,7 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
     .filter((r) => r.rule_key === "custom_amenity")
     .map((r) => r.rule_text);
 
-  const fileUrls = new Map(await Promise.all((files ?? []).map(async (file) => {
-    if (file.public_url) return [file.id, file.public_url] as const;
-    try {
-      return [file.id, await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 })] as const;
-    } catch {
-      return [file.id, null] as const;
-    }
-  })));
+  const fileUrls = new Map((files ?? []).map((file) => [file.id, file.public_url]));
 
   const photos = (photoRows ?? [])
     .map((photo) => {
@@ -278,6 +271,9 @@ export async function getPublicActivePropertyBySlug(slug: string): Promise<Publi
     photos,
     videos,
     roomSpecs,
+    checkInTime: property.check_in_time,
+    checkOutTime: property.check_out_time,
+    rules: (ruleRows ?? []).map((r) => ({ key: r.rule_key, text: r.rule_text })),
   };
 }
 

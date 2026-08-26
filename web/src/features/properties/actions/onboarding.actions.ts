@@ -632,9 +632,9 @@ export async function saveHouseRulesAction(propertyId: string, formData: FormDat
   const raw = Object.fromEntries(formData.entries());
   const input = houseRulesSchema.parse({
     ...raw,
-    smokingAllowed: raw.smokingAllowed === "on" || raw.smokingAllowed === "true",
-    petsAllowed: raw.petsAllowed === "on" || raw.petsAllowed === "true",
-    partiesAllowed: raw.partiesAllowed === "on" || raw.partiesAllowed === "true",
+    smokingAllowed: raw.noSmokingEnforced !== undefined ? raw.noSmokingEnforced !== "on" : (raw.smokingAllowed === "on" || raw.smokingAllowed === "true"),
+    petsAllowed: raw.noPetsEnforced !== undefined ? raw.noPetsEnforced !== "on" : (raw.petsAllowed === "on" || raw.petsAllowed === "true"),
+    partiesAllowed: raw.noPartiesEnforced !== undefined ? raw.noPartiesEnforced !== "on" : (raw.partiesAllowed === "on" || raw.partiesAllowed === "true"),
   });
   const supabase = await createClient();
 

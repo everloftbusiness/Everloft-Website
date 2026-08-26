@@ -252,7 +252,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             googleMapsUrl={property.googleMapsUrl}
           />
 
-          {/* 7. House Rules & Policies */}
+          {/* 7. House Rules & Policies (Option 1: Rules at a Glance Badges) */}
           <section className="border-t border-border/80 pt-10">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
               <ShieldCheck className="h-4 w-4" />
@@ -261,39 +261,73 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               House Rules & Important Information
             </h2>
+
+            {/* Timings */}
             <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
               <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
                 <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
-                  <span className="text-xs text-muted-foreground block">Check-in</span>
-                  <span className="font-semibold text-foreground">2:00 PM onwards</span>
+                  <span className="text-xs text-muted-foreground block font-medium">Check-in</span>
+                  <span className="font-semibold text-foreground">
+                    {property.checkInTime ? `After ${property.checkInTime.slice(0, 5)}` : "After 1:00 PM (13:00)"}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
                 <Clock className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                 <div>
-                  <span className="text-xs text-muted-foreground block">Check-out</span>
-                  <span className="font-semibold text-foreground">Until 11:00 AM</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                <ShieldCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground block">Access</span>
-                  <span className="font-semibold text-foreground">Keyless Smart Lock / In-Person Check-in</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                <Sparkles className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground block">Sanitization</span>
-                  <span className="font-semibold text-foreground">Hospital-grade sanitized before every arrival</span>
+                  <span className="text-xs text-muted-foreground block font-medium">Check-out</span>
+                  <span className="font-semibold text-foreground">
+                    {property.checkOutTime ? `Before ${property.checkOutTime.slice(0, 5)}` : "Before 10:00 AM (10:00)"}
+                  </span>
                 </div>
               </div>
             </div>
+
+            {/* Option 1: Rules at a Glance Badges */}
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 p-4">
+                <span className="text-xl shrink-0">🚭</span>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">No Smoking</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Strictly non-smoking home & shared building areas.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-4">
+                <span className="text-xl shrink-0">🐾</span>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300">No Pets</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pets are not permitted on premises.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20 p-4">
+                <span className="text-xl shrink-0">🎉</span>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300">No Parties or Events</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Quiet residential community (Quiet hours: 10 PM – 8 AM).</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Preset & Custom Rules List */}
+            {property.rules && property.rules.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-border/80 bg-card p-4 space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-2">Additional Guest Guidelines</h4>
+                <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                  {property.rules
+                    .filter((r) => r.key === "preset" || r.key === "custom")
+                    .map((rule, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="font-medium text-foreground">{rule.text}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </section>
         </main>
 

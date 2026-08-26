@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { Home, MapPin, ImageIcon, Video, Type, FileText, Sparkles, ShieldCheck, IndianRupee, CalendarClock, Users } from "lucide-react";
+import { Home, MapPin, ImageIcon, Video, Type, FileText, Sparkles, ShieldCheck, IndianRupee, CalendarClock, Users, ArrowLeft, ChevronRight } from "lucide-react";
 import { getDashboardSession } from "@/lib/dashboard/session";
 import { getOnboardingSnapshot, getOnboardingFormData } from "@/features/properties/services/onboarding.service";
 import { ProgressRing } from "@/components/dashboard/properties/setup/progress-ring";
@@ -119,8 +120,8 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
         <HouseRulesForm
           propertyId={id}
           initial={{
-            checkInTime: property.check_in_time,
-            checkOutTime: property.check_out_time,
+            checkInTime: property.check_in_time ? property.check_in_time.slice(0, 5) : "14:00",
+            checkOutTime: property.check_out_time ? property.check_out_time.slice(0, 5) : "11:00",
             securityDepositAmount: property.security_deposit_amount,
             securityDepositCurrency: property.security_deposit_currency,
             smokingAllowed,
@@ -183,16 +184,30 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
-      <div>
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-card p-6">
-          <div>
-            <p className="eyebrow mb-1">Property Setup Dashboard</p>
-            <EditableTitle propertyId={id} initialName={property.name} />
-            <p className="mt-1 text-sm text-muted-foreground">Complete your property information to start receiving bookings.</p>
+    <div className="space-y-6">
+      {/* Top Back Navigation & Breadcrumb */}
+      <div className="flex items-center justify-between">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/dashboard/properties" className="inline-flex items-center gap-1.5 font-medium hover:text-primary transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Properties
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+          <span className="font-semibold text-primary">{property.name}</span>
+          <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+          <span>Setup Dashboard</span>
+        </nav>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
+        <div>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-card p-6">
+            <div>
+              <p className="eyebrow mb-1">Property Setup Dashboard</p>
+              <EditableTitle propertyId={id} initialName={property.name} />
+              <p className="mt-1 text-sm text-muted-foreground">Complete your property information to start receiving bookings.</p>
+            </div>
+            <SetupHeaderActions propertyId={id} canPublish={snapshot.canPublish} />
           </div>
-          <SetupHeaderActions propertyId={id} canPublish={snapshot.canPublish} />
-        </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-8 rounded-2xl border border-border bg-card p-6">
           <ProgressRing percent={snapshot.overallCompletionPercent} label="Property Complete" size={128} />
@@ -263,6 +278,7 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
         />
         <AiCoachCard recommendations={snapshot.coach} />
       </div>
+    </div>
     </div>
   );
 }

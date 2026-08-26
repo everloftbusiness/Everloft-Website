@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getDashboardSession } from "@/lib/dashboard/session";
-import { DashboardHero, DashboardSection } from "@/components/dashboard/dashboard-ui";
-import { QuickCreatePropertyForm } from "@/components/dashboard/properties/quick-create-form";
+import { createDraftProperty } from "@/features/properties/services/properties.service";
 
 export default async function NewPropertyPage() {
   const session = await getDashboardSession();
@@ -10,12 +9,7 @@ export default async function NewPropertyPage() {
     redirect("/dashboard/properties");
   }
 
-  return (
-    <>
-      <DashboardHero eyebrow="Property Management" userName={session.username} description="Give your new property a name to get started." />
-      <DashboardSection title="Add Property">
-        <QuickCreatePropertyForm />
-      </DashboardSection>
-    </>
-  );
+  const { id } = await createDraftProperty("New Property", session.userId);
+  redirect(`/dashboard/properties/${id}/setup`);
 }
+

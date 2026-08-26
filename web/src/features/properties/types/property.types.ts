@@ -90,4 +90,7 @@ export type PublicPropertyDetail = PublicPropertyListItem & {
   photos: PropertyPhotoItem[];
   videos: { id: string; url: string; videoType: string; caption: string | null }[];
   roomSpecs?: PropertyRoomSpecs;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  rules?: { key: string; text: string }[];
 };
