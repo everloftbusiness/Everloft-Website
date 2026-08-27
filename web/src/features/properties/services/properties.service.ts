@@ -64,9 +64,16 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
 
   const typeNames = new Map((types ?? []).map((t) => [t.id, t.name]));
   const prices = new Map((pricing ?? []).map((rate) => [rate.property_id, rate.base_price ? Number(rate.base_price) : null]));
-  const fileIds = (photos ?? []).map((photo) => photo.file_id);
-  const { data: files } = fileIds.length
-    ? await supabase.from("files").select("id, public_url, bucket, object_key, thumbnail_key").in("id", fileIds)
+  const coverFileByProperty = new Map<string, string>();
+  for (const photo of photos ?? []) {
+    if (!coverFileByProperty.has(photo.property_id) || photo.is_cover) {
+      coverFileByProperty.set(photo.property_id, photo.file_id);
+    }
+  }
+
+  const uniqueCoverFileIds = [...new Set(Array.from(coverFileByProperty.values()))];
+  const { data: files } = uniqueCoverFileIds.length
+    ? await supabase.from("files").select("id, public_url, bucket, object_key, thumbnail_key").in("id", uniqueCoverFileIds)
     : { data: [] };
 
   const filesById = new Map(
@@ -93,13 +100,6 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
       })
     )
   );
-  // Map first (or is_cover) photo for each property
-  const coverFileByProperty = new Map<string, string>();
-  for (const photo of photos ?? []) {
-    if (!coverFileByProperty.has(photo.property_id) || photo.is_cover) {
-      coverFileByProperty.set(photo.property_id, photo.file_id);
-    }
-  }
 
   return properties.map((property) => {
     const fileId = coverFileByProperty.get(property.id);
