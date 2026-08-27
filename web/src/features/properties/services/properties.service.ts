@@ -317,52 +317,61 @@ export async function listProperties(filters: {
   page?: number;
   pageSize?: number;
 }): Promise<{ properties: PropertyListItem[]; total: number; page: number; pageSize: number }> {
-  const supabase = createAdminClient();
   const page = filters.page ?? 1;
   const pageSize = filters.pageSize ?? 25;
 
-  const [{ data: types }, { data: statuses }] = await Promise.all([
-    supabase.from("property_types").select("id, slug, name"),
-    supabase.from("property_status").select("id, slug, name"),
-  ]);
-  const typeMap = new Map((types ?? []).map((t) => [t.id, t.name]));
-  const statusMap = new Map((statuses ?? []).map((s) => [s.id, { slug: s.slug, name: s.name }]));
+  try {
+    const supabase = createAdminClient();
 
-  let query = supabase
-    .from("properties")
-    .select("id, name, slug, internal_code, city, type_id, status_id, owner_id, managed_by, max_guests", {
-      count: "exact",
-    })
-    .is("deleted_at", null);
+    const [{ data: types }, { data: statuses }] = await Promise.all([
+      supabase.from("property_types").select("id, slug, name"),
+      supabase.from("property_status").select("id, slug, name"),
+    ]);
+    const typeMap = new Map((types ?? []).map((t) => [t.id, t.name]));
+    const statusMap = new Map((statuses ?? []).map((s) => [s.id, { slug: s.slug, name: s.name }]));
 
-  if (filters.search) query = query.ilike("name", `%${filters.search}%`);
-  if (filters.typeId) query = query.eq("type_id", filters.typeId);
-  if (filters.statusSlug) {
-    const statusId = [...statusMap.entries()].find(([, v]) => v.slug === filters.statusSlug)?.[0];
-    if (statusId) query = query.eq("status_id", statusId);
+    let query = supabase
+      .from("properties")
+      .select("id, name, slug, internal_code, city, type_id, status_id, owner_id, managed_by, max_guests", {
+        count: "exact",
+      })
+      .is("deleted_at", null);
+
+    if (filters.search) query = query.ilike("name", `%${filters.search}%`);
+    if (filters.typeId) query = query.eq("type_id", filters.typeId);
+    if (filters.statusSlug) {
+      const statusId = [...statusMap.entries()].find(([, v]) => v.slug === filters.statusSlug)?.[0];
+      if (statusId) query = query.eq("status_id", statusId);
+    }
+
+    const from = (page - 1) * pageSize;
+    const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, from + pageSize - 1);
+    if (error) {
+      console.error("listProperties query error:", error);
+      return { properties: [], total: 0, page, pageSize };
+    }
+
+    const ownerMap = await describeOwners(supabase, data ?? []);
+
+    const properties: PropertyListItem[] = (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      internalCode: row.internal_code,
+      city: row.city,
+      typeName: row.type_id ? (typeMap.get(row.type_id) ?? null) : null,
+      statusSlug: row.status_id ? (statusMap.get(row.status_id)?.slug ?? null) : null,
+      statusName: row.status_id ? (statusMap.get(row.status_id)?.name ?? null) : null,
+      ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
+      managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
+      maxGuests: row.max_guests,
+    }));
+
+    return { properties, total: count ?? 0, page, pageSize };
+  } catch (err) {
+    console.error("listProperties catch error:", err);
+    return { properties: [], total: 0, page, pageSize };
   }
-
-  const from = (page - 1) * pageSize;
-  const { data, count, error } = await query.order("created_at", { ascending: false }).range(from, from + pageSize - 1);
-  if (error) throw error;
-
-  const ownerMap = await describeOwners(supabase, data ?? []);
-
-  const properties: PropertyListItem[] = (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    internalCode: row.internal_code,
-    city: row.city,
-    typeName: row.type_id ? (typeMap.get(row.type_id) ?? null) : null,
-    statusSlug: row.status_id ? (statusMap.get(row.status_id)?.slug ?? null) : null,
-    statusName: row.status_id ? (statusMap.get(row.status_id)?.name ?? null) : null,
-    ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
-    managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
-    maxGuests: row.max_guests,
-  }));
-
-  return { properties, total: count ?? 0, page, pageSize };
 }
 
 export async function getProperty(id: string): Promise<PropertyDetail | null> {
