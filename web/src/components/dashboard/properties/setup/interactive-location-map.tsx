@@ -87,9 +87,9 @@ export function InteractiveLocationMap({
         maxZoom: 20,
       });
 
-      // 1. Street Layer (CartoDB Voyager)
-      const streetLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      // 1. Street Layer (OpenStreetMap Standard)
+      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       });
 
