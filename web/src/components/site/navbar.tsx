@@ -81,13 +81,13 @@ export function Navbar() {
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         solid
-          ? "bg-background/95 backdrop-blur-md border-b border-border/40 shadow-xs"
-          : "bg-transparent"
+          ? "bg-[#062318]/92 backdrop-blur-md border-b border-white/10 shadow-md py-1"
+          : "bg-transparent py-2"
       )}
     >
-      <div className="site-container flex h-18 items-center justify-between py-3.5">
+      <div className="site-container flex h-16 sm:h-18 items-center justify-between">
         <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
-          <Logo variant={solid ? "dark" : "light"} />
+          <Logo variant="light" />
         </Link>
 
         <nav className="hidden items-center gap-8 lg:flex">
@@ -96,9 +96,8 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "text-sm font-medium transition-colors",
-                solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white",
-                pathname === link.href && (solid ? "text-emerald-800 dark:text-emerald-400 font-bold" : "text-white font-bold")
+                "text-sm font-medium transition-colors text-white/90 hover:text-emerald-400",
+                pathname === link.href && "text-emerald-400 font-bold"
               )}
             >
               {link.label}
@@ -109,12 +108,9 @@ export function Navbar() {
         <div className="hidden items-center gap-5 lg:flex">
           <a
             href="tel:+917483270264"
-            className={cn(
-              "flex items-center gap-2 text-xs font-semibold tracking-wide transition-colors",
-              solid ? "text-foreground hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/90 hover:text-white"
-            )}
+            className="flex items-center gap-2 text-xs font-semibold tracking-wide text-white/90 hover:text-white transition-colors"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
               <Phone className="h-3.5 w-3.5" />
             </span>
             (+91) 748-327-0264
@@ -124,15 +120,12 @@ export function Navbar() {
             <>
               <Link
                 href={`/dashboard/${session.roleSlug}`}
-                className={cn(
-                  "flex items-center gap-2 text-sm font-medium transition-colors",
-                  solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white"
-                )}
+                className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-emerald-400 transition-colors"
               >
-                <LayoutDashboard className="h-4 w-4" />
+                <LayoutDashboard className="h-4 w-4 text-emerald-400" />
                 {session.name}
               </Link>
-              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm">
+              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm">
                 <Link href={`/dashboard/${session.roleSlug}`}>Dashboard</Link>
               </Button>
             </>
@@ -140,14 +133,11 @@ export function Navbar() {
             <>
               <Link
                 href="/login"
-                className={cn(
-                  "text-sm font-medium transition-colors",
-                  solid ? "text-foreground/80 hover:text-emerald-800 dark:hover:text-emerald-400" : "text-white/85 hover:text-white"
-                )}
+                className="text-sm font-medium text-white/90 hover:text-white transition-colors"
               >
                 Login
               </Link>
-              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm">
+              <Button asChild size="lg" className="rounded-full px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm">
                 <Link href="/properties">Explore Stays</Link>
               </Button>
             </>
