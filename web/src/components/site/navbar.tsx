@@ -39,13 +39,37 @@ function readDisplaySession(): DisplaySession | null {
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [session] = useState<DisplaySession | null>(readDisplaySession);
+  const [session, setSession] = useState<DisplaySession | null>(readDisplaySession);
   const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+
+    // Check Supabase Auth session dynamically
+    async function checkAuthSession() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.user) {
+          const u = data.session.user;
+          const userMeta = u.user_metadata || {};
+          const name = userMeta.full_name || userMeta.name || u.email?.split("@")[0] || "User";
+          setSession({
+            name: `Hi, ${name}`,
+            role: "User",
+            roleSlug: "super-admin",
+          });
+        }
+      } catch {
+        // Fallback to cookie session
+      }
+    }
+
+    checkAuthSession();
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -57,7 +81,7 @@ export function Navbar() {
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         solid
-          ? "bg-background/95 backdrop-blur-md border-b border-border/80 shadow-[0_1px_3px_0_rgba(15,23,42,0.04)]"
+          ? "bg-background/95 backdrop-blur-md border-b border-border/40 shadow-xs"
           : "bg-transparent"
       )}
     >
