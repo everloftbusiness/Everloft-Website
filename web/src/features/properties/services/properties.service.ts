@@ -76,28 +76,16 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
         let thumbUrl: string | null = null;
 
         if (!coverUrl) {
-          if (process.env.R2_PUBLIC_BASE_URL) {
-            coverUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.object_key}`;
-          } else {
-            try {
-              coverUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.object_key, { expiresInSeconds: 3600 });
-            } catch {
-              coverUrl = null;
-            }
-          }
+          const publicBase = process.env.R2_PUBLIC_BASE_URL || "https://pub-ceafc7e3144f4cf0be1a828c0ec9f85c.r2.dev";
+          coverUrl = `${publicBase.replace(/\/$/, "")}/${file.bucket}/${file.object_key}`;
         }
 
         if (file.thumbnail_key) {
           if (file.public_url && file.object_key) {
             thumbUrl = file.public_url.replace(file.object_key, file.thumbnail_key);
-          } else if (process.env.R2_PUBLIC_BASE_URL) {
-            thumbUrl = `${process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "")}/${file.bucket}/${file.thumbnail_key}`;
           } else {
-            try {
-              thumbUrl = await getSignedDownloadUrl(file.bucket as Bucket, file.thumbnail_key, { expiresInSeconds: 3600 });
-            } catch {
-              thumbUrl = null;
-            }
+            const publicBase = process.env.R2_PUBLIC_BASE_URL || "https://pub-ceafc7e3144f4cf0be1a828c0ec9f85c.r2.dev";
+            thumbUrl = `${publicBase.replace(/\/$/, "")}/${file.bucket}/${file.thumbnail_key}`;
           }
         }
 
