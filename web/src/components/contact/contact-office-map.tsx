@@ -85,10 +85,10 @@ export function ContactOfficeMap() {
         }
       );
 
-      // Satellite Layer
-      const satelliteLayer = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-        attribution: "&copy; Google Satellite Imagery",
-        maxZoom: 20,
+      // Satellite Layer (Esri World Imagery HD Satellite)
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "&copy; Esri, Maxar, Earthstar Geographics",
+        maxZoom: 19,
       });
 
       streetLayer.addTo(map);

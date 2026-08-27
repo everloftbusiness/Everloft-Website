@@ -93,10 +93,10 @@ export function InteractiveLocationMap({
         maxZoom: 19,
       });
 
-      // 2. High-Resolution Satellite Layer with Hybrid Labels (Google Satellite Hybrid)
-      const satelliteLayer = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-        attribution: '&copy; Google Satellite Imagery',
-        maxZoom: 20,
+      // 2. High-Resolution Satellite Layer (Esri World Imagery HD Satellite)
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19,
       });
 
       streetLayerRef.current = streetLayer;
