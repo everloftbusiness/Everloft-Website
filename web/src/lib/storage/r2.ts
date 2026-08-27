@@ -2,7 +2,41 @@ import "server-only";
 import { createHash } from "crypto";
 import { S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import sharp from "sharp";
+// Dynamic import helper so sharp C++ native binary is only loaded on upload, never during page rendering
+async function getSharp() {
+  const sharpModule = await import("sharp");
+  return sharpModule.default || sharpModule;
+}
+
+// Images get converted to WebP and compressed before upload. Sharp does not
+// preserve EXIF/GPS metadata unless `.withMetadata()` is explicitly called —
+// deliberately never called here, so every processed image is stripped of
+// camera/GPS metadata by default (privacy — a guest ID photo or a property
+// exterior shot should never leak the uploader's GPS coordinates downstream).
+async function toWebp(body: Buffer, maxWidth?: number) {
+  const sharp = await getSharp();
+  let pipeline = sharp(body).rotate(); // .rotate() bakes in EXIF orientation, then metadata is dropped
+  if (maxWidth) {
+    pipeline = pipeline.resize({
+      width: maxWidth,
+      height: maxWidth,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+  }
+  return pipeline
+    .webp({
+      quality: maxWidth && maxWidth <= 400 ? 80 : 82,
+      effort: 4,
+    })
+    .toBuffer();
+}
+
+async function readImageMetadata(body: Buffer) {
+  const sharp = await getSharp();
+  const meta = await sharp(body).metadata();
+  return { width: meta.width ?? null, height: meta.height ?? null, format: "webp" };
+}
 
 // Cloudflare R2 is S3-API-compatible, so the AWS SDK works unmodified
 // against R2's endpoint. Bucket names here must match the `files` table's
@@ -125,33 +159,7 @@ export function computeChecksum(body: Buffer): string {
   return createHash("sha256").update(body).digest("hex");
 }
 
-// Images get converted to WebP and compressed before upload. Sharp does not
-// preserve EXIF/GPS metadata unless `.withMetadata()` is explicitly called —
-// deliberately never called here, so every processed image is stripped of
-// camera/GPS metadata by default (privacy — a guest ID photo or a property
-// exterior shot should never leak the uploader's GPS coordinates downstream).
-async function toWebp(body: Buffer, maxWidth?: number) {
-  let pipeline = sharp(body).rotate(); // .rotate() bakes in EXIF orientation, then metadata is dropped
-  if (maxWidth) {
-    pipeline = pipeline.resize({
-      width: maxWidth,
-      height: maxWidth,
-      fit: "inside",
-      withoutEnlargement: true,
-    });
-  }
-  return pipeline
-    .webp({
-      quality: maxWidth && maxWidth <= 400 ? 80 : 82,
-      effort: 4,
-    })
-    .toBuffer();
-}
 
-async function readImageMetadata(body: Buffer) {
-  const meta = await sharp(body).metadata();
-  return { width: meta.width ?? null, height: meta.height ?? null, format: "webp" };
-}
 
 async function putObject(bucket: Bucket, key: string, body: Buffer, contentType: string) {
   const client = r2Client();
