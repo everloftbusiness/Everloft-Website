@@ -972,7 +972,8 @@ export async function uploadPropertyPhotoAction(propertyId: string, formData: Fo
     metadata: uploaded.metadata,
   });
 
-  const supabase = await createClient();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
   const { count, error: countError } = await supabase
     .from("property_photos")
     .select("id", { count: "exact", head: true })
@@ -1058,14 +1059,22 @@ export async function reorderPropertyPhotosAction(propertyId: string, photoIds: 
 
 export async function setCoverPhotoAction(propertyId: string, propertyPhotoId: string) {
   const session = await requireEditAccess(propertyId);
-  const supabase = await createClient();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+
   await supabase.from("property_photos").update({ is_cover: false, updated_by: session.userId }).eq("property_id", propertyId);
   const { error } = await supabase
     .from("property_photos")
     .update({ is_cover: true, updated_by: session.userId })
     .eq("id", propertyPhotoId);
   if (error) throw error;
+
+  const { data: prop } = await supabase.from("properties").select("slug").eq("id", propertyId).single();
+
   revalidate(propertyId);
+  if (prop?.slug) {
+    revalidatePath(`/properties/${prop.slug}`);
+  }
   return { ok: true };
 }
 
