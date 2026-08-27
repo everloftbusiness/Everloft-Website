@@ -70,8 +70,16 @@ const IMAGE_BUCKETS = new Set<Bucket>([
 const RESPONSIVE_WIDTHS = { small: 400, medium: 800, large: 1600, xl4k: 3840 } as const;
 export type ResponsiveSize = keyof typeof RESPONSIVE_WIDTHS;
 
+const DEFAULT_R2_ENVS: Record<string, string> = {
+  R2_ACCOUNT_ID: "7a530cbe88931cc848de022330bdbd2f",
+  R2_ACCESS_KEY_ID: "289c6a68c1b6f3612dbe969c72e51329",
+  R2_SECRET_ACCESS_KEY: "abe065d50eed78a305ec700ed81020281ba21a70aeacde2e7a3e89c0b16207ff",
+  R2_PUBLIC_BASE_URL: "https://pub-ceafc7e3144f4cf0be1a828c0ec9f85c.r2.dev",
+  R2_BUCKET_NAME: "everloft-web",
+};
+
 function requiredEnv(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name] || DEFAULT_R2_ENVS[name];
   if (!value) throw new Error(`Missing required env var: ${name}`);
   return value;
 }
@@ -106,7 +114,7 @@ export function validateFileSize(bucket: Bucket, sizeBytes: number) {
 // Bucket+Key pair, so nothing above this layer (file-service.ts, the API
 // routes, the schema) needs to know or care which topology is active.
 function resolvePhysicalLocation(bucket: Bucket, key: string): { physicalBucket: string; physicalKey: string } {
-  const sharedBucket = process.env.R2_BUCKET_NAME;
+  const sharedBucket = process.env.R2_BUCKET_NAME || DEFAULT_R2_ENVS.R2_BUCKET_NAME;
   if (sharedBucket) {
     return { physicalBucket: sharedBucket, physicalKey: `${bucket}/${key}` };
   }
