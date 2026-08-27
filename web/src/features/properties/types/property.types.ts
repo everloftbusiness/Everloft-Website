@@ -10,6 +10,9 @@ export type PropertyListItem = {
   ownerName: string | null;
   managerName: string | null;
   maxGuests: number | null;
+  coverImageUrl?: string | null;
+  thumbnailUrl?: string | null;
+  completionScore?: number;
 };
 
 export type PropertyDetail = PropertyListItem & {

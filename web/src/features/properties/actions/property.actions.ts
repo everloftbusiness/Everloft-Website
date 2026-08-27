@@ -83,3 +83,19 @@ export async function deletePropertyAction(id: string): Promise<{ ok: true }> {
   revalidatePath("/dashboard/properties");
   return { ok: true };
 }
+
+export async function updatePropertyStatusAction(id: string, statusSlug: string): Promise<{ ok: true }> {
+  const session = await requirePermission("edit_property");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+
+  const { data: statusRow } = await supabase.from("property_status").select("id").eq("slug", statusSlug).maybeSingle();
+  if (!statusRow) throw new Error(`Invalid status slug: ${statusSlug}`);
+
+  const { error } = await supabase.from("properties").update({ status_id: statusRow.id, updated_by: session.userId }).eq("id", id);
+  if (error) throw error;
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${id}`);
+  return { ok: true };
+}

@@ -351,21 +351,84 @@ export async function listProperties(filters: {
       return { properties: [], total: 0, page, pageSize };
     }
 
+    const propertyIds = (data ?? []).map((p) => p.id);
+
+    const [{ data: photos }, { data: pricing }] = await Promise.all([
+      propertyIds.length > 0
+        ? supabase
+            .from("property_photos")
+            .select("property_id, file_id, is_cover")
+            .in("property_id", propertyIds)
+            .is("deleted_at", null)
+            .order("is_cover", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      propertyIds.length > 0
+        ? supabase
+            .from("property_pricing")
+            .select("property_id, base_price")
+            .in("property_id", propertyIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const coverFileIds = new Map<string, string>();
+    for (const ph of photos ?? []) {
+      if (!coverFileIds.has(ph.property_id) || ph.is_cover) {
+        coverFileIds.set(ph.property_id, ph.file_id);
+      }
+    }
+
+    const uniqueFileIds = [...new Set(Array.from(coverFileIds.values()))];
+    const { data: files } = uniqueFileIds.length > 0
+      ? await supabase.from("files").select("id, public_url, bucket, object_key").in("id", uniqueFileIds)
+      : { data: [] };
+
+    const fileUrlMap = new Map((files ?? []).map((f) => [f.id, f.public_url]));
+    const pricingMap = new Map((pricing ?? []).map((pr) => [pr.property_id, Boolean(pr.base_price)]));
+    const photoCountMap = new Map<string, number>();
+    for (const ph of photos ?? []) {
+      photoCountMap.set(ph.property_id, (photoCountMap.get(ph.property_id) || 0) + 1);
+    }
+
     const ownerMap = await describeOwners(supabase, data ?? []);
 
-    const properties: PropertyListItem[] = (data ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      internalCode: row.internal_code,
-      city: row.city,
-      typeName: row.type_id ? (typeMap.get(row.type_id) ?? null) : null,
-      statusSlug: row.status_id ? (statusMap.get(row.status_id)?.slug ?? null) : null,
-      statusName: row.status_id ? (statusMap.get(row.status_id)?.name ?? null) : null,
-      ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
-      managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
-      maxGuests: row.max_guests,
-    }));
+    const properties: PropertyListItem[] = (data ?? []).map((row) => {
+      const fileId = coverFileIds.get(row.id);
+      const coverImageUrl = fileId ? fileUrlMap.get(fileId) ?? null : null;
+      const hasPricing = pricingMap.get(row.id) ?? false;
+      const hasPhotos = (photoCountMap.get(row.id) || 0) > 0;
+      const hasBasics = Boolean(row.name && row.city && row.type_id);
+
+      let completionScore = 0;
+      if (hasBasics) completionScore += 30;
+      if (hasPhotos) completionScore += 30;
+      if (hasPricing) completionScore += 40;
+
+      const rawStatusSlug = row.status_id ? (statusMap.get(row.status_id)?.slug ?? "draft") : "draft";
+      let statusSlug = rawStatusSlug;
+      let statusName = row.status_id ? (statusMap.get(row.status_id)?.name ?? "Draft") : "Draft";
+
+      if (rawStatusSlug === "active" && completionScore < 100) {
+        statusSlug = "draft";
+        statusName = "Draft";
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        internalCode: row.internal_code,
+        city: row.city,
+        typeName: row.type_id ? (typeMap.get(row.type_id) ?? null) : null,
+        statusSlug,
+        statusName,
+        ownerName: row.owner_id ? (ownerMap.get(row.owner_id) ?? null) : null,
+        managerName: row.managed_by ? (ownerMap.get(row.managed_by) ?? null) : null,
+        maxGuests: row.max_guests,
+        coverImageUrl,
+        thumbnailUrl: coverImageUrl,
+        completionScore,
+      };
+    });
 
     return { properties, total: count ?? 0, page, pageSize };
   } catch (err) {
