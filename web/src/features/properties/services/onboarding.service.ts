@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SectionKey =
   | "basics"
@@ -81,7 +81,7 @@ function statusFor(percent: number, allRequiredFilled?: boolean): SectionStatus 
 }
 
 export async function getOnboardingFormData(propertyId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [
     { data: property },
@@ -254,7 +254,7 @@ export async function getOnboardingFormData(propertyId: string) {
 }
 
 export async function getOnboardingSnapshot(propertyId: string): Promise<OnboardingSnapshot | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: property } = await supabase.from("properties").select("*").eq("id", propertyId).is("deleted_at", null).maybeSingle();
   if (!property) return null;

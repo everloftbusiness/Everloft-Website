@@ -317,7 +317,7 @@ export async function listProperties(filters: {
   page?: number;
   pageSize?: number;
 }): Promise<{ properties: PropertyListItem[]; total: number; page: number; pageSize: number }> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const page = filters.page ?? 1;
   const pageSize = filters.pageSize ?? 25;
 
@@ -366,7 +366,7 @@ export async function listProperties(filters: {
 }
 
 export async function getProperty(id: string): Promise<PropertyDetail | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: row, error } = await supabase.from("properties").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error) throw error;
   if (!row) return null;
@@ -413,7 +413,7 @@ export async function getPropertyLookups(): Promise<{
   statuses: LookupOption[];
   categories: LookupOption[];
 }> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const [{ data: types }, { data: statuses }, { data: categories }] = await Promise.all([
     supabase.from("property_types").select("id, slug, name").order("sort_order"),
     supabase.from("property_status").select("id, slug, name").order("sort_order"),
@@ -427,7 +427,7 @@ export async function getPropertyLookups(): Promise<{
 }
 
 export async function getOwnerOptions(): Promise<OwnerOption[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: role } = await supabase.from("roles").select("id").eq("slug", "property_owner").maybeSingle();
   if (!role) return [];
 
@@ -446,7 +446,7 @@ export async function getOwnerOptions(): Promise<OwnerOption[]> {
  * other property columns are nullable precisely so this works.
  */
 export async function createDraftProperty(name: string, userId: string): Promise<{ id: string }> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const slug = await uniqueSlug(supabase, name);
 
   const { data: draftStatus } = await supabase.from("property_status").select("id").eq("slug", "draft").maybeSingle();
@@ -492,7 +492,7 @@ export type CreatePropertyInput = {
 export type UpdatePropertyInput = Partial<CreatePropertyInput>;
 
 export async function updateProperty(id: string, input: UpdatePropertyInput, userId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const patch: PropertiesUpdate = { updated_by: userId };
   if (input.name !== undefined) patch.name = input.name;
   if (input.typeId !== undefined) patch.type_id = input.typeId;
@@ -514,7 +514,7 @@ export async function updateProperty(id: string, input: UpdatePropertyInput, use
 }
 
 export async function softDeleteProperty(id: string, userId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("properties")
     .update({ deleted_at: new Date().toISOString(), updated_by: userId })
