@@ -6,10 +6,8 @@ import { DashboardHero, DashboardSection, DataTable, StatusChip } from "@/compon
 import { Button } from "@/components/ui/button";
 import { AirbnbImportDialog } from "@/components/dashboard/properties/airbnb-import-dialog";
 
-export default async function PropertiesListPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string }>;
+export default async function PropertiesListPage(props: {
+  searchParams?: Promise<{ search?: string }>;
 }) {
   const session = await getDashboardSession();
   if (!session) redirect("/login");
@@ -17,7 +15,8 @@ export default async function PropertiesListPage({
     redirect("/dashboard");
   }
 
-  const { search } = await searchParams;
+  const resolvedParams = props.searchParams ? await props.searchParams : {};
+  const search = resolvedParams?.search;
   const { properties, total } = await listProperties({ search });
   const canCreate = session.permissions.includes("create_property") || session.permissions.includes("manage_properties");
 

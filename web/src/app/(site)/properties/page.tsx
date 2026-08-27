@@ -26,13 +26,14 @@ const MAX_PRICE = 70000;
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-export default async function PropertiesPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
+export default async function PropertiesPage(props: {
+  searchParams?: Promise<SearchParams>;
 }) {
-  const params = await searchParams;
-  const get = (key: string) => (Array.isArray(params[key]) ? params[key]?.[0] : params[key]);
+  const params = (props.searchParams ? await props.searchParams : {}) ?? {};
+  const get = (key: string) => {
+    const val = params[key];
+    return Array.isArray(val) ? val[0] : val;
+  };
 
   const allActiveProperties = await listPublicActiveProperties(100);
   const cities = [...new Set(allActiveProperties.map((property) => property.city).filter((city): city is string => Boolean(city)))].sort();
