@@ -40,7 +40,7 @@ export default async function PropertiesPage(props: {
   const types = [...new Set(allActiveProperties.map((property) => property.typeName).filter((type): type is string => Boolean(type)))].sort();
 
   // Dynamic Min and Max price bounds from active listings
-  const validPrices = allActiveProperties.map((p) => p.nightlyPrice).filter((price): price is number => Boolean(price) && price > 0);
+  const validPrices = allActiveProperties.map((p) => p.nightlyPrice).filter((price): price is number => typeof price === "number" && price > 0);
   const minPriceFloor = validPrices.length > 0 ? Math.min(...validPrices) : 1000;
   const maxPriceFloor = validPrices.length > 0 ? Math.max(...validPrices) : 70000;
 
