@@ -1,10 +1,9 @@
 export const AMENITY_TAGS = [
-  "Pool",
-  "WiFi",
-  "Chef",
-  "Pet friendly",
-  "Air conditioning",
-  "Parking",
-  "Housekeeping",
-  "Fireplace",
+  "Swimming Pool",
+  "High-Speed WiFi",
+  "Air Conditioning",
+  "Kitchen Access",
+  "Free Parking",
+  "Power Backup",
+  "Caretaker / Chef",
 ];

@@ -52,6 +52,7 @@ export type PublicPropertyListItem = {
   thumbnailUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  amenities?: string[];
 };
 
 export type PropertyPhotoItem = {

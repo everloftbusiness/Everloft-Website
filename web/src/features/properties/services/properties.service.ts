@@ -44,7 +44,7 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
 
   const propertyIds = properties.map((property) => property.id);
   const typeIds = [...new Set(properties.map((property) => property.type_id).filter((id): id is string => Boolean(id)))];
-  const [{ data: types, error: typesError }, { data: pricing, error: pricingError }, { data: photos, error: photosError }] = await Promise.all([
+  const [{ data: types, error: typesError }, { data: pricing, error: pricingError }, { data: photos, error: photosError }, { data: amenityLinks, error: amenityLinksError }] = await Promise.all([
     typeIds.length > 0
       ? supabase.from("property_types").select("id, name").in("id", typeIds)
       : Promise.resolve({ data: [], error: null }),
@@ -57,10 +57,16 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
       .is("deleted_at", null)
       .order("is_cover", { ascending: false })
       .order("sort_order", { ascending: true }),
+    supabase
+      .from("property_amenities")
+      .select("property_id, amenity_id")
+      .in("property_id", propertyIds)
+      .is("deleted_at", null),
   ]);
   if (typesError) throw typesError;
   if (pricingError) throw pricingError;
   if (photosError) throw photosError;
+  if (amenityLinksError) throw amenityLinksError;
 
   const typeNames = new Map((types ?? []).map((t) => [t.id, t.name]));
   const prices = new Map((pricing ?? []).map((rate) => [rate.property_id, rate.base_price ? Number(rate.base_price) : null]));
@@ -68,6 +74,22 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
   for (const photo of photos ?? []) {
     if (!coverFileByProperty.has(photo.property_id) || photo.is_cover) {
       coverFileByProperty.set(photo.property_id, photo.file_id);
+    }
+  }
+
+  const allAmenityIds = [...new Set((amenityLinks ?? []).map((a) => a.amenity_id))];
+  const { data: masterAmenities } = allAmenityIds.length
+    ? await supabase.from("amenity_master").select("id, name").in("id", allAmenityIds).is("deleted_at", null)
+    : { data: [] };
+  const amenityNameById = new Map((masterAmenities ?? []).map((m) => [m.id, m.name]));
+
+  const propertyAmenitiesMap = new Map<string, string[]>();
+  for (const link of amenityLinks ?? []) {
+    const name = amenityNameById.get(link.amenity_id);
+    if (name) {
+      const list = propertyAmenitiesMap.get(link.property_id) || [];
+      list.push(name);
+      propertyAmenitiesMap.set(link.property_id, list);
     }
   }
 
@@ -123,6 +145,7 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
       thumbnailUrl: thumbUrl,
       latitude: property.latitude ? Number(property.latitude) : null,
       longitude: property.longitude ? Number(property.longitude) : null,
+      amenities: propertyAmenitiesMap.get(property.id) || [],
     };
   });
 }

@@ -3,6 +3,7 @@ import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { HeroSearchBar } from "@/components/site/hero-search-bar";
 import { PropertiesToolbar } from "@/components/property/properties-toolbar";
 import { PropertyFilters } from "@/components/property/property-filters";
+import { ActiveFilterChips } from "@/components/property/active-filter-chips";
 import { PropertiesMapView } from "@/components/property/properties-map-view";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import {
@@ -22,7 +23,6 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 6;
-const MAX_PRICE = 70000;
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -38,11 +38,18 @@ export default async function PropertiesPage(props: {
   const allActiveProperties = await listPublicActiveProperties(100);
   const cities = [...new Set(allActiveProperties.map((property) => property.city).filter((city): city is string => Boolean(city)))].sort();
   const types = [...new Set(allActiveProperties.map((property) => property.typeName).filter((type): type is string => Boolean(type)))].sort();
+
+  // Dynamic Min and Max price bounds from active listings
+  const validPrices = allActiveProperties.map((p) => p.nightlyPrice).filter((price): price is number => Boolean(price) && price > 0);
+  const minPriceFloor = validPrices.length > 0 ? Math.min(...validPrices) : 1000;
+  const maxPriceFloor = validPrices.length > 0 ? Math.max(...validPrices) : 70000;
+
   const city = get("city");
   const type = get("type");
   const guests = get("guests") ? Number(get("guests")) : undefined;
   const bedrooms = get("bedrooms") ? Number(get("bedrooms")) : undefined;
   const maxPrice = get("maxPrice") ? Number(get("maxPrice")) : undefined;
+  const selectedAmenities = get("amenities") ? (get("amenities") as string).split(",").filter(Boolean) : [];
   const sort = get("sort") ?? "recommended";
 
   const allProperties = allActiveProperties
@@ -51,6 +58,13 @@ export default async function PropertiesPage(props: {
     .filter((property) => !guests || (property.maxGuests ?? 0) >= guests)
     .filter((property) => !bedrooms || (property.bedrooms ?? 0) >= bedrooms)
     .filter((property) => !maxPrice || (property.nightlyPrice !== null && property.nightlyPrice <= maxPrice))
+    .filter((property) => {
+      if (selectedAmenities.length === 0) return true;
+      const propAmenities = property.amenities || [];
+      return selectedAmenities.every((tag) =>
+        propAmenities.some((a) => a.toLowerCase().includes(tag.toLowerCase()))
+      );
+    })
     .sort((left, right) => {
       if (sort === "price-asc") return (left.nightlyPrice ?? Number.POSITIVE_INFINITY) - (right.nightlyPrice ?? Number.POSITIVE_INFINITY);
       if (sort === "price-desc") return (right.nightlyPrice ?? -1) - (left.nightlyPrice ?? -1);
@@ -94,7 +108,7 @@ export default async function PropertiesPage(props: {
               <h2 className="mb-6 text-sm font-bold uppercase tracking-wide text-primary">
                 Filters
               </h2>
-              <PropertyFilters cities={cities} types={types} maxPrice={MAX_PRICE} />
+              <PropertyFilters cities={cities} types={types} minPrice={minPriceFloor} maxPrice={maxPriceFloor} />
             </div>
           </aside>
 
@@ -103,11 +117,13 @@ export default async function PropertiesPage(props: {
               resultCount={allProperties.length}
               cities={cities}
               types={types}
-              maxPrice={MAX_PRICE}
+              maxPrice={maxPriceFloor}
               view={view}
             />
 
-            <div className="mt-8">
+            <ActiveFilterChips maxPriceFloor={maxPriceFloor} />
+
+            <div className="mt-6">
               {view === "map" ? (
                 <PropertiesMapView properties={allProperties} />
               ) : pageItems.length > 0 ? (

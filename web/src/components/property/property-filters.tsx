@@ -21,11 +21,13 @@ const ANY = "any";
 export function PropertyFilters({
   cities,
   types,
+  minPrice = 1000,
   maxPrice,
   onApplied,
 }: {
   cities: string[];
   types: string[];
+  minPrice?: number;
   maxPrice: number;
   onApplied?: () => void;
 }) {
@@ -125,7 +127,7 @@ export function PropertyFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ANY}>Any</SelectItem>
-              {[2, 4, 6, 8, 10, 12].map((g) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map((g) => (
                 <SelectItem key={g} value={String(g)}>
                   {g}+
                 </SelectItem>
@@ -165,9 +167,9 @@ export function PropertyFilters({
         <Slider
           value={price}
           onValueChange={setPrice}
-          min={10000}
+          min={minPrice}
           max={maxPrice}
-          step={1000}
+          step={500}
         />
       </div>
 
