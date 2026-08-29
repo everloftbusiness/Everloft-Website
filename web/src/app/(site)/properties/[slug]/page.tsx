@@ -27,6 +27,8 @@ import { PropertySpacesTour } from "@/components/property/property-spaces-tour";
 import { PropertyBedroomsShowcase } from "@/components/property/property-bedrooms-showcase";
 import { PropertyAmenitiesShowcase } from "@/components/property/property-amenities-showcase";
 import { PropertyLocationMap } from "@/components/property/property-location-map";
+import { PropertyAvailabilityCalendar } from "@/components/property/property-availability-calendar";
+import { getPropertyCalendarBlocks } from "@/features/properties/services/ical-sync.service";
 import { Logo } from "@/components/logo";
 import { formatCurrency } from "@/lib/format";
 import { getPublicActivePropertyBySlug, listPublicActiveProperties, PublicPropertyCard } from "@/features/properties";
@@ -50,6 +52,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
   if (!property) notFound();
 
+  const calendarBlocks = await getPropertyCalendarBlocks(property.id);
   const location = [property.area, property.city, property.state].filter(Boolean).join(", ") || "India";
   const similarStays = allProperties.filter((p) => p.slug !== slug).slice(0, 3);
 
@@ -251,6 +254,14 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             longitude={property.longitude}
             googleMapsUrl={property.googleMapsUrl}
           />
+
+          {/* 6b. Interactive Availability Calendar */}
+          <section className="border-t border-border/80 pt-10">
+            <PropertyAvailabilityCalendar
+              nightlyPrice={property.nightlyPrice}
+              blockedRanges={calendarBlocks}
+            />
+          </section>
 
           {/* 7. House Rules & Policies (Option 1: Rules at a Glance Badges) */}
           <section className="border-t border-border/80 pt-10">

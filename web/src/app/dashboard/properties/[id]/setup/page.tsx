@@ -17,6 +17,7 @@ import { VideosManager } from "@/components/dashboard/properties/setup/videos-ma
 import { AmenitiesForm } from "@/components/dashboard/properties/setup/amenities-form";
 import { HouseRulesPresets } from "@/components/dashboard/properties/setup/house-rules-presets";
 import { DiscountsManager, FeesManager, TaxesManager } from "@/components/dashboard/properties/setup/pricing-extras";
+import { PropertyCalendarManager } from "@/components/dashboard/properties/property-calendar-manager";
 import {
   BasicsForm,
   LocationForm,
@@ -158,17 +159,26 @@ export default async function PropertySetupPage({ params }: { params: Promise<{ 
       </>
     ),
     availability: (
-      <AvailabilityForm
-        propertyId={id}
-        initial={{
-          minStayNights: settings?.min_stay_nights ?? 1,
-          maxStayNights: settings?.max_stay_nights ?? null,
-          advanceNoticeHours: settings?.advance_notice_hours ?? 24,
-          instantBook: settings?.instant_book ?? false,
-          sameDayBookingAllowed: settings?.same_day_booking_allowed ?? true,
-          sameDayCutoffTime: settings?.same_day_cutoff_time ?? null,
-        }}
-      />
+      <div className="space-y-6">
+        <AvailabilityForm
+          propertyId={id}
+          initial={{
+            minStayNights: settings?.min_stay_nights ?? 1,
+            maxStayNights: settings?.max_stay_nights ?? null,
+            advanceNoticeHours: settings?.advance_notice_hours ?? 24,
+            instantBook: settings?.instant_book ?? false,
+            sameDayBookingAllowed: settings?.same_day_booking_allowed ?? true,
+            sameDayCutoffTime: settings?.same_day_cutoff_time ?? null,
+          }}
+        />
+        <div className="border-t border-border pt-6">
+          <PropertyCalendarManager
+            propertyId={id}
+            propertySlug={property.slug}
+            propertyName={property.name}
+          />
+        </div>
+      </div>
     ),
     guestRequirements: (
       <GuestRequirementsForm

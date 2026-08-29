@@ -8,6 +8,8 @@ import { PropertyForm } from "@/components/dashboard/properties/property-form";
 import { DeletePropertyButton } from "@/components/dashboard/properties/delete-property-button";
 import { Button } from "@/components/ui/button";
 
+import { PropertyCalendarManager } from "@/components/dashboard/properties/property-calendar-manager";
+
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getDashboardSession();
   if (!session) redirect("/login");
@@ -37,6 +39,14 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
           </Button>
         </div>
       )}
+
+      <DashboardSection title="Calendar & Airbnb Sync">
+        <PropertyCalendarManager
+          propertyId={property.id}
+          propertySlug={property.slug}
+          propertyName={property.name}
+        />
+      </DashboardSection>
 
       <DashboardSection title="Property Details">
         {canEdit ? (

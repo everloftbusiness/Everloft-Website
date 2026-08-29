@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Temporary files & folders
+tmp/
+temp/
+.temp/
+scratch/
+*.tmp
+
+# Next.js & Build outputs
+.next/
+out/
+build/
+dist/
+
+# Environment files
+.env*
+!.env.example
+
+# OS & Logs
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database & IDE
+*.db
+*.db-journal
+.vscode/
+.idea/
