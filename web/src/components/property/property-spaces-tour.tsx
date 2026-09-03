@@ -55,64 +55,8 @@ const SPACE_ICON_MAP: Record<string, React.ElementType> = {
   "Surroundings & Views": Compass,
 };
 
-// Standard space highlights based on category
-function getSpaceHighlights(spaceTag: string): string[] {
-  if (spaceTag.startsWith("Bedroom")) {
-    if (spaceTag === "Bedroom 1") {
-      return ["1 King Bed", "En-suite Bathroom", "Air Conditioned", "Wardrobe & Balcony"];
-    } else if (spaceTag === "Bedroom 2") {
-      return ["1 Queen Bed", "Wardrobe Storage", "Air Conditioned", "Work Desk"];
-    }
-    return ["Comfortable Bed Setup", "Air Conditioned", "Wardrobe Storage", "Scenic View"];
-  }
-
-  if (spaceTag.startsWith("Bathroom")) {
-    if (spaceTag === "Bathroom 1") {
-      return ["Hot Water / Geyser", "Glass Shower Partition", "Luxury Toiletries", "Fresh Towels"];
-    } else if (spaceTag === "Bathroom 2") {
-      return ["Hot Water Geyser", "Shower Setup", "Fresh Towels", "Premium Toiletries"];
-    }
-    return ["Clean Modern Bathroom", "Hot Water Geyser", "Fresh Towels", "Toiletries Provided"];
-  }
-
-  switch (spaceTag) {
-    case "Living Room":
-      return ["Plush Sofa Lounge", "Smart HD TV", "Natural Sunlight", "Cozy Ambience"];
-    case "Kitchen":
-      return ["Full Kitchen Set", "Refrigerator & Microwave", "Stove & Cookware", "RO Water Purifier"];
-    case "Dining Area":
-      return ["Spacious Dining Table", "Comfortable Seating", "Fine Crockery & Cutlery", "Bar / Counter Space"];
-    case "Balcony":
-    case "Balcony & Views":
-      return ["Private Balcony", "Outdoor Seating", "Scenic Open View", "Morning Sunrise"];
-    case "Terrace":
-      return ["Rooftop Sunset Lounge", "Panoramic 360° View", "Open-Air Seating", "Barbecue Friendly"];
-    case "Private Swimming Pool":
-      return ["Crystal Clear Private Pool", "Sun Deck Loungers", "Poolside Lighting", "Clean Filtration"];
-    case "Garden & Lawn":
-      return ["Manicured Green Lawn", "Outdoor Gazebo Seating", "Bonfire Area", "Open Sky Views"];
-    case "Entertainment & Games":
-      return ["Indoor Board Games / Pool Table", "Smart Entertainment TV", "Surround Sound", "Lounge Seating"];
-    case "Gym & Fitness":
-      return ["Cardio & Strength Equipment", "Yoga Mats & Blocks", "Open Air Fitness Deck", "Full Length Mirrors"];
-    case "Car Parking":
-      return ["Covered On-Premises Parking", "Gated Security", "EV Fast Charging Friendly"];
-    case "Laundry & Utility":
-      return ["In-Unit Washing Machine", "Clothes Dryer Available", "Steam Iron & Ironing Board", "Drying Rack"];
-    case "Dedicated Workspace":
-      return ["High-Speed WiFi (100+ Mbps)", "Ergonomic Chair", "Dedicated Work Desk", "Power Outlets"];
-    case "Exterior & Entrance":
-      return ["Gated Entrance", "24/7 Security", "Elevator Access", "Private Foyer"];
-    case "Surroundings & Views":
-      return ["Scenic Nature Views", "Peaceful Neighborhood", "Walking Trails", "Easy Road Access"];
-    default:
-      return ["High-speed WiFi", "Air Conditioning", "Daily Housekeeping"];
-  }
-}
-
 function matchSpaceAmenities(spaceTag: string, amenities: string[] = []): string[] {
-  const fallbackHighlights = getSpaceHighlights(spaceTag);
-  if (!amenities || amenities.length === 0) return fallbackHighlights;
+  if (!amenities || amenities.length === 0) return [];
 
   const lowerSpace = spaceTag.toLowerCase();
   const matched: string[] = [];
@@ -146,23 +90,27 @@ function matchSpaceAmenities(spaceTag: string, amenities: string[] = []): string
     }
   });
 
-  if (matched.length === 0) return fallbackHighlights;
-  // Merge and deduplicate
-  const combined = Array.from(new Set([...matched, ...fallbackHighlights]));
-  return combined.slice(0, 4);
+  return Array.from(new Set(matched)).slice(0, 4);
 }
 
-function getSpaceAttributes(spaceTag: string, roomSpecs?: import("@/features/properties/types/property.types").PropertyRoomSpecs, amenities: string[] = []): string[] {
+function getSpaceAttributes(
+  spaceTag: string,
+  roomSpecs?: import("@/features/properties/types/property.types").PropertyRoomSpecs,
+  amenities: string[] = []
+): string[] {
   if (spaceTag.startsWith("Bedroom") && roomSpecs && roomSpecs[spaceTag]) {
     const spec = roomSpecs[spaceTag];
     if (spec.amenities && spec.amenities.length > 0) {
       return spec.amenities;
     }
-    const badges: string[] = [spec.bedType || "King Bed"];
+    const badges: string[] = [];
+    if (spec.bedType && spec.bedType.trim()) badges.push(spec.bedType.trim());
     if (spec.hasAc) badges.push("Air Conditioning (AC)");
     if (spec.hasBalcony) badges.push("Private Balcony");
     if (spec.hasWorkDesk) badges.push("Work Desk & Chair");
     if (spec.hasTv) badges.push("Smart TV");
+    if (spec.hasWardrobe) badges.push("Wardrobe Storage");
+    if (spec.viewType && spec.viewType.trim()) badges.push(`${spec.viewType.trim()} View`);
     return badges;
   }
 

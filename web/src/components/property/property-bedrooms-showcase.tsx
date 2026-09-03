@@ -27,8 +27,17 @@ export function PropertyBedroomsShowcase({
   photos?: PropertyPhotoItem[];
   propertyName: string;
 }) {
-  const totalBeds = Math.max(1, bedroomsCount ?? 1);
-  const bedroomKeys = Array.from({ length: totalBeds }, (_, i) => `Bedroom ${i + 1}`);
+  const hasSpecs = Object.keys(roomSpecs).length > 0;
+  const numBedrooms = bedroomsCount && bedroomsCount > 0 ? bedroomsCount : 0;
+
+  if (numBedrooms === 0 && !hasSpecs) {
+    return null;
+  }
+
+  // Derive bedroom keys: either from count or existing roomSpecs keys
+  const bedroomKeys = numBedrooms > 0
+    ? Array.from({ length: numBedrooms }, (_, i) => `Bedroom ${i + 1}`)
+    : Object.keys(roomSpecs);
 
   return (
     <section id="where-you-will-sleep" className="border-t border-border/80 pt-10">
@@ -42,26 +51,41 @@ export function PropertyBedroomsShowcase({
             Where You&apos;ll Sleep
           </h2>
           <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
-            {totalBeds} curated bedroom suites with premium hotel-grade linens, fresh sanitized duvets & climate control
+            {bedroomKeys.length} curated bedroom suite{bedroomKeys.length === 1 ? "" : "s"} with premium hotel-grade linens, fresh sanitized duvets & climate control
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 text-xs font-bold text-emerald-900 dark:text-emerald-300 border border-emerald-500/20">
           <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          {totalBeds} Private Bedrooms
+          {bedroomKeys.length} Private Bedroom{bedroomKeys.length === 1 ? "" : "s"}
         </div>
       </div>
 
       {/* Bedrooms Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {bedroomKeys.map((roomName, idx) => {
+        {bedroomKeys.map((roomName) => {
           const spec = roomSpecs[roomName] ?? {};
-          const bedType = spec.bedType || (idx === 0 ? "King Bed" : "Queen Bed");
-          const amenities = spec.amenities && spec.amenities.length > 0 ? spec.amenities : [
-            bedType,
-            "Air Conditioned",
-            idx === 0 ? "Attached Bathroom" : "Sanitized Linens",
-            "Wardrobe Storage",
-          ];
+          const bedType = spec.bedType && spec.bedType.trim() ? spec.bedType.trim() : null;
+
+          // Dynamically construct room amenities strictly from actual spec data
+          const dynamicAmenities: string[] = [];
+          if (bedType) dynamicAmenities.push(bedType);
+          if (spec.hasAc) dynamicAmenities.push("Air Conditioned");
+          if (spec.bathroomType === "attached") dynamicAmenities.push("Attached Bathroom");
+          else if (spec.bathroomType === "dedicated") dynamicAmenities.push("Dedicated Bathroom");
+          else if (spec.bathroomType === "common") dynamicAmenities.push("Common Bathroom");
+          if (spec.hasBalcony) dynamicAmenities.push("Private Balcony");
+          if (spec.hasWorkDesk) dynamicAmenities.push("Work Desk");
+          if (spec.hasTv) dynamicAmenities.push("Smart TV");
+          if (spec.hasWardrobe) dynamicAmenities.push("Wardrobe Storage");
+          if (spec.viewType && spec.viewType.trim()) dynamicAmenities.push(`${spec.viewType.trim()} View`);
+
+          if (spec.amenities && Array.isArray(spec.amenities)) {
+            spec.amenities.forEach((a) => {
+              if (a && typeof a === "string" && !dynamicAmenities.includes(a.trim())) {
+                dynamicAmenities.push(a.trim());
+              }
+            });
+          }
 
           // Find specific photo matching this bedroom
           const matchingPhoto = photos.find((p) => {
@@ -106,25 +130,29 @@ export function PropertyBedroomsShowcase({
                     </div>
                     <div>
                       <p className="text-sm font-bold text-foreground">{roomName}</p>
-                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                        {bedType}
-                      </p>
+                      {bedType && (
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          {bedType}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Amenities Badges */}
-                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/60">
-                  {amenities.map((item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-foreground"
-                    >
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                      <span>{item}</span>
-                    </span>
-                  ))}
-                </div>
+                {/* Dynamic Amenities Badges */}
+                {dynamicAmenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/60">
+                    {dynamicAmenities.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-foreground"
+                      >
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                        <span>{item}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );

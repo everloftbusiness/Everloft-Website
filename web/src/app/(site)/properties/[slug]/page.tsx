@@ -56,6 +56,95 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
   const location = [property.area, property.city, property.state].filter(Boolean).join(", ") || "India";
   const similarStays = allProperties.filter((p) => p.slug !== slug).slice(0, 3);
 
+  // Dynamic House Rules & Guidelines Parsing
+  const rawRules = property.rules ?? [];
+  
+  const smokingRule = rawRules.find(
+    (r) => r.key === "smoking" || r.text.toLowerCase().includes("smoking")
+  );
+  const petRule = rawRules.find(
+    (r) => r.key === "pets" || r.text.toLowerCase().includes("pet")
+  );
+  const partyRule = rawRules.find(
+    (r) => r.key === "parties" || r.text.toLowerCase().includes("party") || r.text.toLowerCase().includes("event")
+  );
+
+  const topRuleCards: { id: string; emoji: string; title: string; description: string; colorClass: string; matchedText: string }[] = [];
+
+  if (smokingRule) {
+    const isNoSmoking = smokingRule.text.toLowerCase().includes("no smoking") || smokingRule.key === "smoking";
+    topRuleCards.push({
+      id: "smoking",
+      emoji: "🚭",
+      title: isNoSmoking ? "No Smoking" : "Smoking Allowed",
+      description: isNoSmoking
+        ? "Strictly non-smoking home & shared building areas."
+        : "Smoking is permitted in designated areas.",
+      colorClass: isNoSmoking
+        ? "border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300"
+        : "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300",
+      matchedText: smokingRule.text,
+    });
+  }
+
+  if (petRule) {
+    const isNoPets = petRule.text.toLowerCase().includes("no pet") || petRule.key === "pets";
+    topRuleCards.push({
+      id: "pets",
+      emoji: "🐾",
+      title: isNoPets ? "No Pets" : "Pets Allowed",
+      description: isNoPets
+        ? "Pets are not permitted on premises."
+        : "Pets are welcome on premises.",
+      colorClass: "border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300",
+      matchedText: petRule.text,
+    });
+  }
+
+  if (partyRule) {
+    const isNoParties = partyRule.text.toLowerCase().includes("no event") || partyRule.text.toLowerCase().includes("no part") || partyRule.key === "parties";
+    topRuleCards.push({
+      id: "parties",
+      emoji: "🎉",
+      title: isNoParties ? "No Parties or Events" : "Events Allowed",
+      description: isNoParties
+        ? "Quiet residential community (Quiet hours apply)."
+        : "Events or parties permitted with prior approval.",
+      colorClass: "border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20 text-purple-900 dark:text-purple-300",
+      matchedText: partyRule.text,
+    });
+  }
+
+  const topMatchedTexts = new Set(topRuleCards.map((c) => c.matchedText.toLowerCase().trim()));
+  const systemKeys = new Set(["room_specs", "custom_amenity", "ical_feeds", "airbnb_ical_url", "calendar_blocks"]);
+
+  const additionalGuestRules = rawRules.filter((r) => {
+    const lowerKey = (r.key || "").toLowerCase().trim();
+    const lowerText = (r.text || "").toLowerCase().trim();
+
+    // Filter out system keys, iCal feeds, calendar blocks, and JSON data
+    if (
+      systemKeys.has(lowerKey) ||
+      lowerKey.includes("ical") ||
+      lowerKey.includes("calendar") ||
+      lowerText.startsWith("ical_feeds|") ||
+      lowerText.startsWith("airbnb_ical_url|") ||
+      lowerText.startsWith("calendar_blocks|") ||
+      lowerText.startsWith("[") ||
+      lowerText.startsWith("{")
+    ) {
+      return false;
+    }
+
+    if (topMatchedTexts.has(lowerText)) return false;
+    if (lowerKey === "smoking" || lowerKey === "pets" || lowerKey === "parties") return false;
+    return true;
+  });
+
+  const uniqueAdditionalRules = Array.from(
+    new Map(additionalGuestRules.map((r) => [r.text.toLowerCase().trim(), r])).values()
+  );
+
   return (
     <div className="bg-background">
       {/* 1. Breadcrumbs & Header Section */}
@@ -263,7 +352,7 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
             />
           </section>
 
-          {/* 7. House Rules & Policies (Option 1: Rules at a Glance Badges) */}
+          {/* 7. House Rules & Policies */}
           <section className="border-t border-border/80 pt-10">
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
               <ShieldCheck className="h-4 w-4" />
@@ -296,46 +385,35 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
               </div>
             </div>
 
-            {/* Option 1: Rules at a Glance Badges */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 p-4">
-                <span className="text-xl shrink-0">🚭</span>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">No Smoking</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Strictly non-smoking home & shared building areas.</p>
-                </div>
+            {/* Dynamic Rule Badges */}
+            {topRuleCards.length > 0 && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {topRuleCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className={`flex items-start gap-3 rounded-2xl border p-4 ${card.colorClass}`}
+                  >
+                    <span className="text-xl shrink-0">{card.emoji}</span>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider">{card.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{card.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div className="flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-950/20 p-4">
-                <span className="text-xl shrink-0">🐾</span>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300">No Pets</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Pets are not permitted on premises.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20 p-4">
-                <span className="text-xl shrink-0">🎉</span>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300">No Parties or Events</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Quiet residential community (Quiet hours: 10 PM – 8 AM).</p>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Preset & Custom Rules List */}
-            {property.rules && property.rules.length > 0 && (
+            {uniqueAdditionalRules.length > 0 && (
               <div className="mt-4 rounded-2xl border border-border/80 bg-card p-4 space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-2">Additional Guest Guidelines</h4>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                  {property.rules
-                    .filter((r) => r.key === "preset" || r.key === "custom")
-                    .map((rule, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-muted-foreground">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="font-medium text-foreground">{rule.text}</span>
-                      </div>
-                    ))}
+                  {uniqueAdditionalRules.map((rule, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="font-medium text-foreground">{rule.text}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
