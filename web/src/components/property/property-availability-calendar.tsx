@@ -17,8 +17,13 @@ export function PropertyAvailabilityCalendar({
   const [selectedStart, setSelectedStart] = useState<Date | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<Date | null>(null);
 
+  const now = new Date();
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  const isCurrentOrPastMonth =
+    year < now.getFullYear() ||
+    (year === now.getFullYear() && month <= now.getMonth());
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -28,7 +33,7 @@ export function PropertyAvailabilityCalendar({
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = now.toISOString().split("T")[0];
 
   function isDateBlocked(dateStr: string): boolean {
     if (dateStr < todayStr) return true; // Past dates blocked
@@ -73,6 +78,7 @@ export function PropertyAvailabilityCalendar({
   }
 
   function prevMonth() {
+    if (isCurrentOrPastMonth) return;
     setCurrentDate(new Date(year, month - 1, 1));
   }
 
@@ -106,7 +112,13 @@ export function PropertyAvailabilityCalendar({
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={prevMonth}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={prevMonth}
+            disabled={isCurrentOrPastMonth}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-xs font-bold px-2 min-w-[100px] text-center">

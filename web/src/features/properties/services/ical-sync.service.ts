@@ -104,6 +104,16 @@ export async function getPropertyCalendarBlocks(propertyId: string): Promise<Cal
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
   const supabase = createAdminClient();
 
+  // Auto-sync iCal channel feeds in real-time if feeds exist for this property
+  try {
+    const feeds = await getICalChannelFeeds(propertyId);
+    if (feeds.length > 0) {
+      await syncAllICalFeeds(propertyId);
+    }
+  } catch (err) {
+    console.error("Auto iCal sync on fetch error:", err);
+  }
+
   const { data: rules } = await supabase
     .from("property_rules")
     .select("rule_text")
