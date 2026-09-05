@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { getDashboardSession } from "@/lib/dashboard/session";
 import { getProperty, getPropertyLookups, getOwnerOptions } from "@/features/properties/services/properties.service";
 import { updatePropertyAction } from "@/features/properties/actions/property.actions";

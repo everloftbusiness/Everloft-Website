@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import type { CalendarBlock } from "@/features/properties/services/ical-sync.service";
 
+function formatYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function PropertyAvailabilityCalendar({
   nightlyPrice,
   blockedRanges = [],
@@ -33,18 +40,21 @@ export function PropertyAvailabilityCalendar({
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = formatYmd(now);
 
   function isDateBlocked(dateStr: string): boolean {
     if (dateStr < todayStr) return true; // Past dates blocked
-    return blockedRanges.some(
-      (b) => dateStr >= b.startDate && dateStr <= b.endDate
-    );
+    return blockedRanges.some((b) => {
+      const startYmd = (b.startDate || "").slice(0, 10);
+      const endYmd = (b.endDate || "").slice(0, 10);
+      if (startYmd === endYmd) return dateStr === startYmd;
+      return dateStr >= startYmd && dateStr < endYmd;
+    });
   }
 
   function handleDateClick(day: number) {
     const clickedDate = new Date(year, month, day);
-    const dateStr = clickedDate.toISOString().split("T")[0];
+    const dateStr = formatYmd(clickedDate);
 
     if (isDateBlocked(dateStr)) return;
 
@@ -60,7 +70,7 @@ export function PropertyAvailabilityCalendar({
         let hasBlockedBetween = false;
         const cur = new Date(selectedStart);
         while (cur <= clickedDate) {
-          if (isDateBlocked(cur.toISOString().split("T")[0])) {
+          if (isDateBlocked(formatYmd(cur))) {
             hasBlockedBetween = true;
             break;
           }
@@ -105,7 +115,7 @@ export function PropertyAvailabilityCalendar({
         <div>
           <h3 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-emerald-800 dark:text-emerald-400" />
-            Select Availability & Dates
+            Select Availability &amp; Dates
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Green dates are open for instant booking. Gray dates are reserved.
@@ -143,11 +153,11 @@ export function PropertyAvailabilityCalendar({
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
           const thisDate = new Date(year, month, day);
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const dateStr = formatYmd(thisDate);
           const blocked = isDateBlocked(dateStr);
 
-          const isStart = selectedStart && selectedStart.toISOString().split("T")[0] === dateStr;
-          const isEnd = selectedEnd && selectedEnd.toISOString().split("T")[0] === dateStr;
+          const isStart = selectedStart && formatYmd(selectedStart) === dateStr;
+          const isEnd = selectedEnd && formatYmd(selectedEnd) === dateStr;
           const isInRange =
             selectedStart &&
             selectedEnd &&

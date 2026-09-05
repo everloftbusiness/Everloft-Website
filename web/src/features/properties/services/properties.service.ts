@@ -151,8 +151,6 @@ export async function listPublicActiveProperties(limit = 6): Promise<PublicPrope
 }
 
 export async function getPublicActivePropertyBySlug(slug: string): Promise<PublicPropertyDetail | null> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
-
   const supabase = createAdminClient();
   const { data: activeStatus, error: statusError } = await supabase
     .from("property_status")

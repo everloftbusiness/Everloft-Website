@@ -56,3 +56,11 @@
 - `.site-container` uses `px-4 sm:px-6 md:px-10 lg:px-16`.
 - Mobile navigation drawers in `navbar.tsx` and `dashboard-header.tsx`.
 - Global floating WhatsApp button positioned at `bottom-20 right-4` on mobile to avoid overlapping sticky bars.
+
+### Multi-Calendar & iCal Sync Engine (`src/components/dashboard/properties/property-calendar-grid.tsx`)
+- **Exclusive PMS End-Date Logic**: Date ranges follow `[startDate, endDate)`. 1-night block (`startDate === endDate`) resolves `endYmd = startDate + 1 day` via `getEffectiveBlockDates()`.
+- **Continuous Bar Styling**: Multi-day stay bars float at `z-20 -mx-[9px] w-[calc(100%+18px)]` to cover 1px cell borders cleanly with 0 narrow line gaps.
+- **Uncut Label Rendering**: Check-in labels (e.g. `"Owner Stay / Maintenance"`) use `whitespace-nowrap overflow-visible` so full text flows across stay dates without truncate clipping.
+- **Solid Check-Out Caps**: Check-out morning bars use 100% solid `#222222` color with 0% opacity drop and NO `"Out"` text.
+- **Label Priority**: `getChannelLabel(block)` evaluates `block.notes` ➔ `block.channelName` ➔ `block.reason` (e.g. `"Owner Stay / Maintenance"`).
+

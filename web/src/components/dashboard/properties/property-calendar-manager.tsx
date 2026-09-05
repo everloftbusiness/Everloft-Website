@@ -136,13 +136,12 @@ export function PropertyCalendarManager({
     setMessage(null);
     try {
       const res = await saveManualCalendarBlockAction(propertyId, startDate, endDate, notes);
-      if (res.success) {
+      if (res.success && res.blocks) {
         setMessage({ text: res.message, type: "success" });
         setStartDate("");
         setEndDate("");
         setNotes("");
-        const data = await fetchCalendarDataAction(propertyId);
-        setBlocks(data.blocks);
+        setBlocks(res.blocks);
       } else {
         setMessage({ text: res.message, type: "error" });
       }
@@ -154,10 +153,13 @@ export function PropertyCalendarManager({
   }
 
   async function handleDeleteBlock(blockId: string) {
+    setMessage(null);
     const res = await deleteCalendarBlockAction(propertyId, blockId);
-    if (res.success) {
+    if (res.success && res.blocks) {
       setMessage({ text: res.message, type: "success" });
-      setBlocks((prev) => prev.filter((b) => b.id !== blockId));
+      setBlocks(res.blocks);
+    } else {
+      setMessage({ text: res.message, type: "error" });
     }
   }
 
@@ -170,6 +172,38 @@ export function PropertyCalendarManager({
     navigator.clipboard.writeText(everloftICalUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  async function handleQuickBlock(start: string, end: string, blockNotes?: string) {
+    setMessage(null);
+    // Instant optimistic update
+    const tempId = `blk_${Date.now()}`;
+    const newBlock: CalendarBlock = {
+      id: tempId,
+      propertyId,
+      startDate: start.slice(0, 10),
+      endDate: end.slice(0, 10),
+      reason: "manual_block",
+      notes: blockNotes || "Manual Block / Maintenance",
+    };
+    setBlocks((prev) => [...prev, newBlock]);
+
+    try {
+      const res = await saveManualCalendarBlockAction(propertyId, start, end, blockNotes);
+      if (res.success && res.blocks) {
+        setMessage({ text: res.message, type: "success" });
+        setBlocks(res.blocks);
+        return true;
+      } else {
+        setBlocks((prev) => prev.filter((b) => b.id !== tempId));
+        setMessage({ text: res.message, type: "error" });
+        return false;
+      }
+    } catch {
+      setBlocks((prev) => prev.filter((b) => b.id !== tempId));
+      setMessage({ text: "Failed to block dates.", type: "error" });
+      return false;
+    }
   }
 
   return (
@@ -215,11 +249,12 @@ export function PropertyCalendarManager({
         </div>
       )}
 
-      {/* 1. VISUAL INTERACTIVE CALENDAR GRID */}
+      {/* 1. VISUAL INTERACTIVE AIRBNB-STYLE CALENDAR GRID */}
       <PropertyCalendarGrid
         blocks={blocks}
         onSelectDateRange={handleSelectDateRange}
         onDeleteBlock={handleDeleteBlock}
+        onQuickBlock={handleQuickBlock}
       />
 
       {/* 2. MANUAL DATE BLOCKER FORM */}

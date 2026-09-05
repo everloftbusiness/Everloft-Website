@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { formatDistanceToNow } from "date-fns";
 import { Home, MapPin, ImageIcon, Video, Type, FileText, Sparkles, ShieldCheck, IndianRupee, CalendarClock, Users, ArrowLeft, ChevronRight } from "lucide-react";
 import { getDashboardSession } from "@/lib/dashboard/session";

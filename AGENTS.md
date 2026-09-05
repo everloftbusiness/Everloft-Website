@@ -74,3 +74,11 @@ in `web/`. Scope file searches to `web/` by default.
 
 5. **Property Page Section Sequence**:
    - `Gallery` ➔ `Key Specs (BHK, Max Guests, Baths, Sqft)` ➔ `Managed Guarantee` ➔ `About & Highlights` ➔ `What This Place Offers (Amenities)` ➔ `Where You'll Sleep (Bedrooms)` ➔ `Location Map` ➔ `House Rules` ➔ `Spaces Tour` ➔ `Video Tour`.
+
+6. **Multi-Calendar & iCal Sync Architecture (`property-calendar-grid.tsx` & `ical-sync.service.ts`)**:
+   - **Exclusive PMS End-Date Logic**: Blocks span `[startDate, endDate)`. A 1-night block on `2026-09-10` sets `startDate: 2026-09-10` & `endDate: 2026-09-10` in DB, but `getEffectiveBlockDates()` calculates `endYmd = 2026-09-11` for check-out AM.
+   - **Continuous Horizontal Bar Layout**: Multi-day stay bars float at `z-20 -mx-[9px] w-[calc(100%+18px)]` to overlay 1px grid borders with 0 narrow line gaps.
+   - **Uncut Text Flow**: Check-in labels (e.g. `Owner Stay / Maintenance`) use `whitespace-nowrap overflow-visible` to flow smoothly across stay dates without truncate clipping.
+   - **Clean Check-Out Caps**: Check-out morning bars render in 100% solid `#222222` with 0% opacity drop and NO `"Out"` text.
+   - **Label Resolution**: `getChannelLabel(block)` checks `block.notes` ➔ `block.channelName` ➔ `block.reason` (e.g. `"Owner Stay / Maintenance"`).
+
