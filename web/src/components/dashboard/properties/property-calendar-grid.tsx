@@ -16,10 +16,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { defaultChannelColor } from "@/lib/calendar-channel-colors";
 import type { CalendarBlock } from "@/features/properties/services/ical-sync.service";
 
 interface PropertyCalendarGridProps {
   blocks: CalendarBlock[];
+  channelColors?: Record<string, string>;
   onSelectDateRange?: (startDate: string, endDate: string) => void;
   onDeleteBlock?: (blockId: string) => void;
   onQuickBlock?: (startDate: string, endDate: string, notes?: string) => Promise<boolean | void>;
@@ -27,6 +29,7 @@ interface PropertyCalendarGridProps {
 
 export function PropertyCalendarGrid({
   blocks,
+  channelColors = {},
   onSelectDateRange,
   onDeleteBlock,
   onQuickBlock,
@@ -126,6 +129,12 @@ export function PropertyCalendarGrid({
     return "bg-neutral-800 text-white font-medium shadow-sm";
   }
 
+  function getBlockColor(block: CalendarBlock): string | undefined {
+    if (block.reason === "manual_block") return undefined;
+    const channelName = block.channelName || block.reason;
+    return channelColors[channelName.toLowerCase()] || defaultChannelColor(channelName);
+  }
+
   function getChannelLabel(block: CalendarBlock) {
     if (block.notes && !block.notes.toLowerCase().startsWith("calendar block")) {
       return block.notes.replace(/^airbnb:\s*/i, "");
@@ -140,6 +149,15 @@ export function PropertyCalendarGrid({
   }
 
   function handleDayClick(dateStr: string) {
+    if (dateStr < formatYmdDate(new Date())) return;
+
+    // A second click on either endpoint is an explicit deselect action.
+    if (dateStr === rangeStart || dateStr === rangeEnd) {
+      setRangeStart(null);
+      setRangeEnd(null);
+      return;
+    }
+
     const activeOnDate = getBlocksForDate(dateStr);
 
     if (rangeStart && !rangeEnd) {
@@ -379,6 +397,10 @@ export function PropertyCalendarGrid({
 
               const isBlocked = activeBlocks.length > 0;
               const isOwnerBlocked = activeBlocks.some((b) => b.reason === "manual_block");
+              const isPastDate = cell.dateStr < todayStr;
+              // The check-in cell owns the label that flows across a multi-day bar.
+              // Put that cell above later siblings so their backgrounds cannot cover it.
+              const startsBlock = blocks.some((b) => getEffectiveBlockDates(b).startYmd === cell.dateStr);
 
               let cellBg = cell.isCurrentMonth
                 ? "bg-card hover:bg-neutral-50/80 dark:hover:bg-neutral-900/50"
@@ -393,12 +415,14 @@ export function PropertyCalendarGrid({
               } else if (isInRange) {
                 cellBg = "bg-emerald-200/60 dark:bg-emerald-900/40 font-semibold";
               }
+              if (isPastDate) cellBg = "bg-muted/50 text-muted-foreground opacity-60 cursor-not-allowed";
 
               return (
                 <div
                   key={`${cell.dateStr}_${idx}`}
-                  onClick={() => cell.isCurrentMonth && handleDayClick(cell.dateStr)}
-                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors relative cursor-pointer group select-none ${cellBg}`}
+                  onClick={() => cell.isCurrentMonth && !isPastDate && handleDayClick(cell.dateStr)}
+                  aria-disabled={isPastDate}
+                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors relative cursor-pointer group select-none ${startsBlock ? "z-30" : "z-0"} ${cellBg}`}
                 >
                   {/* Day Number Header */}
                   <div className="flex items-center justify-between">
@@ -457,6 +481,7 @@ export function PropertyCalendarGrid({
                               className={`w-[38%] h-full flex items-center justify-center rounded-r-md cursor-pointer shadow-xs ${getBlockBarStyle(
                                 checkoutBlock
                               )}`}
+                              style={{ backgroundColor: getBlockColor(checkoutBlock) }}
                             />
 
                             {/* Turnover Gap Divider */}
@@ -472,6 +497,7 @@ export function PropertyCalendarGrid({
                               className={`w-[58%] h-full flex items-center text-[11px] font-bold rounded-l-full pl-1.5 cursor-pointer shadow-xs relative ${getBlockBarStyle(
                                 checkinBlock
                               )}`}
+                              style={{ backgroundColor: getBlockColor(checkinBlock) }}
                             >
                               <span className="flex items-center gap-1.5 whitespace-nowrap absolute left-1.5 top-1/2 -translate-y-1/2 z-40 pointer-events-none">
                                 <div className="h-4 w-4 rounded-full bg-neutral-700 text-white font-bold flex items-center justify-center text-[9px] shrink-0 border border-white/20">
@@ -499,6 +525,7 @@ export function PropertyCalendarGrid({
                               className={`w-[35%] h-full rounded-r-full cursor-pointer shadow-xs ${getBlockBarStyle(
                                 checkoutBlock
                               )}`}
+                              style={{ backgroundColor: getBlockColor(checkoutBlock) }}
                             />
                           </div>
                         );
@@ -506,17 +533,6 @@ export function PropertyCalendarGrid({
 
                       // Case 3: Check-In Afternoon ONLY (Bar starting at check-in PM, label flowing continuously across stay dates)
                       if (checkinBlock && !checkoutBlock) {
-                        const { startYmd, endYmd } = getEffectiveBlockDates(checkinBlock);
-                        const stayNights = Math.max(
-                          1,
-                          Math.round(
-                            (new Date(`${endYmd}T00:00:00`).getTime() - new Date(`${startYmd}T00:00:00`).getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          )
-                        );
-                        // Allow full-length text flow across multi-day stay bars without truncate overflow-hidden
-                        const maxTextWidthClass = stayNights === 1 ? "max-w-[85px] truncate" : "whitespace-nowrap overflow-visible";
-
                         return (
                           <div className="flex items-center w-full h-7 relative z-30 overflow-visible">
                             <div
@@ -527,12 +543,13 @@ export function PropertyCalendarGrid({
                               className={`w-[75%] ml-auto h-full flex items-center text-[11px] font-bold rounded-l-full pl-2 pr-1 shadow-sm cursor-pointer relative overflow-visible ${getBlockBarStyle(
                                 checkinBlock
                               )}`}
+                              style={{ backgroundColor: getBlockColor(checkinBlock) }}
                             >
                               <span className="flex items-center gap-1.5 whitespace-nowrap absolute left-2 top-1/2 -translate-y-1/2 z-40 pointer-events-none overflow-visible">
                                 <div className="h-4.5 w-4.5 rounded-full bg-neutral-700 text-white font-bold flex items-center justify-center text-[9px] shrink-0 border border-white/20">
                                   {getGuestInitial(getChannelLabel(checkinBlock))}
                                 </div>
-                                <span className={`font-bold text-white z-40 drop-shadow-xs ${maxTextWidthClass}`}>
+                                <span className="font-bold text-white z-40 drop-shadow-xs whitespace-nowrap overflow-visible">
                                   {getChannelLabel(checkinBlock)}
                                 </span>
                               </span>
@@ -559,6 +576,7 @@ export function PropertyCalendarGrid({
                               className={`w-full h-full flex items-center text-[11px] font-bold shadow-xs cursor-pointer ${shapeClasses} ${getBlockBarStyle(
                                 middleBlock
                               )}`}
+                              style={{ backgroundColor: getBlockColor(middleBlock) }}
                             >
                               {isWeekStart ? (
                                 <span className="flex items-center gap-1.5 px-0.5 whitespace-nowrap relative z-30">

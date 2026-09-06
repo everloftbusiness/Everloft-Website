@@ -59,6 +59,25 @@ export async function addICalFeedAction(propertyId: string, channelName: string,
   return { success: false, message: "Failed to save calendar feed." };
 }
 
+export async function updateICalFeedColorAction(propertyId: string, feedId: string, color: string) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+    return { success: false, message: "Choose a valid six-digit color." };
+  }
+
+  const feeds = await getICalChannelFeeds(propertyId);
+  if (!feeds.some((feed) => feed.id === feedId)) {
+    return { success: false, message: "Calendar feed not found." };
+  }
+
+  const ok = await saveICalChannelFeeds(
+    propertyId,
+    feeds.map((feed) => (feed.id === feedId ? { ...feed, color } : feed)),
+  );
+  return ok
+    ? { success: true, message: "Calendar color updated." }
+    : { success: false, message: "Could not update the calendar color." };
+}
+
 export async function deleteICalFeedAction(propertyId: string, feedId: string) {
   const feeds = await getICalChannelFeeds(propertyId);
   const targetFeed = feeds.find((f) => f.id === feedId);
@@ -174,4 +193,3 @@ export async function deleteCalendarBlockAction(propertyId: string, blockId: str
 
   return { success: false, message: "Failed to delete calendar block.", blocks: existingBlocks };
 }
-

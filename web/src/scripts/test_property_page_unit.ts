@@ -11,10 +11,11 @@ require("module")._cache[require.resolve("server-only")] = {
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 
-import { getPublicActivePropertyBySlug } from "../features/properties/services/properties.service";
-import { getPropertyCalendarBlocks } from "../features/properties/services/ical-sync.service";
-
 async function runUnitTest() {
+  // These server-only modules must load after the CommonJS cache mock above.
+  // Static imports are hoisted and would evaluate `server-only` before it.
+  const { getPublicActivePropertyBySlug } = await import("../features/properties/services/properties.service");
+  const { getPropertyCalendarBlocks } = await import("../features/properties/services/ical-sync.service");
   console.log("==================================================");
   console.log("UNIT TEST: Property Page & House Rules Data Test");
   console.log("Target Slug: 305-stylish-2bhk-by-everloft-with-balcony");

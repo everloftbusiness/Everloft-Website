@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { defaultChannelColor } from "@/lib/calendar-channel-colors";
 
 export type ICalChannelFeed = {
   id: string;
@@ -6,6 +7,7 @@ export type ICalChannelFeed = {
   channelName: string; // e.g., "Airbnb", "VRBO", "Booking.com", "Agoda", "Custom Website"
   icalUrl: string;
   lastSyncedAt?: string | null;
+  color?: string | null;
 };
 
 export type CalendarBlock = {
@@ -353,7 +355,7 @@ export async function getICalChannelFeeds(propertyId: string): Promise<ICalChann
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rows } = await (supabase as any)
       .from("property_integrations")
-      .select("id, property_id, channel, listing_url, status, sync_status, last_synced_at")
+      .select("id, property_id, channel, listing_url, status, sync_status, last_synced_at, calendar_color")
       .eq("property_id", propertyId)
       .is("deleted_at", null);
 
@@ -368,6 +370,7 @@ export async function getICalChannelFeeds(propertyId: string): Promise<ICalChann
           channelName: dbKeyToChannelName(r.channel),
           icalUrl: r.listing_url,
           lastSyncedAt: r.last_synced_at ? new Date(r.last_synced_at).toISOString() : null,
+          color: r.calendar_color || defaultChannelColor(r.channel),
         }));
       }
     }
@@ -435,6 +438,7 @@ export async function saveICalChannelFeeds(propertyId: string, feeds: ICalChanne
       status: "active",
       sync_status: feed.lastSyncedAt ? "synced" : "never_synced",
       last_synced_at: feed.lastSyncedAt ? new Date(feed.lastSyncedAt).toISOString() : null,
+      calendar_color: feed.color || defaultChannelColor(feed.channelName),
       updated_at: new Date().toISOString(),
       ...(userId ? { created_by: userId, updated_by: userId } : {}),
     };
@@ -685,5 +689,4 @@ export async function syncAirbnbICalFeed(
     message: res.message,
   };
 }
-
 

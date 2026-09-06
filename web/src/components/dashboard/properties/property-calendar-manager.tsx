@@ -21,6 +21,7 @@ import { PropertyCalendarGrid } from "@/components/dashboard/properties/property
 import {
   fetchCalendarDataAction,
   addICalFeedAction,
+  updateICalFeedColorAction,
   deleteICalFeedAction,
   syncAllICalFeedsAction,
   saveManualCalendarBlockAction,
@@ -53,6 +54,7 @@ export function PropertyCalendarManager({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
 
   const everloftICalUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/ical/${propertySlug}`
@@ -106,6 +108,16 @@ export function PropertyCalendarManager({
     }
   }
 
+  async function handleFeedColorChange(feedId: string, color: string) {
+    const previousFeeds = feeds;
+    setFeeds((current) => current.map((feed) => (feed.id === feedId ? { ...feed, color } : feed)));
+    const res = await updateICalFeedColorAction(propertyId, feedId, color);
+    if (!res.success) {
+      setFeeds(previousFeeds);
+      setMessage({ text: res.message, type: "error" });
+    }
+  }
+
   async function handleSyncAll() {
     setIsSyncingAll(true);
     setMessage(null);
@@ -129,6 +141,10 @@ export function PropertyCalendarManager({
   async function handleAddManualBlock() {
     if (!startDate || !endDate) {
       setMessage({ text: "Start and End dates are required.", type: "error" });
+      return;
+    }
+    if (startDate < today || endDate < today) {
+      setMessage({ text: "Past dates cannot be blocked.", type: "error" });
       return;
     }
 
@@ -252,6 +268,7 @@ export function PropertyCalendarManager({
       {/* 1. VISUAL INTERACTIVE AIRBNB-STYLE CALENDAR GRID */}
       <PropertyCalendarGrid
         blocks={blocks}
+        channelColors={Object.fromEntries(feeds.map((feed) => [feed.channelName.toLowerCase(), feed.color || ""]))}
         onSelectDateRange={handleSelectDateRange}
         onDeleteBlock={handleDeleteBlock}
         onQuickBlock={handleQuickBlock}
@@ -267,11 +284,11 @@ export function PropertyCalendarManager({
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <Label className="text-xs font-semibold">Start Date</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1" />
+            <Input type="date" min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1" />
           </div>
           <div>
             <Label className="text-xs font-semibold">End Date</Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1" />
+            <Input type="date" min={startDate || today} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1" />
           </div>
           <div>
             <Label className="text-xs font-semibold">Reason / Notes</Label>
@@ -308,6 +325,7 @@ export function PropertyCalendarManager({
                   <option value="Airbnb">Airbnb</option>
                   <option value="VRBO">VRBO / HomeAway</option>
                   <option value="Booking.com">Booking.com</option>
+                  <option value="MakeMyTrip">MakeMyTrip</option>
                   <option value="Agoda">Agoda</option>
                   <option value="Custom Website">Custom Website / Other</option>
                 </select>
@@ -395,6 +413,7 @@ export function PropertyCalendarManager({
                   <th className="py-3 px-4">Channel</th>
                   <th className="py-3 px-4">iCal Feed URL</th>
                   <th className="py-3 px-4">Last Synced</th>
+                  <th className="py-3 px-4">Color</th>
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
@@ -411,6 +430,15 @@ export function PropertyCalendarManager({
                     </td>
                     <td className="py-3 px-4 text-muted-foreground font-mono">
                       {feed.lastSyncedAt ? new Date(feed.lastSyncedAt).toLocaleString() : "Pending"}
+                    </td>
+                    <td className="py-3 px-4">
+                      <input
+                        type="color"
+                        aria-label={`${feed.channelName} calendar color`}
+                        value={feed.color || "#047857"}
+                        onChange={(event) => handleFeedColorChange(feed.id, event.target.value)}
+                        className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent p-0.5"
+                      />
                     </td>
                     <td className="py-3 px-4 text-right">
                       <Button
