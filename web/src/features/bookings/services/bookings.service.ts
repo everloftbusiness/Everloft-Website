@@ -20,14 +20,22 @@ type RegisterDatabase = {
             guest_profiles: Table<GuestOption & {
                 deleted_at: string | null;
             }>;
+            bookings: Table<{
+                id: string;
+                deleted_at: string | null;
+            }>;
             booking_financial_lines: Table<FinancialLine & {
+                id: string;
                 booking_id: string;
                 created_at: string;
             }>;
             transactions: Table<Omit<PaymentRow, 'payment_type'> & {
+                id: string;
                 related_entity_id: string;
+                related_entity_type?: string;
             }>;
             booking_payments: Table<{
+                id: string;
                 booking_id: string;
                 transaction_id: string;
                 payment_type: string;
@@ -159,3 +167,29 @@ export async function finalizeBooking(id: string) { await requireRegisterAccess(
 export async function recordPayment(payload: unknown) { await requireRegisterAccess(); const db = await client(); const { error } = await db.rpc('record_booking_payment', { payload }); fail(error); }
 export async function reversePayment(id: string, reason: string) { await requireRegisterAccess(); const db = await client(); const { error } = await db.rpc('reverse_booking_payment', { transaction_id: id, reason }); fail(error); }
 export async function updateStayStatus(id: string, status: string) { await requireRegisterAccess(); const db = await client(); const { error } = await db.rpc('update_booking_stay_status', { booking_id: id, new_status: status }); fail(error); }
+import { createAdminClient } from '@/lib/supabase/admin';
+
+export async function deleteBooking(id: string) {
+    await requireRegisterAccess();
+    const admin = createAdminClient() as unknown as SupabaseClient<RegisterDatabase>;
+    const { data: payments } = await admin.from('booking_payments').select('transaction_id').eq('booking_id', id);
+    if (payments && payments.length > 0) {
+        const txIds = (payments as { transaction_id: string }[]).map((p) => p.transaction_id);
+        await admin.from('booking_payments').delete().eq('booking_id', id);
+        await admin.from('transactions').delete().in('id', txIds);
+    }
+    await admin.from('transactions').delete().eq('related_entity_id', id);
+    await admin.from('booking_financial_lines').delete().eq('booking_id', id);
+    const { error } = await admin.from('bookings').delete().eq('id', id);
+    fail(error);
+}
+
+export async function deleteAllBookings() {
+    await requireRegisterAccess();
+    const admin = createAdminClient() as unknown as SupabaseClient<RegisterDatabase>;
+    await admin.from('booking_payments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('transactions').delete().eq('related_entity_type', 'booking');
+    await admin.from('booking_financial_lines').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    const { error } = await admin.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    fail(error);
+}

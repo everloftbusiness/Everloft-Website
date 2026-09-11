@@ -5,7 +5,7 @@ import { BookingPayments } from './booking-payments';
 import type { BookingRow } from '../types/booking.types';
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
-vi.mock('../actions/booking.actions', () => ({ finalizeBookingAction: vi.fn(), recordPaymentAction: vi.fn(), reversePaymentAction: vi.fn(), updateStayStatusAction: vi.fn(), getBookingDetailsAction: vi.fn() }));
+vi.mock('../actions/booking.actions', () => ({ finalizeBookingAction: vi.fn(), recordPaymentAction: vi.fn(), reversePaymentAction: vi.fn(), updateStayStatusAction: vi.fn(), getBookingDetailsAction: vi.fn(), deleteBookingAction: vi.fn(), deleteAllBookingsAction: vi.fn() }));
 vi.mock('../actions/import.actions', () => ({ importBookingsAction: vi.fn() }));
 afterEach(cleanup);
 const booking = { id: 'test', reservation_code: 'EL-TEST', property_id: 'p1', property_name: 'Example', primary_guest_id: 'g1', guest_name: 'Example guest', email: null, phone: null, country: null, unit_label: '405', source: 'Airbnb', external_booking_ref: 'OTA1', booking_date: '2026-06-01', check_in_date: '2026-06-02', check_out_date: '2026-06-03', nights: 1, adults: 1, children: 0, currency: 'INR', status: 'confirmed', financial_status: 'draft', collection_mode:'platform',guest_balance:null, guest_total: 2477.65, host_total: 2015.52, guest_received: 0, host_received: 0, deposit_held: 0, payout_balance: 2015.52, notes: '', created_at: '2026-06-01', updated_at: '2026-06-01', finalized_at: null } satisfies BookingRow;
@@ -24,5 +24,19 @@ describe('booking workflows', () => {
         expect(screen.queryByRole('button', { name: 'Record payment' })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('checkbox'));
         expect(screen.getByRole('button', { name: 'Finalize breakdown' })).toBeEnabled();
+    });
+    it('opens delete confirmation modal when delete button in stay particulars is clicked', () => {
+        render(<BookingRegister rows={[booking]} total={1} page={1} filters={{ property: 'p1' }} properties={[{ id: 'p1', name: 'Example' }]}/>);
+        const deleteButton = screen.getByRole('button', { name: 'Delete booking' });
+        expect(deleteButton).toBeInTheDocument();
+        fireEvent.click(deleteButton);
+        expect(screen.getByRole('heading', { name: 'Delete Booking' })).toBeInTheDocument();
+    });
+    it('opens bulk delete confirmation modal when Delete All button is clicked', () => {
+        render(<BookingRegister rows={[booking]} total={1} page={1} filters={{ property: 'p1' }} properties={[{ id: 'p1', name: 'Example' }]}/>);
+        const deleteAllButton = screen.getByRole('button', { name: 'Delete All' });
+        expect(deleteAllButton).toBeInTheDocument();
+        fireEvent.click(deleteAllButton);
+        expect(screen.getByRole('heading', { name: 'Delete ALL Bookings?' })).toBeInTheDocument();
     });
 });

@@ -26,6 +26,7 @@ import {
   ArrowUpDown,
   Filter,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -39,7 +40,7 @@ import {
   type PaymentRow
 } from '../types/booking.types';
 import { money } from '../utils/money';
-import { getBookingDetailsAction } from '../actions/booking.actions';
+import { getBookingDetailsAction, deleteBookingAction, deleteAllBookingsAction } from '../actions/booking.actions';
 import { CsvImportModal } from './csv-import-modal';
 import { GoogleSheetSyncModal } from './google-sheet-sync-modal';
 
@@ -129,6 +130,14 @@ export function BookingRegister({
   } | null>(null);
   const [isPendingDrawer, startTransitionDrawer] = useTransition();
 
+  // Delete Booking Modal State
+  const [bookingToDelete, setBookingToDelete] = useState<BookingRow | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  // Delete All Bookings State
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
+  const [isDeletingAll, startDeleteAllTransition] = useTransition();
+
   function openDrawer(row: BookingRow) {
     setDrawerRow(row);
     setDrawerDetails(null);
@@ -143,6 +152,35 @@ export function BookingRegister({
         }
       } catch (err) {
         console.error('Failed to fetch drawer booking details:', err);
+      }
+    });
+  }
+
+  function handleDeleteBooking() {
+    if (!bookingToDelete) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteBookingAction(bookingToDelete.id);
+        toast.success(`Booking ${bookingToDelete.reservation_code} permanently deleted`);
+        setBookingToDelete(null);
+        if (drawerRow?.id === bookingToDelete.id) {
+          setDrawerRow(null);
+        }
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete booking');
+      }
+    });
+  }
+
+  function handleDeleteAllBookings() {
+    startDeleteAllTransition(async () => {
+      try {
+        await deleteAllBookingsAction();
+        toast.success('All bookings permanently deleted');
+        setConfirmDeleteAllOpen(false);
+        setDrawerRow(null);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete all bookings');
       }
     });
   }
@@ -206,7 +244,7 @@ export function BookingRegister({
             {total} booking{total === 1 ? '' : 's'} registered · Tracks guest tax/charges, expected payouts, and bank credits.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <GoogleSheetSyncModal properties={properties} />
           <CsvImportModal properties={properties} />
           <a
@@ -215,6 +253,14 @@ export function BookingRegister({
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Export Excel (.xlsx)
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 font-semibold text-xs shadow-2xs"
+            onClick={() => setConfirmDeleteAllOpen(true)}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" /> Delete All
+          </Button>
           <Button asChild variant="blue-accent" size="sm" className="shadow-xs">
             <Link href={`/dashboard/bookings/new${filters.property ? `?property=${filters.property}` : ''}`}>
               <Plus className="mr-1 h-4 w-4" /> Add booking
@@ -599,9 +645,16 @@ export function BookingRegister({
                           <button
                             title="Quick preview drawer"
                             onClick={() => openDrawer(r)}
-                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                           >
                             <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            title="Delete booking"
+                            onClick={() => setBookingToDelete(r)}
+                            className="rounded p-1 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                           <Link className="hover:underline" href={`/dashboard/bookings/${r.id}`}>
                             {r.reservation_code}
@@ -902,10 +955,104 @@ export function BookingRegister({
 
             {/* Footer Action */}
             <div className="border-t pt-4 flex gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-rose-500/30 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs"
+                onClick={() => setBookingToDelete(drawerRow)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+              </Button>
               <Button asChild variant="blue-accent" size="sm" className="w-full text-xs">
                 <Link href={`/dashboard/bookings/${drawerRow.id}`}>
                   Open Full Record & Edit <ChevronRight className="ml-1 h-3.5 w-3.5" />
                 </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. Delete Confirmation Modal Dialog */}
+      {bookingToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Delete Booking</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Are you sure you want to delete booking{' '}
+                  <span className="font-mono font-semibold text-foreground">{bookingToDelete.reservation_code}</span> for{' '}
+                  <span className="font-semibold text-foreground">{bookingToDelete.guest_name}</span>?
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700 dark:text-rose-300 font-medium">
+              ⚠️ Permanent Deletion: This will permanently remove the booking record, guest charges, host payouts, and transactions from the database.
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setBookingToDelete(null)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+                onClick={handleDeleteBooking}
+                className="text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                {isDeleting ? 'Deleting...' : 'Permanent Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Bulk Delete All Bookings Confirmation Modal Dialog */}
+      {confirmDeleteAllOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-xl border border-rose-500/30 bg-card p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Delete ALL Bookings?</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This will <strong className="text-rose-600 dark:text-rose-400">permanently delete all booking records</strong>, guest charges, host payouts, and transactions from the database.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700 dark:text-rose-300 font-medium">
+              ⚠️ Warning: Useful for clearing dummy development data. This action CANNOT be undone.
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDeletingAll}
+                onClick={() => setConfirmDeleteAllOpen(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeletingAll}
+                onClick={handleDeleteAllBookings}
+                className="text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                {isDeletingAll ? 'Deleting All...' : 'Yes, Delete All Bookings'}
               </Button>
             </div>
           </div>

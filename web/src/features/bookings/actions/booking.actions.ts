@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { bookingSchema, paymentSchema } from '../schemas/booking.schema';
-import { saveBooking, finalizeBooking, recordPayment, reversePayment, searchGuests, updateStayStatus, getBooking } from '../services/bookings.service';
+import { saveBooking, finalizeBooking, recordPayment, reversePayment, searchGuests, updateStayStatus, getBooking, deleteBooking, deleteAllBookings } from '../services/bookings.service';
 import { STATUSES } from '../types/booking.types';
 function refresh() { revalidatePath('/dashboard/bookings', 'layout'); }
 export async function saveBookingAction(input: unknown) { const id = await saveBooking(bookingSchema.parse(input)); refresh(); return id; }
@@ -12,3 +12,6 @@ export async function reversePaymentAction(id: string, reason: string) { await r
 export async function searchGuestsAction(search: string) { return searchGuests(z.string().max(100).parse(search)); }
 export async function updateStayStatusAction(id: string, status: string) { await updateStayStatus(z.string().uuid().parse(id), z.enum(STATUSES).parse(status)); refresh(); }
 export async function getBookingDetailsAction(id: string) { return getBooking(z.string().uuid().parse(id)); }
+export async function deleteBookingAction(id: string) { await deleteBooking(z.string().uuid().parse(id)); refresh(); }
+export async function deleteAllBookingsAction() { await deleteAllBookings(); refresh(); }
+
