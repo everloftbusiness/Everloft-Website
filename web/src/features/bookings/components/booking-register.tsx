@@ -43,6 +43,7 @@ import { money } from '../utils/money';
 import { getBookingDetailsAction, deleteBookingAction, deleteAllBookingsAction } from '../actions/booking.actions';
 import { CsvImportModal } from './csv-import-modal';
 import { GoogleSheetSyncModal } from './google-sheet-sync-modal';
+import { FormattedDateTime } from '@/components/ui/formatted-date-time';
 
 type GroupType = 'stay' | 'guest' | 'host';
 
@@ -751,6 +752,14 @@ export function BookingRegister({
                         >
                           {r.collection_mode === 'direct' ? 'Direct Collection' : 'Platform Collection'}
                         </span>
+                      </td>
+                    );
+                  }
+
+                  if (c.key === 'created_at') {
+                    return (
+                      <td className="px-4 py-3 text-muted-foreground" key={c.key}>
+                        <FormattedDateTime date={r.created_at} />
                       </td>
                     );
                   }

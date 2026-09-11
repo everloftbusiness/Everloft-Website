@@ -16,6 +16,7 @@ import {
   Sliders,
   ExternalLink,
   Layers,
+  Clock,
 } from 'lucide-react';
 import { type PropertyOption } from '../types/booking.types';
 import {
@@ -25,6 +26,7 @@ import {
   type TabSyncResult,
 } from '../actions/dynamic-sheet-sync.action';
 import { toast } from 'sonner';
+import { FormattedDateTime, LocalTimezoneBadge } from '@/components/ui/formatted-date-time';
 
 type PropertyMapping = {
   propertyId: string;
@@ -52,17 +54,28 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
   // Per-property tab mappings state
   const [mappings, setMappings] = useState<PropertyMapping[]>([]);
   
-  // Tab-by-tab sync results map
+  // Tab-by-tab sync results map & timestamps
   const [tabResults, setTabResults] = useState<Record<string, TabSyncResult>>({});
+  const [lastSyncedTimes, setLastSyncedTimes] = useState<Record<string, string>>({});
+  const [lastGlobalSyncTime, setLastGlobalSyncTime] = useState<string | null>(null);
+
   const [activeSyncingKey, setActiveSyncingKey] = useState<string | null>(null);
   const [isSyncingAll, startTransitionSyncAll] = useTransition();
 
-  // Load saved settings from localStorage on mount
+  const isSyncOngoing = isSyncingAll || activeSyncingKey !== null;
+
+  // Load saved settings & sync timestamps from localStorage on mount
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
         const savedUrl = localStorage.getItem('everloft_google_sheet_url');
         if (savedUrl) setSpreadsheetUrl(savedUrl);
+
+        const savedGlobalTime = localStorage.getItem('everloft_google_sheet_last_global_sync');
+        if (savedGlobalTime) setLastGlobalSyncTime(savedGlobalTime);
+
+        const savedTabTimes = localStorage.getItem('everloft_google_sheet_last_sync_times');
+        if (savedTabTimes) setLastSyncedTimes(JSON.parse(savedTabTimes));
 
         const savedMappings = localStorage.getItem('everloft_property_sheet_mappings');
         if (savedMappings) {
@@ -96,6 +109,43 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
       console.error('Failed to save mappings:', e);
     }
   }
+
+  function saveSyncTimestamp(key: string) {
+    const nowIso = new Date().toISOString();
+    setLastGlobalSyncTime(nowIso);
+    setLastSyncedTimes((prev) => {
+      const updated = { ...prev, [key]: nowIso };
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('everloft_google_sheet_last_global_sync', nowIso);
+          localStorage.setItem('everloft_google_sheet_last_sync_times', JSON.stringify(updated));
+        }
+      } catch (e) {
+        // ignore
+      }
+      return updated;
+    });
+  }
+
+  function saveAllSyncTimestamps(keys: string[]) {
+    const nowIso = new Date().toISOString();
+    setLastGlobalSyncTime(nowIso);
+    setLastSyncedTimes((prev) => {
+      const updated = { ...prev };
+      keys.forEach((k) => (updated[k] = nowIso));
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('everloft_google_sheet_last_global_sync', nowIso);
+          localStorage.setItem('everloft_google_sheet_last_sync_times', JSON.stringify(updated));
+        }
+      } catch (e) {
+        // ignore
+      }
+      return updated;
+    });
+  }
+
+
 
   function handleUrlChange(newUrl: string) {
     setSpreadsheetUrl(newUrl);
@@ -170,6 +220,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
       });
 
       setTabResults((prev) => ({ ...prev, [key]: res }));
+      saveSyncTimestamp(key);
 
       if (res.success) {
         toast.success(res.message);
@@ -192,17 +243,20 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         });
 
         const newMap: Record<string, TabSyncResult> = { ...tabResults };
+        const keysToUpdate: string[] = [];
         let successCount = 0;
         let failCount = 0;
 
         results.forEach((res) => {
           const key = `${res.propertyId}_${res.tabType}`;
           newMap[key] = res;
+          keysToUpdate.push(key);
           if (res.success) successCount++;
           else failCount++;
         });
 
         setTabResults(newMap);
+        saveAllSyncTimestamps(keysToUpdate);
 
         if (failCount === 0) {
           toast.success(`✓ Successfully synced all ${successCount} property tab(s)!`);
@@ -221,11 +275,31 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         type="button"
         variant="outline"
         size="sm"
-        className="h-9 rounded-lg border-purple-500/30 bg-purple-500/5 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 text-xs font-semibold shadow-2xs"
+        className={`h-9 rounded-lg transition-all text-xs font-semibold shadow-2xs ${
+          isSyncOngoing
+            ? 'border-purple-500/60 bg-purple-500/15 text-purple-700 dark:text-purple-300 animate-pulse font-bold'
+            : 'border-purple-500/30 bg-purple-500/5 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10'
+        }`}
         onClick={() => setIsOpen(true)}
       >
-        <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-        ⚡ Google Sheet Sync
+        <RefreshCw className={`mr-1.5 h-3.5 w-3.5 text-purple-600 dark:text-purple-400 ${isSyncOngoing ? 'animate-spin' : ''}`} />
+        {isSyncOngoing ? (
+          <span className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+            </span>
+            Syncing Google Sheet...
+          </span>
+        ) : (
+          <span>⚡ Google Sheet Sync</span>
+        )}
+        {!isSyncOngoing && lastGlobalSyncTime && (
+          <span className="ml-1.5 text-[10px] font-normal opacity-80 border-l border-purple-500/30 pl-1.5 flex items-center gap-1">
+            <Clock className="h-3 w-3 text-purple-500" />
+            <FormattedDateTime date={lastGlobalSyncTime} relative includeTimezone={false} />
+          </span>
+        )}
       </Button>
 
       {isOpen && (
@@ -398,7 +472,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                 Sync
                               </Button>
                             </div>
-                            {/* Income Status Badge */}
+                            {/* Income Status Badge & Last Sync Time */}
                             {incRes && (
                               <div
                                 className={`text-[10px] font-medium leading-tight flex items-center gap-1 ${
@@ -414,6 +488,14 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                   <AlertCircle className="h-3 w-3 shrink-0" />
                                 )}
                                 <span className="truncate max-w-[200px]">{incRes.message}</span>
+                              </div>
+                            )}
+                            {lastSyncedTimes[incKey] && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <Clock className="h-3 w-3 text-purple-500 shrink-0" />
+                                <span>Synced:</span>
+                                <FormattedDateTime date={lastSyncedTimes[incKey]} relative className="font-medium text-foreground" />
+                                <LocalTimezoneBadge />
                               </div>
                             )}
                           </td>
@@ -442,7 +524,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                 Sync
                               </Button>
                             </div>
-                            {/* Expense Status Badge */}
+                            {/* Expense Status Badge & Last Sync Time */}
                             {expRes && (
                               <div
                                 className={`text-[10px] font-medium leading-tight flex items-center gap-1 ${
@@ -458,6 +540,14 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                   <AlertCircle className="h-3 w-3 shrink-0" />
                                 )}
                                 <span className="truncate max-w-[200px]">{expRes.message}</span>
+                              </div>
+                            )}
+                            {lastSyncedTimes[expKey] && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <Clock className="h-3 w-3 text-purple-500 shrink-0" />
+                                <span>Synced:</span>
+                                <FormattedDateTime date={lastSyncedTimes[expKey]} relative className="font-medium text-foreground" />
+                                <LocalTimezoneBadge />
                               </div>
                             )}
                           </td>
