@@ -62,7 +62,7 @@ export async function importAirbnbPropertyAction(
       matchedTypeId = typeMatch.id;
     }
 
-    const { data: activeStatus } = await supabase.from("property_status").select("id").eq("slug", "active").maybeSingle();
+    const { data: draftStatus } = await supabase.from("property_status").select("id").eq("slug", "draft").maybeSingle();
 
     // 4. Update Main Property Fields
     const { error: propertyError } = await supabase
@@ -70,7 +70,7 @@ export async function importAirbnbPropertyAction(
       .update({
         name: extracted.name,
         type_id: matchedTypeId,
-        status_id: activeStatus?.id || null,
+        status_id: draftStatus?.id || null,
         description: extracted.description,
         short_description: extracted.shortDescription || null,
         city: extracted.city || "Bengaluru",

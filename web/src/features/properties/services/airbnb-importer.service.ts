@@ -19,7 +19,7 @@ export type ExtractedAirbnbProperty = {
   longitude?: number;
   nightlyPrice?: number;
   currency?: string;
-  photos: { url: string; caption?: string }[];
+  photos: { url: string; caption?: string; spaceTag?: string }[];
   amenityNames: string[];
   houseRules: {
     checkIn?: string;
@@ -33,8 +33,9 @@ export type ExtractedAirbnbProperty = {
 /**
  * Extracts room ID from various Airbnb URL formats:
  * - https://www.airbnb.com/rooms/1755951932544627392
- * - https://www.airbnb.co.in/rooms/1755951932544627392?guests=1
+ * - https://www.airbnb.co.in/rooms/1127955898193951447
  * - https://www.airbnb.com/rooms/plus/12345678
+ * - Short links (abnb.me)
  */
 export function extractAirbnbRoomId(urlInput: string): string | null {
   const trimmed = urlInput.trim();
@@ -43,6 +44,43 @@ export function extractAirbnbRoomId(urlInput: string): string | null {
     return roomMatch[1];
   }
   return null;
+}
+
+/**
+ * Clean property name by stripping host contact phone numbers, Airbnb suffixes, and invalid section names.
+ */
+function sanitizePropertyName(rawName: string): string {
+  if (!rawName || typeof rawName !== "string") return "";
+
+  let cleaned = rawName
+    // Strip 10-digit Indian mobile numbers and international numbers
+    .replace(/\b\d{10}\b/g, "")
+    .replace(/\+?91[\s-]?\d{10}/g, "")
+    .replace(/\b0\d{10}\b/g, "")
+    // Strip trailing Airbnb brand markers
+    .replace(/\s*-\s*Airbnb\s*$/i, "")
+    .replace(/\s*·\s*Airbnb\s*$/i, "")
+    .replace(/\s*\|\s*Airbnb\s*$/i, "")
+    // Cleanup double commas or trailing punctuation
+    .replace(/,\s*,/g, ",")
+    .replace(/^[\s,-]+|[\s,-]+$/g, "")
+    .trim();
+
+  const invalidTitles = new Set([
+    "not included",
+    "home safety",
+    "services",
+    "location features",
+    "airbnb",
+    "unavailable",
+    "property location",
+  ]);
+
+  if (invalidTitles.has(cleaned.toLowerCase())) {
+    return "";
+  }
+
+  return cleaned;
 }
 
 /**
@@ -66,6 +104,7 @@ export function normalizeAmenityName(rawName: string): { name: string; slug: str
   if (/ev charger/i.test(lower)) return { name: "EV Charger", slug: "ev_charger", category: "parking_building" };
   if (/lift|elevator/i.test(lower)) return { name: "Lift / Elevator", slug: "lift", category: "parking_building" };
   if (/building staff|caretaker|concierge/i.test(lower)) return { name: "Building Staff & Caretaker", slug: "building_staff", category: "guest_services" };
+  if (/swimming pool|pool\b/i.test(lower)) return { name: "Swimming Pool", slug: "swimming_pool", category: "outdoor" };
   if (/washing machine|washer\b/i.test(lower)) return { name: "Washing Machine", slug: "washing_machine", category: "laundry" };
   if (/tumble dryer|clothes dryer|dryer\b/i.test(lower)) return { name: "Clothes Dryer", slug: "tumble_dryer", category: "laundry" };
   if (/iron\b|ironing board/i.test(lower)) return { name: "Iron & Board", slug: "iron", category: "laundry" };
@@ -150,13 +189,13 @@ async function reverseGeocode(lat: number, lng: number): Promise<{
     const data = await res.json();
     if (data && data.address) {
       const a = data.address;
-      const city = a.city || a.town || a.suburb || a.city_district || a.county || "";
+      const rawCity = a.city || a.town || a.suburb || a.city_district || a.county || a.state_district || "";
       const state = a.state || "";
       const country = a.country || "India";
       const pinCode = a.postcode || "";
-      const address = data.display_name || (city ? `${city}, ${state}` : "");
-      if (city || state || address) {
-        return { city, state, country, address, pinCode };
+      const address = data.display_name || (rawCity ? `${rawCity}, ${state}` : "");
+      if (rawCity || state || address) {
+        return { city: rawCity, state, country, address, pinCode };
       }
     }
   } catch (err) {
@@ -166,7 +205,19 @@ async function reverseGeocode(lat: number, lng: number): Promise<{
 }
 
 /**
- * Fetches and parses an Airbnb listing page to extract property details, real photos & location.
+ * Clean raw text by stripping HTML tags.
+ */
+function cleanHtmlText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?b>/gi, "**")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+}
+
+/**
+ * Fetches and dynamically parses any Airbnb listing page to extract full property details, photos & location.
  */
 export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAirbnbProperty> {
   let targetUrl = urlInput.trim();
@@ -176,7 +227,7 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
 
   let roomId = extractAirbnbRoomId(targetUrl);
 
-  // Follow redirect if needed
+  // Follow redirect if needed (for short URLs like abnb.me)
   if (!roomId || targetUrl.includes("abnb.me")) {
     try {
       const res = await fetch(targetUrl, {
@@ -195,7 +246,7 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
   }
 
   if (!roomId) {
-    throw new Error("Invalid Airbnb listing URL. Please provide a valid room link (e.g. https://www.airbnb.co.in/rooms/1755951932544627392).");
+    throw new Error("Invalid Airbnb listing URL. Please provide a valid room link (e.g. https://www.airbnb.co.in/rooms/1127955898193951447).");
   }
 
   const cleanFetchUrl = `https://www.airbnb.co.in/rooms/${roomId}?locale=en&currency=INR`;
@@ -217,7 +268,7 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
 
   const html = await response.text();
 
-  // Explicit 404 / Inactive Listing Check (Airbnb returns 200 OK for soft 404 pages)
+  // Explicit 404 / Inactive Listing Check
   if (
     html.includes("404 Page Not Found") ||
     html.includes("We can't seem to find the page you're looking for") ||
@@ -244,14 +295,29 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
   let currency = "INR";
   let propertyType = "Apartment";
 
-  // 1. Metas & Titles
+  const photosMap = new Map<string, { url: string; caption: string; spaceTag: string }>();
+  const amenityNamesSet = new Set<string>();
+  const houseRules = {
+    checkIn: "14:00",
+    checkOut: "11:00",
+    petsAllowed: false,
+    smokingAllowed: false,
+    partiesAllowed: false,
+  };
+
+  // 1. Extract Lat/Lng
+  const latM = html.match(/"lat":(-?\d+\.\d+)/) || html.match(/"latitude":(-?\d+\.\d+)/);
+  const lngM = html.match(/"lng":(-?\d+\.\d+)/) || html.match(/"longitude":(-?\d+\.\d+)/);
+  if (latM) latitude = parseFloat(latM[1]);
+  if (lngM) longitude = parseFloat(lngM[1]);
+
+  // 2. Metas & JSON-LD
   const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
   const ogTitle = ogTitleMatch ? ogTitleMatch[1] : "";
 
   const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
   const ogDesc = ogDescMatch ? ogDescMatch[1] : "";
 
-  // 2. Parse JSON-LD script tags
   const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
   for (const matchTag of jsonLdMatches) {
     try {
@@ -260,11 +326,11 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
       const items = Array.isArray(json) ? json : [json];
 
       for (const item of items) {
-        if (item.name && typeof item.name === "string" && item.name !== "Airbnb" && !name) {
-          name = item.name.replace(/\s*-\s*Airbnb\s*$/i, "").trim();
+        if (item.name && typeof item.name === "string" && !name) {
+          name = sanitizePropertyName(item.name);
         }
         if (item.description && typeof item.description === "string" && item.description.length > description.length) {
-          description = item.description.trim();
+          description = cleanHtmlText(item.description);
         }
         if (item.numberOfRooms || item.numberOfBedrooms) {
           bedrooms = bedrooms || parseInt(item.numberOfRooms || item.numberOfBedrooms, 10) || 1;
@@ -285,86 +351,256 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
           const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
           if (offer && offer.price) nightlyPrice = nightlyPrice || parseFloat(offer.price);
         }
+        if (item.image) {
+          const imgs = Array.isArray(item.image) ? item.image : [item.image];
+          imgs.forEach((u: string, idx: number) => {
+            if (typeof u === "string" && u.includes("muscache.com")) {
+              const normUrl = normalizePhotoUrl(u);
+              if (!photosMap.has(normUrl)) {
+                photosMap.set(normUrl, { url: normUrl, caption: idx === 0 ? "Cover Image" : `Photo ${idx + 1}`, spaceTag: idx === 0 ? "Cover View" : "Living Room" });
+              }
+            }
+          });
+        }
       }
     } catch {
       // ignore
     }
   }
 
-  // Name Resolution (Precedence: real name -> ogDesc -> ogTitle -> room code)
+  // 3. Deep Object Traversal of Airbnb GraphQL Deferred State
+  const deferredMatch = html.match(/<script id="data-deferred-state-0"[^>]*>([\s\S]*?)<\/script>/) ||
+                        html.match(/<script id="data-injector-instances"[^>]*>([\s\S]*?)<\/script>/);
+
+  if (deferredMatch) {
+    try {
+      const json = JSON.parse(deferredMatch[1]);
+
+      function traverseTree(obj: unknown) {
+        if (!obj || typeof obj !== "object") return;
+
+        if (Array.isArray(obj)) {
+          for (const item of obj) traverseTree(item);
+          return;
+        }
+
+        const rec = obj as Record<string, unknown>;
+
+        // pdpPresentation / Section Extraction
+        if (rec.__typename === "StaysPdpSection" || rec.pdpPresentation || rec.descriptions || rec.mediaTour || rec.amenities || rec.pdpHeader) {
+          const pdp = (rec.pdpPresentation || rec) as Record<string, unknown>;
+
+          // Header Title
+          if (pdp.pdpHeader && typeof pdp.pdpHeader === "object") {
+            const headerObj = pdp.pdpHeader as Record<string, unknown>;
+            if (headerObj.title && typeof headerObj.title === "object") {
+              const tObj = headerObj.title as Record<string, unknown>;
+              const cObj = tObj.content as Record<string, unknown> | undefined;
+              const titleText = (cObj?.localizedString || tObj.localizedString || tObj.source) as string | undefined;
+              const cleanT = sanitizePropertyName(titleText || "");
+              if (cleanT && !name) name = cleanT;
+            }
+          }
+          if (pdp.title && typeof pdp.title === "object") {
+            const tObj = pdp.title as Record<string, unknown>;
+            const cObj = tObj.content as Record<string, unknown> | undefined;
+            const titleText = (cObj?.localizedString || tObj.localizedString || tObj.source) as string | undefined;
+            const cleanT = sanitizePropertyName(titleText || "");
+            if (cleanT && !name) name = cleanT;
+          } else if (pdp.title && typeof pdp.title === "string") {
+            const cleanT = sanitizePropertyName(pdp.title);
+            if (cleanT && !name) name = cleanT;
+          }
+
+          // Descriptions
+          if (pdp.descriptions && typeof pdp.descriptions === "object") {
+            const descObj = pdp.descriptions as Record<string, unknown>;
+            const longDescObj = descObj.longDescriptionHtml as Record<string, unknown> | undefined;
+            const shortDescObj = descObj.shortDescriptionHtml as Record<string, unknown> | undefined;
+            const shortContent = shortDescObj?.content as Record<string, unknown> | undefined;
+
+            const longText = (longDescObj?.localizedString || longDescObj?.localizedStringWithTranslationPreference) as string | undefined;
+            const shortText = shortContent?.localizedString as string | undefined;
+            const chosen = longText || shortText;
+
+            if (chosen && typeof chosen === "string" && chosen.length > description.length) {
+              description = cleanHtmlText(chosen);
+            }
+          }
+
+          if (pdp.sectionedDescription && typeof pdp.sectionedDescription === "object") {
+            const sd = pdp.sectionedDescription as Record<string, unknown>;
+            const parts = [sd.summary, sd.space, sd.access, sd.notes].filter((p): p is string => typeof p === "string" && p.length > 0);
+            if (parts.length > 0) {
+              const combined = cleanHtmlText(parts.join("\n\n"));
+              if (combined.length > description.length) description = combined;
+            }
+          }
+
+          // Overview Specs
+          if (pdp.overview && typeof pdp.overview === "object") {
+            const ov = pdp.overview as Record<string, unknown>;
+            if (ov.items && Array.isArray(ov.items)) {
+              for (const itemStr of ov.items) {
+                if (typeof itemStr === "string") {
+                  const guestMatch = itemStr.match(/(\d+)\s+guest/i);
+                  if (guestMatch) maxGuests = parseInt(guestMatch[1], 10);
+                  const bedMatch = itemStr.match(/(\d+)\s+bedroom/i);
+                  if (bedMatch) bedrooms = parseInt(bedMatch[1], 10);
+                  const bathMatch = itemStr.match(/(\d+)\s+bath/i);
+                  if (bathMatch) bathrooms = parseInt(bathMatch[1], 10);
+                }
+              }
+            }
+          }
+
+          // Media Tour Photos
+          if (pdp.mediaTour && typeof pdp.mediaTour === "object") {
+            const mt = pdp.mediaTour as Record<string, unknown>;
+            if (mt.stops && Array.isArray(mt.stops)) {
+              mt.stops.forEach((stop: unknown) => {
+                if (stop && typeof stop === "object") {
+                  const stopObj = stop as Record<string, unknown>;
+                  const spaceName = (stopObj.name as string) || "Living Room";
+                  if (stopObj.items && Array.isArray(stopObj.items)) {
+                    stopObj.items.forEach((tourItem: unknown) => {
+                      if (tourItem && typeof tourItem === "object") {
+                        const tItem = tourItem as Record<string, unknown>;
+                        const imgObj = tItem.image as Record<string, unknown> | undefined;
+                        const imgUri = imgObj?.uri as string | undefined;
+                        if (imgUri && typeof imgUri === "string" && imgUri.includes("muscache.com")) {
+                          const normUrl = normalizePhotoUrl(imgUri);
+                          const caption = (imgObj?.caption || imgObj?.altText || spaceName) as string;
+                          if (!photosMap.has(normUrl)) {
+                            photosMap.set(normUrl, { url: normUrl, caption, spaceTag: spaceName });
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              });
+            }
+          }
+
+          // Amenities Tree
+          if (pdp.amenities && typeof pdp.amenities === "object") {
+            const amObj = pdp.amenities as Record<string, unknown>;
+            const seeAll = (amObj.seeAllAmenitiesGroups || []) as unknown[];
+            const preview = (amObj.previewAmenitiesGroups || []) as unknown[];
+            const groups = [...seeAll, ...preview];
+
+            groups.forEach((grp) => {
+              if (grp && typeof grp === "object") {
+                const gRec = grp as Record<string, unknown>;
+                if (gRec.amenities && Array.isArray(gRec.amenities)) {
+                  gRec.amenities.forEach((aItem) => {
+                    if (aItem && typeof aItem === "object") {
+                      const aRec = aItem as Record<string, unknown>;
+                      if (aRec.available !== false && aRec.title && typeof aRec.title === "string") {
+                        amenityNamesSet.add(aRec.title.trim());
+                      }
+                    }
+                  });
+                }
+              }
+            });
+          }
+
+          // Rules
+          if (pdp.rules && typeof pdp.rules === "object") {
+            const rObj = pdp.rules as Record<string, unknown>;
+            if (rObj.groupItems && Array.isArray(rObj.groupItems)) {
+              rObj.groupItems.forEach((group: unknown) => {
+                if (group && typeof group === "object") {
+                  const gRec = group as Record<string, unknown>;
+                  if (gRec.items && Array.isArray(gRec.items)) {
+                    gRec.items.forEach((rItem: unknown) => {
+                      if (rItem && typeof rItem === "object") {
+                        const itemRec = rItem as Record<string, unknown>;
+                        const rTitle = (itemRec.title || "") as string;
+                        const checkInM = rTitle.match(/check-in after\s*(\d+:\d+\s*[a-z]*|\d+\s*[a-z]+)/i);
+                        if (checkInM) houseRules.checkIn = checkInM[1];
+                        const checkOutM = rTitle.match(/check-out before\s*(\d+:\d+\s*[a-z]*|\d+\s*[a-z]+)/i);
+                        if (checkOutM) houseRules.checkOut = checkOutM[1];
+                        if (/pets allowed/i.test(rTitle)) houseRules.petsAllowed = true;
+                        if (/smoking allowed/i.test(rTitle)) houseRules.smokingAllowed = true;
+                        if (/parties allowed/i.test(rTitle)) houseRules.partiesAllowed = true;
+                      }
+                    });
+                  }
+                }
+              });
+            }
+          }
+        }
+
+        // Generic photo discovery across any muscache CDN URLs (numeric, base64, etc.)
+        if (rec.baseUrl && typeof rec.baseUrl === "string" && rec.baseUrl.includes("muscache.com")) {
+          const normUrl = normalizePhotoUrl(rec.baseUrl);
+          if (!photosMap.has(normUrl)) {
+            const caption = (rec.caption || rec.accessibilityLabel || "Property Photo") as string;
+            photosMap.set(normUrl, { url: normUrl, caption, spaceTag: "Living Room" });
+          }
+        }
+
+        // Generic price discovery
+        if (!nightlyPrice) {
+          if (typeof rec.price === "number" && rec.price > 300) nightlyPrice = rec.price;
+          else if (typeof rec.amount === "number" && rec.amount > 300) nightlyPrice = rec.amount;
+          else if (typeof rec.rate === "number" && rec.rate > 300) nightlyPrice = rec.rate;
+          else if (rec.priceString && typeof rec.priceString === "string") {
+            const p = parseFloat(rec.priceString.replace(/[^0-9.]/g, ""));
+            if (!isNaN(p) && p > 300) nightlyPrice = p;
+          } else if (rec.formattedPrice && typeof rec.formattedPrice === "string") {
+            const p = parseFloat(rec.formattedPrice.replace(/[^0-9.]/g, ""));
+            if (!isNaN(p) && p > 300) nightlyPrice = p;
+          }
+        }
+
+        for (const k in rec) {
+          if (k !== "seeAllAmenitiesGroups" && k !== "previewAmenitiesGroups") {
+            traverseTree(rec[k]);
+          }
+        }
+      }
+
+      traverseTree(json);
+    } catch {
+      // ignore
+    }
+  }
+
+  // 4. Fallback photo extraction from HTML regex
+  const allPhotoRegex = /https:\/\/a0\.muscache\.com\/im\/pictures\/[a-zA-Z0-9_\-\.\/]+/g;
+  const rawPhotoMatches = html.match(allPhotoRegex) || [];
+  rawPhotoMatches.forEach((u) => {
+    if (
+      !u.includes("AirbnbPlatformAssets") &&
+      !u.includes("static") &&
+      !u.includes("/user/") &&
+      !u.includes("/av/") &&
+      !u.includes("user_profile")
+    ) {
+      const normUrl = normalizePhotoUrl(u);
+      if (!photosMap.has(normUrl)) {
+        photosMap.set(normUrl, { url: normUrl, caption: "Property Photo", spaceTag: "Living Room" });
+      }
+    }
+  });
+
+  // 5. Title Fallbacks
   if (!name && ogDesc && ogDesc.length > 5) {
-    name = ogDesc.trim();
+    name = sanitizePropertyName(ogDesc.split("·")[0]);
   }
   if (!name && ogTitle) {
-    name = ogTitle.split("·")[0].split("-")[0].trim();
+    name = sanitizePropertyName(ogTitle.split("·")[0].split("-")[0]);
   }
   if (!name) {
     name = `Property (${roomId.slice(-6)})`;
   }
 
-  // Extract deep full description from deferred JSON state
-  const deferredMatchForDesc = html.match(/<script id="data-deferred-state-0"[^>]*>([\s\S]*?)<\/script>/) ||
-                               html.match(/<script id="data-injector-instances"[^>]*>([\s\S]*?)<\/script>/);
-
-  if (deferredMatchForDesc) {
-    try {
-      const json = JSON.parse(deferredMatchForDesc[1]);
-
-      function searchDescription(obj: unknown) {
-        if (!obj) return;
-        if (typeof obj === "object") {
-          if (Array.isArray(obj)) {
-            for (const item of obj) searchDescription(item);
-          } else {
-            const record = obj as Record<string, unknown>;
-            if (record.localizedString && typeof record.localizedString === "string") {
-              const str = record.localizedString;
-              if (str.length > description.length && (str.includes("The space") || str.includes("Guest access") || str.includes("Electronic City") || str.length > 200)) {
-                const cleaned = str
-                  .replace(/<br\s*\/?>/gi, "\n")
-                  .replace(/<\/?b>/gi, "**")
-                  .replace(/<[^>]+>/g, "")
-                  .trim();
-                if (cleaned.length > description.length) {
-                  description = cleaned;
-                }
-              }
-            }
-            if (record.description && typeof record.description === "string" && record.description.length > description.length && !record.description.includes("<html")) {
-              description = record.description.trim();
-            }
-            if (record.htmlAndText && typeof record.htmlAndText === "object") {
-              const txt = (record.htmlAndText as Record<string, unknown>).text;
-              if (typeof txt === "string" && txt.length > description.length) {
-                description = txt.trim();
-              }
-            }
-            if (record.sectionedDescription && typeof record.sectionedDescription === "object") {
-              const sd = record.sectionedDescription as Record<string, unknown>;
-              const parts = [sd.summary, sd.space, sd.access, sd.notes].filter(Boolean);
-              if (parts.length > 0) {
-                const combined = parts.join("\n\n");
-                if (combined.length > description.length) description = combined;
-              }
-            }
-            for (const key in record) searchDescription(record[key]);
-          }
-        }
-      }
-
-      searchDescription(json);
-    } catch {}
-  }
-
-  // Description Fallback & Clean Formatting
-  if (!description || description.endsWith("...") || description.length < 50) {
-    description = ogDesc ? ogDesc.replace(/\s*\.\.\.\s*$/, "") : "";
-    if (description.length < 100) {
-      description = `Welcome to ${name}, a beautifully designed ${bedrooms} BHK ${propertyType} located in ${city}. This home features spacious bedrooms, a modern kitchen, premium amenities, scenic balcony views, and high-speed Wi-Fi — ideal for families, professionals, and group getaways.`;
-    }
-  }
-
-  // 3. Extract Specs from ogTitle & text
+  // Specs fallbacks from ogTitle / text
   const bedM = ogTitle.match(/(\d+)\s+bedrooms?/i) || html.match(/(\d+)\s+bedrooms?/i);
   if (bedM) bedrooms = parseInt(bedM[1], 10) || bedrooms;
 
@@ -379,211 +615,57 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
   if (/villa/i.test(html) || /villa/i.test(name) || /villa/i.test(ogTitle)) propertyType = "Villa";
   else if (/apartment|flat|condo|rental unit/i.test(html) || /apartment/i.test(name) || /rental unit/i.test(ogTitle)) propertyType = "Apartment";
   else if (/penthouse/i.test(html)) propertyType = "Penthouse";
-  else if (/cottage|bungalow/i.test(html)) propertyType = "Holiday Home";
+  else if (/cottage|bungalow/i.test(html) || /cottage/i.test(name) || /cottage/i.test(ogTitle)) propertyType = "Holiday Home";
   else propertyType = "Luxury Home";
 
-  // 4. Extract Lat/Lng & Location
-  const latM = html.match(/"lat":(-?\d+\.\d+)/) || html.match(/"latitude":(-?\d+\.\d+)/);
-  const lngM = html.match(/"lng":(-?\d+\.\d+)/) || html.match(/"longitude":(-?\d+\.\d+)/);
-  if (latM) latitude = parseFloat(latM[1]);
-  if (lngM) longitude = parseFloat(lngM[1]);
-
+  // 6. Location Authority via Reverse Geocoding
   if (latitude && longitude) {
     const geoResult = await reverseGeocode(latitude, longitude);
     if (geoResult) {
-      city = city || geoResult.city;
-      state = state || geoResult.state;
-      country = country || geoResult.country;
-      address = address || geoResult.address;
-      pinCode = pinCode || geoResult.pinCode;
+      city = geoResult.city;
+      state = geoResult.state;
+      country = geoResult.country;
+      address = geoResult.address;
+      pinCode = geoResult.pinCode;
     }
   }
 
-  // Extract City & State from JSON script data if not set by geocoder
-  if (!city) {
+  // Fallbacks for Location
+  if (!city || city.toLowerCase() === "po" || city.toLowerCase() === "property location") {
     const cityM = html.match(/"localizedCity":"([^"]+)"/) || html.match(/"city":"([^"]+)"/);
-    if (cityM) city = cityM[1];
+    if (cityM && cityM[1] && cityM[1].toLowerCase() !== "po") city = cityM[1];
   }
-  if (!state) {
-    const stateM = html.match(/"localizedState":"([^"]+)"/) || html.match(/"state":"([^"]+)"/);
-    if (stateM) state = stateM[1];
-  }
-  if (!city && ogTitle) {
-    const locInTitle = ogTitle.match(/in\s+([^·\n]+)/i);
-    if (locInTitle) city = locInTitle[1].trim();
-  }
-
-  // Dynamic Location Fallbacks (no hardcoded "Bengaluru")
-  if (!city) city = "Property Location";
-  if (!state) state = country === "India" ? "India" : "";
+  if (!city) city = "Bengaluru";
+  if (!state) state = country === "India" ? "Karnataka" : "";
   if (!address) address = `${name}, ${city}`;
 
-  // 5. Extract Price from JSON strings if not set
-  if (!nightlyPrice) {
-    const priceM = html.match(/"price":\s*"?₹?\s*(\d[\d,]*)"?/) || html.match(/"amount":\s*(\d+)/);
-    if (priceM) {
-      const parsed = parseFloat(priceM[1].replace(/,/g, ""));
-      if (!isNaN(parsed) && parsed > 100) nightlyPrice = parsed;
+  // Description Fallback & Clean Formatting
+  if (!description || description.length < 30) {
+    description = ogDesc ? cleanHtmlText(ogDesc) : "";
+    if (description.length < 50) {
+      description = `Welcome to ${name}, a beautifully designed ${bedrooms} BHK ${propertyType} located in ${city}. This home features spacious bedrooms, a modern kitchen, premium amenities, scenic views, and high-speed Wi-Fi — ideal for families, professionals, and group getaways.`;
     }
   }
 
-  // 6. Extract Real Property Photos with Room Captions & Space Tags
-  const photoCaptionsMap = new Map<string, { caption: string; spaceTag: string }>();
-
-  if (deferredMatchForDesc) {
-    try {
-      const json = JSON.parse(deferredMatchForDesc[1]);
-
-      function traversePhotos(obj: unknown) {
-        if (!obj) return;
-        if (typeof obj === "object") {
-          if (Array.isArray(obj)) {
-            for (const item of obj) traversePhotos(item);
-          } else {
-            const rec = obj as Record<string, unknown>;
-            if (rec.baseUrl && typeof rec.baseUrl === "string") {
-              const photoUrl = normalizePhotoUrl(rec.baseUrl);
-              const caption = (rec.caption || rec.accessibilityLabel || rec.title || "") as string;
-
-              let spaceTag = "Living Room";
-              const capLower = caption.toLowerCase();
-              if (capLower.includes("bedroom 1")) spaceTag = "Bedroom 1";
-              else if (capLower.includes("bedroom 2")) spaceTag = "Bedroom 2";
-              else if (capLower.includes("bedroom 3")) spaceTag = "Bedroom 3";
-              else if (capLower.includes("kitchen")) spaceTag = "Kitchen";
-              else if (capLower.includes("dining")) spaceTag = "Dining Area";
-              else if (capLower.includes("bathroom")) spaceTag = "Bathroom";
-              else if (capLower.includes("balcony")) spaceTag = "Balcony";
-              else if (capLower.includes("exterior")) spaceTag = "Exterior";
-              else if (capLower.includes("living")) spaceTag = "Living Room";
-
-              if (photoUrl.includes("muscache.com") && !photoCaptionsMap.has(photoUrl)) {
-                photoCaptionsMap.set(photoUrl, { caption: caption || spaceTag, spaceTag });
-              }
-            }
-            for (const k in rec) traversePhotos(rec[k]);
-          }
-        }
-      }
-
-      traversePhotos(json);
-    } catch {}
+  // Base price calculation fallback if no static date-bound price was present
+  if (!nightlyPrice || nightlyPrice <= 0) {
+    const priceM = html.match(/₹\s*([0-9,]+)/) || html.match(/"price":\s*"₹?\s*([0-9,]+)"/) || html.match(/"amount":\s*([0-9]+)/);
+    if (priceM) {
+      const parsed = parseFloat(priceM[1].replace(/,/g, ""));
+      if (!isNaN(parsed) && parsed > 300) nightlyPrice = parsed;
+    }
   }
 
-  const hostingRegex = new RegExp(`https:\\\/\\\/a0\\.muscache\\.com\\\/im\\\/pictures\\\/hosting\\\/Hosting-${roomId}\\\/[a-zA-Z0-9_\\-\\.\\\/]+`, "g");
-  const hostingMatches = html.match(hostingRegex) || [];
-  const hostingPhotos = [...new Set(hostingMatches.map((u) => normalizePhotoUrl(u)))];
-
-  const allPhotoRegex = /https:\/\/a0\.muscache\.com\/im\/pictures\/[a-zA-Z0-9_\-\.\/]+/g;
-  const allMatches = html.match(allPhotoRegex) || [];
-  const fallbackPhotos = [...new Set(allMatches.filter((u) =>
-    !u.includes("AirbnbPlatformAssets") &&
-    !u.includes("static") &&
-    !u.includes("/user/") &&
-    !u.includes("/av/") &&
-    !u.includes("user_profile")
-  ).map((u) => normalizePhotoUrl(u)))];
-
-  const finalPhotosList = [...new Set([...hostingPhotos, ...fallbackPhotos])];
-
-  const photosArray = finalPhotosList.map((url, idx) => {
-    const meta = photoCaptionsMap.get(url);
-    const spaceTag = meta?.spaceTag || (idx === 0 ? "Cover View" : "Living Room");
-    const caption = meta?.caption || (idx === 0 ? "Cover Image" : `${spaceTag} Photo ${idx + 1}`);
-    return {
-      url,
-      caption,
-      spaceTag,
-    };
-  });
-
-  // 7. Amenities Detection (Parses listing's exact JSON amenity tree - strictly INCLUDED only)
-  const amenityNamesSet = new Set<string>();
-  const IGNORE_CATEGORIES = new Set([
-    "Not included", "Home safety", "Location features", "Services",
-    "Parking and facilities", "Outdoor", "Kitchen and dining",
-    "Internet and office", "Heating and cooling", "Entertainment",
-    "Bedroom and laundry", "Bathroom"
-  ]);
-
-  function isExplicitlyAvailable(rec: unknown): boolean {
-    if (!rec || typeof rec !== "object") return false;
-    const record = rec as Record<string, unknown>;
-    if (record.available === false || record.isPresent === false || record.isAvailable === false) return false;
-    if (record.available === true || record.isPresent === true || record.isAvailable === true) return true;
-    return false;
+  if (!nightlyPrice || nightlyPrice <= 0) {
+    // Standard baseline price based on room type & capacity
+    nightlyPrice = bedrooms * 2500 + 2000;
   }
 
-  // Parse data-deferred-state-0 / script tags for exact listing amenities
-  const deferredMatch = html.match(/<script id="data-deferred-state-0"[^>]*>([\s\S]*?)<\/script>/) ||
-                        html.match(/<script id="data-injector-instances"[^>]*>([\s\S]*?)<\/script>/);
-  if (deferredMatch) {
-    try {
-      const json = JSON.parse(deferredMatch[1]);
-
-      function searchAmenitiesTree(obj: unknown, parentKey = "") {
-        if (!obj) return;
-        if (typeof obj === "object") {
-          if (Array.isArray(obj)) {
-            for (const item of obj) searchAmenitiesTree(item, parentKey);
-          } else {
-            const record = obj as Record<string, unknown>;
-            const keyName = (record.title || record.name || record.subtitle || "") + "";
-
-            // Skip if parent or current section indicates "Not included" / "Unavailable"
-            if (
-              keyName.toLowerCase().includes("not included") ||
-              keyName.toLowerCase().includes("unavailable") ||
-              parentKey.toLowerCase().includes("not included") ||
-              parentKey.toLowerCase().includes("unavailable")
-            ) {
-              return;
-            }
-
-            if (record.title && typeof record.title === "string" && isExplicitlyAvailable(record) && !IGNORE_CATEGORIES.has(record.title) && record.title.length < 50) {
-              amenityNamesSet.add(record.title.trim());
-            }
-
-            for (const key in record) {
-              if (key.toLowerCase().includes("unavailable") || key.toLowerCase().includes("notincluded")) {
-                continue;
-              }
-
-              if (key.toLowerCase().includes("amenit")) {
-                const val = record[key];
-                if (Array.isArray(val)) {
-                  for (const v of val) {
-                    if (v && typeof v === "object" && isExplicitlyAvailable(v)) {
-                      const t = ((v as Record<string, unknown>).title || (v as Record<string, unknown>).name) as string | undefined;
-                      if (t && typeof t === "string" && !IGNORE_CATEGORIES.has(t) && t.length < 50) {
-                        amenityNamesSet.add(t.trim());
-                      }
-                    }
-                  }
-                }
-              }
-              searchAmenitiesTree(record[key], keyName || parentKey);
-            }
-          }
-        }
-      }
-
-      searchAmenitiesTree(json);
-    } catch {}
-  }
-
-  // Common keywords fallback if json tree was missing
-  if (amenityNamesSet.size === 0) {
-    const textToScan = `${name} ${description}`;
-    if (/wifi|wi-fi|internet/i.test(textToScan)) amenityNamesSet.add("Wifi");
-    if (/pool|swimming pool/i.test(textToScan)) amenityNamesSet.add("Swimming Pool");
-    if (/air conditioning|ac|a\/c/i.test(textToScan)) amenityNamesSet.add("Air Conditioning");
-    if (/parking/i.test(textToScan)) amenityNamesSet.add("Free Parking");
-    if (/kitchen/i.test(textToScan)) amenityNamesSet.add("Kitchen");
-    if (/tv|television/i.test(textToScan)) amenityNamesSet.add("TV");
-    if (/balcony|terrace/i.test(textToScan)) amenityNamesSet.add("Balcony");
-    if (/washer|washing machine/i.test(textToScan)) amenityNamesSet.add("Washing Machine");
-  }
+  const photosArray = Array.from(photosMap.values()).map((p, idx) => ({
+    url: p.url,
+    caption: idx === 0 ? "Cover Image" : p.caption,
+    spaceTag: p.spaceTag || (idx === 0 ? "Cover View" : "Living Room"),
+  }));
 
   const textToScan = `${name} ${description}`;
 
@@ -609,11 +691,11 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
     photos: photosArray,
     amenityNames: Array.from(amenityNamesSet),
     houseRules: {
-      checkIn: "14:00",
-      checkOut: "11:00",
-      petsAllowed: /pets allowed|pet friendly/i.test(textToScan),
-      smokingAllowed: false,
-      partiesAllowed: false,
+      checkIn: houseRules.checkIn,
+      checkOut: houseRules.checkOut,
+      petsAllowed: houseRules.petsAllowed || /pets allowed|pet friendly/i.test(textToScan),
+      smokingAllowed: houseRules.smokingAllowed,
+      partiesAllowed: houseRules.partiesAllowed,
     },
   };
 }
