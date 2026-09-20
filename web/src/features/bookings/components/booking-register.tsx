@@ -55,7 +55,7 @@ const columns: {
 }[] = [
   // Stay Particulars
   { key: 'reservation_code', label: 'Booking', group: 'stay' },
-  { key: 'guest_name', label: 'Guest', group: 'stay' },
+  { key: 'guest_name', label: 'Guest Name', group: 'stay' },
   { key: 'property_name', label: 'Property', group: 'stay' },
   { key: 'unit_label', label: 'Unit', group: 'stay' },
   { key: 'check_in_date', label: 'Check-in', group: 'stay' },
@@ -66,16 +66,16 @@ const columns: {
   { key: 'financial_status', label: 'Breakdown', group: 'stay' },
 
   // Guest Charges (Left Ledger)
-  { key: 'guest_total', label: 'Guest charges', financial: true, group: 'guest' },
-  { key: 'guest_received', label: 'Direct collections', financial: true, group: 'guest' },
-  { key: 'guest_balance', label: 'Guest balance', financial: true, group: 'guest' },
+  { key: 'guest_total', label: 'Total Charges', financial: true, group: 'guest' },
+  { key: 'guest_received', label: 'Direct Collections', financial: true, group: 'guest' },
+  { key: 'guest_balance', label: 'Remaining Balance', financial: true, group: 'guest' },
 
   // Host Payout & Bank Settlement (Right Ledger)
-  { key: 'host_total', label: 'Expected payout', financial: true, group: 'host' },
-  { key: 'host_received', label: 'Payout received', financial: true, group: 'host' },
-  { key: 'payout_balance', label: 'Payout difference', financial: true, group: 'host' },
-  { key: 'collection_mode', label: 'Collection mode', group: 'host' },
-  { key: 'deposit_held', label: 'Deposit held', financial: true, group: 'host' },
+  { key: 'host_total', label: 'Expected Payout', financial: true, group: 'host' },
+  { key: 'host_received', label: 'Payout Received', financial: true, group: 'host' },
+  { key: 'payout_balance', label: 'Payout Difference', financial: true, group: 'host' },
+  { key: 'collection_mode', label: 'Collection Mode', group: 'host' },
+  { key: 'deposit_held', label: 'Deposit Held', financial: true, group: 'host' },
 
   // Optional Toggleable Columns
   { key: 'currency', label: 'Currency', group: 'stay' },
@@ -489,7 +489,7 @@ export function BookingRegister({
           </legend>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <p className="mb-2 text-xs font-semibold text-blue-600 dark:text-blue-400">Stay Particulars</p>
+              <p className="mb-2 text-xs font-semibold text-blue-600 dark:text-blue-400">Stay Details</p>
               <div className="space-y-1.5">
                 {columns
                   .filter((c) => c.group === 'stay')
@@ -511,7 +511,7 @@ export function BookingRegister({
 
             <div>
               <p className="mb-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                Guest Paid (Left Ledger)
+                Guest Billing Ledger
               </p>
               <div className="space-y-1.5">
                 {columns
@@ -534,7 +534,7 @@ export function BookingRegister({
 
             <div>
               <p className="mb-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                Host Payout & Settlement (Right)
+                Host Settlement Ledger
               </p>
               <div className="space-y-1.5">
                 {columns
@@ -570,7 +570,7 @@ export function BookingRegister({
                   className="border-r px-4 py-2 text-blue-700 dark:text-blue-300 bg-blue-500/5 text-left"
                 >
                   <div className="flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5 text-blue-500" /> Stay & Guest Particulars
+                    <Building2 className="h-3.5 w-3.5 text-blue-500" /> Stay Details
                   </div>
                 </th>
               )}
@@ -580,7 +580,7 @@ export function BookingRegister({
                   className="border-r px-4 py-2 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 text-right"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-indigo-500" /> Guest Paid (Left Ledger)
+                    <Receipt className="h-3.5 w-3.5 text-indigo-500" /> Guest Billing Ledger
                   </div>
                 </th>
               )}
@@ -590,7 +590,7 @@ export function BookingRegister({
                   className="px-4 py-2 text-emerald-700 dark:text-emerald-300 bg-emerald-500/5 text-right"
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <Banknote className="h-3.5 w-3.5 text-emerald-500" /> Host Payout & Bank Settlement
+                    <Banknote className="h-3.5 w-3.5 text-emerald-500" /> Host Settlement Ledger
                   </div>
                 </th>
               )}

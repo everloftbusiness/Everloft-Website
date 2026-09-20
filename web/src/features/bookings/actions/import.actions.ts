@@ -18,7 +18,21 @@ export async function importBookingsAction(
   let importedCount = 0;
   const errors: string[] = [];
 
-  // Unique Batch ID to prevent duplicate external_booking_ref collisions
+  // Build lookup set of existing active bookings to prevent duplicate stay creation
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const { data: existingBookings } = await (admin as any)
+    .from('bookings')
+    .select('property_id, guest_name, check_in_date')
+    .is('deleted_at', null);
+
+  const existingSet = new Set(
+    (existingBookings ?? []).map(
+      (b: any) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
+    )
+  );
+
+  // Unique Batch ID for this import session
   const batchId = crypto.randomUUID().slice(0, 8).toUpperCase();
 
   for (let idx = 0; idx < rows.length; idx++) {
@@ -32,6 +46,13 @@ export async function importBookingsAction(
       ) || properties[0];
 
       const targetPropertyId = matchedProp ? matchedProp.id : defaultPropertyId;
+
+      const lookupKey = `${targetPropertyId}_${r.guestName.trim().toLowerCase()}_${r.checkInDate}`;
+      if (existingSet.has(lookupKey)) {
+        // Skip duplicate stay already registered in database
+        continue;
+      }
+      existingSet.add(lookupKey);
 
       const isDirect =
         r.source.toLowerCase().includes('db') ||
