@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
 import {
   Bath,
   BedDouble,
@@ -12,16 +11,11 @@ import {
   Maximize,
   ShieldCheck,
   Users,
-  Star,
   Clock,
   Sparkles,
   Phone,
   MessageCircle,
   ArrowRight,
-  Wifi,
-  UtensilsCrossed,
-  Car,
-  Waves,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyGallery } from "@/components/property/property-gallery";
@@ -31,7 +25,6 @@ import { PropertyBedroomsShowcase } from "@/components/property/property-bedroom
 import { PropertyAmenitiesShowcase } from "@/components/property/property-amenities-showcase";
 import { PropertyLocationMap } from "@/components/property/property-location-map";
 import { PropertyAvailabilityCalendar } from "@/components/property/property-availability-calendar";
-import { getPropertyCalendarBlocks } from "@/features/properties/services/ical-sync.service";
 import { Logo } from "@/components/logo";
 import { formatCurrency } from "@/lib/format";
 import { getPublicActivePropertyBySlug, listPublicActiveProperties, PublicPropertyCard } from "@/features/properties";
@@ -55,7 +48,6 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
 
   if (!property) notFound();
 
-  const calendarBlocks = await getPropertyCalendarBlocks(property.id);
   const location = [property.area, property.city, property.state].filter(Boolean).join(", ") || "India";
   const similarStays = allProperties.filter((p) => p.slug !== slug).slice(0, 3);
 
@@ -350,8 +342,8 @@ export default async function PropertyDetailsPage({ params }: { params: Promise<
           {/* 6b. Interactive Availability Calendar */}
           <section className="border-t border-border/80 pt-10">
             <PropertyAvailabilityCalendar
+              propertyId={property.id}
               nightlyPrice={property.nightlyPrice}
-              blockedRanges={calendarBlocks}
             />
           </section>
 

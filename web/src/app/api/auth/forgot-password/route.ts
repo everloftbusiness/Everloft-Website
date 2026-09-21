@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCanonicalSiteUrl } from "@/lib/auth/url-helper";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = getCanonicalSiteUrl();
 
   // Supabase returns success even for unknown emails (prevents account
   // enumeration) — so this response is intentionally always the same shape.
