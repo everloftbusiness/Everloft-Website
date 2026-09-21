@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, ShieldCheck, Tag } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
-import type { CalendarBlock } from "@/features/properties/services/ical-sync.service";
+
+type DateRange = {
+  startDate: string;
+  endDate: string;
+};
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
@@ -14,15 +18,49 @@ function formatYmd(d: Date): string {
 }
 
 export function PropertyAvailabilityCalendar({
+  propertyId,
   nightlyPrice,
-  blockedRanges = [],
+  initialBlockedRanges = [],
 }: {
+  propertyId?: string;
   nightlyPrice: number | null;
-  blockedRanges?: CalendarBlock[];
+  initialBlockedRanges?: DateRange[];
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedStart, setSelectedStart] = useState<Date | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<Date | null>(null);
+  const [blockedRanges, setBlockedRanges] = useState<DateRange[]>(initialBlockedRanges);
+  const [isLoading, setIsLoading] = useState<boolean>(Boolean(propertyId));
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!propertyId) return;
+
+    let isMounted = true;
+    async function loadLiveAvailability() {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const res = await fetch(`/api/properties/${propertyId}/availability`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.blockedRanges)) {
+          setBlockedRanges(data.blockedRanges);
+        }
+      } catch {
+        if (isMounted) {
+          setFetchError("Unable to load latest calendar availability.");
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadLiveAvailability();
+    return () => {
+      isMounted = false;
+    };
+  }, [propertyId]);
 
   const now = new Date();
   const year = currentDate.getFullYear();
@@ -43,7 +81,7 @@ export function PropertyAvailabilityCalendar({
   const todayStr = formatYmd(now);
 
   function isDateBlocked(dateStr: string): boolean {
-    if (dateStr < todayStr) return true; // Past dates blocked
+    if (dateStr < todayStr) return true;
     return blockedRanges.some((b) => {
       const startYmd = (b.startDate || "").slice(0, 10);
       const endYmd = (b.endDate || "").slice(0, 10);
@@ -66,7 +104,6 @@ export function PropertyAvailabilityCalendar({
         setSelectedStart(clickedDate);
         setSelectedEnd(null);
       } else {
-        // Check if any blocked date exists between start and end
         let hasBlockedBetween = false;
         const cur = new Date(selectedStart);
         while (cur <= clickedDate) {
@@ -96,128 +133,188 @@ export function PropertyAvailabilityCalendar({
     setCurrentDate(new Date(year, month + 1, 1));
   }
 
-  // Compute stay pricing breakdown
   const nights =
     selectedStart && selectedEnd
-      ? Math.round(
-          (selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 3600 * 24)
-        )
+      ? Math.max(1, Math.round((selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
 
-  const basePrice = nightlyPrice || 4500;
-  const accommodationTotal = nights * basePrice;
-  const gstTax = Math.round(accommodationTotal * 0.18);
-  const grandTotal = accommodationTotal + gstTax;
+  const basePriceNum = nightlyPrice ?? 0;
+  const baseTotal = nights * basePriceNum;
+  const gstTax = baseTotal * 0.18;
+  const grandTotal = baseTotal + gstTax;
 
   return (
-    <div className="rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
+    <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm transition-all hover:shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div>
-          <h3 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-emerald-800 dark:text-emerald-400" />
-            Select Availability &amp; Dates
-          </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Green dates are open for instant booking. Gray dates are reserved.
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <h3 className="text-xl font-bold tracking-tight text-foreground">
+              Select Stay Dates
+            </h3>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Prices include transparent + GST breakdown. Minimum 1 night stay.
           </p>
         </div>
-        <div className="flex items-center gap-1">
+
+        {nightlyPrice !== null && (
+          <div className="flex flex-col items-start sm:items-end">
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-extrabold text-foreground tracking-tight">
+                {formatCurrency(nightlyPrice)}
+              </span>
+              <span className="text-xs font-semibold text-muted-foreground">/ night</span>
+              <span className="ml-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                + GST
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground">Excludes 18% GST & taxes</span>
+          </div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="my-10 flex flex-col items-center justify-center space-y-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600 dark:text-amber-400" />
+          <p className="text-xs font-medium">Checking live date availability...</p>
+        </div>
+      ) : fetchError ? (
+        <div className="my-8 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-center text-xs text-destructive">
+          <p>{fetchError}</p>
           <Button
             variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={prevMonth}
-            disabled={isCurrentOrPastMonth}
+            size="sm"
+            className="mt-2 text-xs"
+            onClick={() => {
+              if (propertyId) {
+                setIsLoading(true);
+                setFetchError(null);
+                fetch(`/api/properties/${propertyId}/availability`, { cache: "no-store" })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.success && Array.isArray(d.blockedRanges)) setBlockedRanges(d.blockedRanges);
+                  })
+                  .catch(() => setFetchError("Unable to load latest calendar availability."))
+                  .finally(() => setIsLoading(false));
+              }
+            }}
           >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs font-bold px-2 min-w-[100px] text-center">
-            {monthNames[month]} {year}
-          </span>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={nextMonth}>
-            <ChevronRight className="h-4 w-4" />
+            <RefreshCw className="mr-1 h-3 w-3" /> Retry Loading
           </Button>
         </div>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs mb-2 font-bold text-muted-foreground">
-        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-        {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-          <div key={`empty_${i}`} className="h-9 sm:h-11" />
-        ))}
-
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const thisDate = new Date(year, month, day);
-          const dateStr = formatYmd(thisDate);
-          const blocked = isDateBlocked(dateStr);
-
-          const isStart = selectedStart && formatYmd(selectedStart) === dateStr;
-          const isEnd = selectedEnd && formatYmd(selectedEnd) === dateStr;
-          const isInRange =
-            selectedStart &&
-            selectedEnd &&
-            thisDate > selectedStart &&
-            thisDate < selectedEnd;
-
-          let btnClass = "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200/60 font-semibold";
-
-          if (blocked) {
-            btnClass = "bg-slate-100 dark:bg-slate-900/60 text-slate-400 line-through cursor-not-allowed border-transparent";
-          } else if (isStart || isEnd) {
-            btnClass = "bg-emerald-800 text-white font-bold shadow-sm border-emerald-800";
-          } else if (isInRange) {
-            btnClass = "bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-950 dark:text-emerald-200 font-bold border-transparent";
-          }
-
-          return (
-            <button
-              key={day}
-              type="button"
-              disabled={blocked}
-              onClick={() => handleDateClick(day)}
-              className={`h-9 sm:h-11 rounded-xl text-xs sm:text-sm flex flex-col items-center justify-center transition-all ${btnClass}`}
-            >
-              <span>{day}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Selected Stay Summary Card */}
-      {selectedStart && (
-        <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-950/30 p-4 sm:p-5 shadow-2xs">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-400">
-                <ShieldCheck className="h-4 w-4" />
-                <span>Selected Dates: {selectedStart.toLocaleDateString("en-IN", { month: "short", day: "numeric" })} {selectedEnd ? `→ ${selectedEnd.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}` : "(Select check-out date)"}</span>
-              </div>
-
-              {nights > 0 && (
-                <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                  <p>{formatCurrency(basePrice)} × {nights} {nights === 1 ? "night" : "nights"} = <span className="font-semibold text-foreground">{formatCurrency(accommodationTotal)}</span></p>
-                  <p>GST &amp; Taxes (18%) = <span className="font-semibold text-foreground">{formatCurrency(gstTax)}</span></p>
-                  <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300 pt-1">Total (inc. GST): {formatCurrency(grandTotal)}</p>
-                </div>
-              )}
+      ) : (
+        <>
+          <div className="mt-6 flex items-center justify-between">
+            <h4 className="text-base font-semibold text-foreground">
+              {monthNames[month]} {year}
+            </h4>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-foreground hover:bg-muted"
+                onClick={prevMonth}
+                disabled={isCurrentOrPastMonth}
+                aria-label="Previous Month"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-foreground hover:bg-muted"
+                onClick={nextMonth}
+                aria-label="Next Month"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-
-            <Button
-              disabled={!selectedStart || !selectedEnd}
-              className="w-full sm:w-auto rounded-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-6 h-10 shadow-sm"
-              onClick={() => {
-                const checkoutUrl = `/booking?slug=current&start=${selectedStart.toISOString().split("T")[0]}&end=${selectedEnd?.toISOString().split("T")[0]}`;
-                window.location.href = checkoutUrl;
-              }}
-            >
-              <Tag className="mr-1.5 h-4 w-4" /> Instant Reserve
-            </Button>
           </div>
+
+          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
+            <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-7 gap-1">
+            {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
+              <div key={`empty-${idx}`} className="h-9 w-full" />
+            ))}
+
+            {Array.from({ length: daysInMonth }).map((_, idx) => {
+              const day = idx + 1;
+              const dateObj = new Date(year, month, day);
+              const dateStr = formatYmd(dateObj);
+              const blocked = isDateBlocked(dateStr);
+
+              const isStart = selectedStart && formatYmd(selectedStart) === dateStr;
+              const isEnd = selectedEnd && formatYmd(selectedEnd) === dateStr;
+              const isSelectedRange =
+                selectedStart &&
+                selectedEnd &&
+                dateObj > selectedStart &&
+                dateObj < selectedEnd;
+
+              let btnStyle = "hover:bg-muted text-foreground";
+              if (blocked) {
+                btnStyle = "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through";
+              } else if (isStart || isEnd) {
+                btnStyle = "bg-amber-600 text-white font-bold shadow-xs dark:bg-amber-500";
+              } else if (isSelectedRange) {
+                btnStyle = "bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold";
+              }
+
+              return (
+                <button
+                  key={`day-${day}`}
+                  type="button"
+                  disabled={blocked}
+                  onClick={() => handleDateClick(day)}
+                  className={`flex h-9 w-full items-center justify-center rounded-lg text-xs font-medium transition-all ${btnStyle}`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {selectedStart && (
+        <div className="mt-6 rounded-xl border border-border/60 bg-muted/30 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground">Selected Stay:</span>
+              <p className="text-sm font-bold text-foreground">
+                {formatYmd(selectedStart)} {selectedEnd ? `➔ ${formatYmd(selectedEnd)}` : "(Select check-out date)"}
+              </p>
+            </div>
+            {selectedEnd && nights > 0 && (
+              <div className="text-right">
+                <span className="text-xs text-muted-foreground">{nights} Night(s)</span>
+                <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(grandTotal)} <span className="text-xs font-normal text-muted-foreground">(inc. GST)</span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {selectedEnd && (
+            <div className="mt-4 pt-4 border-t border-border/60 space-y-1.5 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Base Fare ({nights} night(s) × {formatCurrency(basePriceNum)})</span>
+                <span className="font-mono text-foreground">{formatCurrency(baseTotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>GST & Taxes (18%)</span>
+                <span className="font-mono text-foreground">{formatCurrency(gstTax)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-foreground pt-1 border-t border-border/40">
+                <span>Total (inc. GST)</span>
+                <span className="font-mono text-amber-600 dark:text-amber-400">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

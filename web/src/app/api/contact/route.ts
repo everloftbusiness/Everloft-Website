@@ -12,7 +12,7 @@ const schema = z.object({
 
 async function forwardToGoogleSheet(data: z.infer<typeof schema>) {
   const scriptUrl = process.env.GOOGLE_CONTACT_SCRIPT_URL;
-  if (!scriptUrl) return;
+  if (!scriptUrl || !scriptUrl.trim()) return;
 
   const body = new URLSearchParams({
     name: data.name,
@@ -21,14 +21,20 @@ async function forwardToGoogleSheet(data: z.infer<typeof schema>) {
     message: `[${data.subject}] ${data.message}`,
   });
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
   try {
     await fetch(scriptUrl, {
       method: "POST",
       headers: { Accept: "application/json" },
       body,
+      signal: controller.signal,
     });
   } catch (error) {
-    console.error("Failed to forward contact submission to Google Sheet:", error);
+    console.error("Failed to forward contact submission to Google Sheet:", error instanceof Error ? error.message : "Network error");
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

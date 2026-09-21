@@ -172,24 +172,53 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function deleteBooking(id: string) {
     await requireRegisterAccess();
     const admin = createAdminClient() as unknown as SupabaseClient<RegisterDatabase>;
-    const { data: payments } = await admin.from('booking_payments').select('transaction_id').eq('booking_id', id);
+    const nowIso = new Date().toISOString();
+
+    const { data: payments, error: fetchPayErr } = await admin.from('booking_payments').select('transaction_id').eq('booking_id', id);
+    fail(fetchPayErr);
+
     if (payments && payments.length > 0) {
         const txIds = (payments as { transaction_id: string }[]).map((p) => p.transaction_id);
-        await admin.from('booking_payments').delete().eq('booking_id', id);
-        await admin.from('transactions').delete().in('id', txIds);
+        const { error: delPayErr } = await admin.from('booking_payments').delete().eq('booking_id', id);
+        fail(delPayErr);
+
+        // Soft delete associated transactions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: txSoftErr } = await (admin.from('transactions') as any).update({ deleted_at: nowIso }).in('id', txIds);
+        fail(txSoftErr);
     }
-    await admin.from('transactions').delete().eq('related_entity_id', id);
-    await admin.from('booking_financial_lines').delete().eq('booking_id', id);
-    const { error } = await admin.from('bookings').delete().eq('id', id);
-    fail(error);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: txRelErr } = await (admin.from('transactions') as any).update({ deleted_at: nowIso }).eq('related_entity_id', id);
+    fail(txRelErr);
+
+    const { error: lineErr } = await admin.from('booking_financial_lines').delete().eq('booking_id', id);
+    fail(lineErr);
+
+    // Soft delete main booking record
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: bookErr } = await (admin.from('bookings') as any).update({ deleted_at: nowIso }).eq('id', id);
+    fail(bookErr);
 }
 
 export async function deleteAllBookings() {
     await requireRegisterAccess();
     const admin = createAdminClient() as unknown as SupabaseClient<RegisterDatabase>;
-    await admin.from('booking_payments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await admin.from('transactions').delete().eq('related_entity_type', 'booking');
-    await admin.from('booking_financial_lines').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    const { error } = await admin.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    fail(error);
+    const nowIso = new Date().toISOString();
+
+    const { error: payErr } = await admin.from('booking_payments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    fail(payErr);
+
+    // Soft delete all transactions related to bookings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: txErr } = await (admin.from('transactions') as any).update({ deleted_at: nowIso }).eq('related_entity_type', 'booking');
+    fail(txErr);
+
+    const { error: lineErr } = await admin.from('booking_financial_lines').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    fail(lineErr);
+
+    // Soft delete all booking records
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: bookErr } = await (admin.from('bookings') as any).update({ deleted_at: nowIso }).neq('id', '00000000-0000-0000-0000-000000000000');
+    fail(bookErr);
 }

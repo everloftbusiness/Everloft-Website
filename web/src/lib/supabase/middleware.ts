@@ -7,6 +7,16 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some((c) => c.name.startsWith("sb-") || c.name.includes("auth-token"));
+  const pathname = request.nextUrl.pathname;
+  const isProtectedPath = pathname.startsWith("/dashboard") || pathname.startsWith("/auth") || pathname === "/login";
+
+  // Fast-path: Skip Supabase Auth HTTP API call for public guests with no auth cookies
+  if (!hasAuthCookie && !isProtectedPath) {
+    return { response, user: null };
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

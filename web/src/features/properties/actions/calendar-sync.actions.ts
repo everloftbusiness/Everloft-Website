@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getDashboardSession } from "@/lib/dashboard/session";
 import {
   getPropertyCalendarBlocks,
   savePropertyCalendarBlocks,
@@ -14,7 +15,19 @@ import {
   type ICalChannelFeed,
 } from "@/features/properties/services/ical-sync.service";
 
+async function requirePropertyPermission(permission: "manage_properties" | "view_dashboard" = "manage_properties") {
+  const session = await getDashboardSession();
+  if (!session) {
+    throw new Error("Unauthorized: Authentication required.");
+  }
+  if (!session.permissions.includes(permission) && session.role !== "super_admin" && session.role !== "property_manager" && session.role !== "operations_manager") {
+    throw new Error(`Forbidden: Insufficient permissions (${permission} required).`);
+  }
+  return session;
+}
+
 export async function fetchCalendarDataAction(propertyId: string) {
+  await requirePropertyPermission("view_dashboard");
   const [blocks, feeds, airbnbUrl] = await Promise.all([
     getPropertyCalendarBlocks(propertyId),
     getICalChannelFeeds(propertyId),
@@ -24,6 +37,7 @@ export async function fetchCalendarDataAction(propertyId: string) {
 }
 
 export async function addICalFeedAction(propertyId: string, channelName: string, icalUrl: string) {
+  await requirePropertyPermission("manage_properties");
   if (!icalUrl || !icalUrl.startsWith("http")) {
     return { success: false, message: "Please provide a valid iCal URL starting with http:// or https://" };
   }
@@ -44,7 +58,6 @@ export async function addICalFeedAction(propertyId: string, channelName: string,
     if (channelName.toLowerCase() === "airbnb") {
       await saveAirbnbICalUrl(propertyId, icalUrl);
     }
-    // Auto-sync immediately
     const syncRes = await syncAllICalFeeds(propertyId);
     try {
       revalidatePath("/dashboard/properties", "layout");
@@ -60,6 +73,7 @@ export async function addICalFeedAction(propertyId: string, channelName: string,
 }
 
 export async function updateICalFeedColorAction(propertyId: string, feedId: string, color: string) {
+  await requirePropertyPermission("manage_properties");
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
     return { success: false, message: "Choose a valid six-digit color." };
   }
@@ -79,6 +93,7 @@ export async function updateICalFeedColorAction(propertyId: string, feedId: stri
 }
 
 export async function deleteICalFeedAction(propertyId: string, feedId: string) {
+  await requirePropertyPermission("manage_properties");
   const feeds = await getICalChannelFeeds(propertyId);
   const targetFeed = feeds.find((f) => f.id === feedId);
   if (targetFeed) {
@@ -102,7 +117,6 @@ export async function deleteICalFeedAction(propertyId: string, feedId: string) {
   const ok = await saveICalChannelFeeds(propertyId, updatedFeeds);
 
   if (ok) {
-    // Re-sync remaining feeds
     await syncAllICalFeeds(propertyId, true);
     try {
       revalidatePath("/dashboard/properties", "layout");
@@ -115,6 +129,7 @@ export async function deleteICalFeedAction(propertyId: string, feedId: string) {
 }
 
 export async function syncAllICalFeedsAction(propertyId: string, forceSync = true) {
+  await requirePropertyPermission("manage_properties");
   const result = await syncAllICalFeeds(propertyId, forceSync);
   if (result.success) {
     try {
@@ -126,6 +141,7 @@ export async function syncAllICalFeedsAction(propertyId: string, forceSync = tru
 }
 
 export async function syncAirbnbICalAction(propertyId: string, icalUrl: string) {
+  await requirePropertyPermission("manage_properties");
   if (!icalUrl || !icalUrl.startsWith("http")) {
     return { success: false, message: "Please provide a valid iCal URL starting with http:// or https://" };
   }
@@ -146,6 +162,7 @@ export async function saveManualCalendarBlockAction(
   endDate: string,
   notes?: string
 ) {
+  await requirePropertyPermission("manage_properties");
   if (!startDate || !endDate) {
     return { success: false, message: "Start date and End date are required.", blocks: [] };
   }
@@ -179,6 +196,7 @@ export async function saveManualCalendarBlockAction(
 }
 
 export async function deleteCalendarBlockAction(propertyId: string, blockId: string) {
+  await requirePropertyPermission("manage_properties");
   const existingBlocks = await getPropertyCalendarBlocks(propertyId);
   const updatedBlocks = existingBlocks.filter((b) => b.id !== blockId);
   const ok = await savePropertyCalendarBlocks(propertyId, updatedBlocks);

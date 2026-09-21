@@ -12,7 +12,6 @@ import {
   Download,
   ArrowRight,
   Plus,
-  Trash2,
   Zap,
   Maximize2,
   Minimize2,
@@ -21,11 +20,14 @@ import {
   parseGoogleSheetCsv,
   detectHeaderColumns,
   SYSTEM_MAPPING_FIELDS,
-  getCombinedSystemFields,
   type DynamicFieldDefinition,
   type ParsedImportRow,
 } from '../utils/csv-parser';
-import { importBookingsAction } from '../actions/import.actions';
+import {
+  importBookingsAction,
+  analyzeImportRowsAction,
+  type ImportRowAnalysis,
+} from '../actions/import.actions';
 import { type PropertyOption } from '../types/booking.types';
 import { money } from '../utils/money';
 import { toast } from 'sonner';
@@ -45,6 +47,17 @@ export function CsvImportModal({
   const [parsedRows, setParsedRows] = useState<ParsedImportRow[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState(properties[0]?.id || '');
   const [viewMode, setViewMode] = useState<'full' | 'compact'>('full');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'duplicate' | 'invalid'>('all');
+
+  // Database Duplicate Pre-Scanner State
+  const [analysisResult, setAnalysisResult] = useState<{
+    total: number;
+    newCount: number;
+    duplicateCount: number;
+    invalidCount: number;
+    analyzedRows: ImportRowAnalysis[];
+  } | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Dynamic Column Mapping State
   const [detectedHeaders, setDetectedHeaders] = useState<string[]>([]);
@@ -52,7 +65,17 @@ export function CsvImportModal({
   const [isMappingOpen, setIsMappingOpen] = useState(false);
 
   // Dynamic Custom System Fields State
-  const [dynamicFields, setDynamicFields] = useState<DynamicFieldDefinition[]>([]);
+  const [dynamicFields, setDynamicFields] = useState<DynamicFieldDefinition[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('everloft_dynamic_system_fields');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (err) {
+      console.error('Failed to load dynamic system fields:', err);
+    }
+    return [];
+  });
   const [isAddDynamicOpen, setIsAddDynamicOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldCategory, setNewFieldCategory] = useState('Custom Details');
@@ -62,19 +85,32 @@ export function CsvImportModal({
   const [importError, setImportError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Load saved dynamic fields from localStorage
+  // Pre-scan parsed rows against database to categorize New vs Duplicate vs Invalid Data
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('everloft_dynamic_system_fields');
-        if (saved) {
-          setDynamicFields(JSON.parse(saved));
+    if (parsedRows.length === 0) return;
+
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) setIsAnalyzing(true);
+    });
+
+    analyzeImportRowsAction(parsedRows, selectedPropertyId)
+      .then((res) => {
+        if (isMounted && res.success) {
+          setAnalysisResult(res);
         }
-      }
-    } catch (err) {
-      console.error('Failed to load dynamic system fields:', err);
-    }
-  }, []);
+      })
+      .catch((err) => {
+        console.error('Failed to pre-scan import rows against DB:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsAnalyzing(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [parsedRows, selectedPropertyId]);
 
   function saveDynamicFields(updatedFields: DynamicFieldDefinition[]) {
     setDynamicFields(updatedFields);
@@ -184,7 +220,7 @@ export function CsvImportModal({
           const worksheet = workbook.Sheets[firstSheetName];
           const text = XLSX.utils.sheet_to_csv(worksheet);
           processContent(text);
-        } catch (err) {
+        } catch {
           setImportError('Failed to read Excel file. Please try exporting as CSV.');
         }
       };
@@ -226,7 +262,7 @@ export function CsvImportModal({
         localStorage.setItem('everloft_custom_excel_mappings', JSON.stringify(customMappings));
         toast.success('Column mapping rule saved! Future uploads will auto-apply this mapping.');
       }
-    } catch (e) {
+    } catch {
       toast.error('Failed to save mapping rule.');
     }
   }
@@ -236,7 +272,6 @@ export function CsvImportModal({
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Everloft Booking Ledger');
 
-      // Set column widths matching D:\Untitled spreadsheet.xlsx
       worksheet.columns = [
         { key: 'pad', width: 4 },
         { key: 'date', width: 14 },
@@ -431,23 +466,34 @@ export function CsvImportModal({
   }
 
   function handleImportSubmit() {
-    const validRows = parsedRows.filter((r) => r.isValid);
-    if (validRows.length === 0) {
-      setImportError('No valid rows found to import.');
+    let rowsToImport = parsedRows.filter((r) => r.isValid);
+
+    if (analysisResult) {
+      const duplicateIndices = new Set(
+        analysisResult.analyzedRows
+          .filter((ar) => ar.status === 'duplicate')
+          .map((ar) => ar.rawLineIndex)
+      );
+      rowsToImport = rowsToImport.filter((r) => !duplicateIndices.has(r.rawLineIndex));
+    }
+
+    if (rowsToImport.length === 0) {
+      setImportError('No new valid rows to import. (All valid rows are duplicates or skipped).');
       return;
     }
 
     setImportError(null);
     startTransition(async () => {
       try {
-        const res = await importBookingsAction(validRows, selectedPropertyId);
+        const res = await importBookingsAction(rowsToImport, selectedPropertyId);
         if (res.success) {
-          setImportSuccessMessage(`Successfully imported ${res.count} booking records!`);
+          setImportSuccessMessage(`Successfully imported ${res.count} new booking record${res.count === 1 ? '' : 's'}!`);
           setTimeout(() => {
             setIsOpen(false);
             setImportSuccessMessage(null);
             setCsvText('');
             setParsedRows([]);
+            setAnalysisResult(null);
             if (onImportComplete) onImportComplete();
           }, 1500);
         }
@@ -461,7 +507,20 @@ export function CsvImportModal({
   const totalGuestSum = parsedRows.filter((r) => r.isValid).reduce((sum, r) => sum + r.guestTotal, 0);
   const totalHostSum = parsedRows.filter((r) => r.isValid).reduce((sum, r) => sum + r.hostTotal, 0);
 
-  const combinedFields = getCombinedSystemFields(dynamicFields);
+  const analysisMap = new Map<number, ImportRowAnalysis>();
+  if (analysisResult?.analyzedRows) {
+    analysisResult.analyzedRows.forEach((ar) => {
+      analysisMap.set(ar.rawLineIndex, ar);
+    });
+  }
+
+  const filteredRows = parsedRows.filter((r) => {
+    if (statusFilter === 'all') return true;
+    const analysis = analysisMap.get(r.rawLineIndex);
+    if (!analysis) return true;
+    return analysis.status === statusFilter;
+  });
+
   const activeMappedDynamicFields = dynamicFields.filter((df) =>
     Object.values(customMappings).includes(df.key)
   );
@@ -789,7 +848,7 @@ export function CsvImportModal({
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-mono text-muted-foreground">Col {colIdx}:</span>
                           <span className="font-bold text-foreground truncate max-w-[140px]" title={headerText}>
-                            "{headerText || `<Blank>`}"
+                            &quot;{headerText || `<Blank>`}&quot;
                           </span>
                         </div>
 
@@ -852,12 +911,119 @@ export function CsvImportModal({
 
             {/* Reconciliation Preview Grid */}
             {parsedRows.length > 0 && (
-              <div className="space-y-3 border-t pt-4">
+              <div className="space-y-4 border-t pt-4">
+                {/* Database Pre-scan KPI Cards */}
+                {isAnalyzing ? (
+                  <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-300 font-medium flex items-center justify-between animate-pulse">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-blue-500 animate-spin" />
+                      Pre-scanning parsed rows against database reservations to identify duplicates...
+                    </span>
+                  </div>
+                ) : analysisResult ? (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {/* KPI Card 1: New Data */}
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" /> 🟢 New Data to Add
+                        </span>
+                        <span className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                          {analysisResult.newCount}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        New reservations ready to create in database
+                      </p>
+                    </div>
+
+                    {/* KPI Card 2: Duplicate Data */}
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                          <AlertCircle className="h-4 w-4 text-amber-500" /> 🟡 Duplicates (Skipped)
+                        </span>
+                        <span className="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+                          {analysisResult.duplicateCount}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Already existing in DB or repeated inside file
+                      </p>
+                    </div>
+
+                    {/* KPI Card 3: Invalid Rows */}
+                    <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                          <AlertCircle className="h-4 w-4 text-rose-500" /> 🔴 Invalid Rows
+                        </span>
+                        <span className="font-mono text-base font-bold text-rose-600 dark:text-rose-400">
+                          {analysisResult.invalidCount}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Rows with formatting or date parsing errors
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                       <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Reconciliation Preview ({validCount} valid rows)
                     </h3>
+
+                    {/* Status Filter Chips */}
+                    {analysisResult && (
+                      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 text-xs font-medium">
+                        <button
+                          type="button"
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            statusFilter === 'all'
+                              ? 'bg-card text-foreground font-semibold shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onClick={() => setStatusFilter('all')}
+                        >
+                          All Rows ({parsedRows.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            statusFilter === 'new'
+                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onClick={() => setStatusFilter('new')}
+                        >
+                          🟢 New Data ({analysisResult.newCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            statusFilter === 'duplicate'
+                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onClick={() => setStatusFilter('duplicate')}
+                        >
+                          🟡 Duplicates ({analysisResult.duplicateCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            statusFilter === 'invalid'
+                              ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-semibold shadow-xs'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onClick={() => setStatusFilter('invalid')}
+                        >
+                          🔴 Invalid ({analysisResult.invalidCount})
+                        </button>
+                      </div>
+                    )}
                     
                     {/* View Mode Toggle */}
                     <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 text-xs font-medium">
@@ -959,77 +1125,106 @@ export function CsvImportModal({
                           <th className="px-3 py-1.5 border-r">Amount Credited</th>
                           <th className="px-2.5 py-1.5 border-r">Credited Date</th>
                           <th className="px-3 py-1.5 border-r">Note</th>
-                          <th className="px-2.5 py-1.5 text-center">Status</th>
+                          <th className="px-2.5 py-1.5 text-center">Import Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {parsedRows.map((r, idx) => (
-                          <tr key={idx} className={r.isValid ? 'hover:bg-muted/30' : 'bg-rose-500/5'}>
-                            <td className="px-2 py-1.5 border-r text-muted-foreground text-center sticky left-0 z-10 bg-card">{r.rawLineIndex}</td>
-                            <td className="px-3 py-1.5 border-r sticky left-8 z-10 bg-card">
-                              <span className="font-semibold text-foreground">{r.guestName}</span>
-                              {r.reconciliationNote && (
-                                <span className="block text-[10px] font-medium text-blue-600 dark:text-blue-400">
-                                  ⚡ {r.reconciliationNote}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-2.5 py-1.5 border-r font-mono text-[11px] text-muted-foreground">{r.checkInDate}</td>
-                            <td className="px-2.5 py-1.5 border-r">
-                              <span className="font-mono bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[11px] font-bold">
-                                {r.roomLabel || 'Whole Villa'}
-                              </span>
-                            </td>
-                            <td className="px-2.5 py-1.5 border-r">{r.source}</td>
-                            <td className="px-2 py-1.5 border-r font-mono text-center">{r.nights}</td>
+                        {filteredRows.map((r, idx) => {
+                          const analysis = analysisMap.get(r.rawLineIndex);
+                          const isDuplicate = analysis?.status === 'duplicate';
+                          const isInvalid = !r.isValid || analysis?.status === 'invalid';
 
-                            {/* Guest Ledger */}
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono">{money(r.guestBase, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.guestTaxes, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.guestServiceCharge, 'INR')}</td>
-                            <td className="px-3 py-1.5 border-r text-right font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/5">
-                              {money(r.guestTotal, 'INR')}
-                            </td>
-
-                            {/* Host Ledger */}
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono">{money(r.hostBase, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostRateAdjustment, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostServiceFee, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostTaxes, 'INR')}</td>
-                            <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostAdditionalIncome, 'INR')}</td>
-                            <td className="px-3 py-1.5 border-r text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
-                              {money(r.hostTotal, 'INR')}
-                            </td>
-
-                            {/* Dynamic Custom Fields Values */}
-                            {activeMappedDynamicFields.map((df) => (
-                              <td key={df.key} className="px-3 py-1.5 border-r font-mono text-[11px] bg-purple-500/5 font-medium text-purple-700 dark:text-purple-300">
-                                {r.customFields?.[df.key] !== undefined ? String(r.customFields[df.key]) : '—'}
+                          return (
+                            <tr
+                              key={idx}
+                              className={
+                                isInvalid
+                                  ? 'bg-rose-500/5'
+                                  : isDuplicate
+                                  ? 'bg-amber-500/10 hover:bg-amber-500/15'
+                                  : 'hover:bg-muted/30'
+                              }
+                            >
+                              <td className="px-2 py-1.5 border-r text-muted-foreground text-center sticky left-0 z-10 bg-card">{r.rawLineIndex}</td>
+                              <td className="px-3 py-1.5 border-r sticky left-8 z-10 bg-card">
+                                <span className="font-semibold text-foreground">{r.guestName}</span>
+                                {r.reconciliationNote && (
+                                  <span className="block text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                                    ⚡ {r.reconciliationNote}
+                                  </span>
+                                )}
                               </td>
-                            ))}
+                              <td className="px-2.5 py-1.5 border-r font-mono text-[11px] text-muted-foreground">{r.checkInDate}</td>
+                              <td className="px-2.5 py-1.5 border-r">
+                                <span className="font-mono bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[11px] font-bold">
+                                  {r.roomLabel || 'Whole Villa'}
+                                </span>
+                              </td>
+                              <td className="px-2.5 py-1.5 border-r">{r.source}</td>
+                              <td className="px-2 py-1.5 border-r font-mono text-center">{r.nights}</td>
 
-                            {/* Settlement */}
-                            <td className="px-2.5 py-1.5 border-r font-mono text-[11px]">{r.contactPhone || '—'}</td>
-                            <td className="px-3 py-1.5 border-r font-semibold text-emerald-600 dark:text-emerald-400">
-                              {r.amountCreditedBank || '—'}
-                            </td>
-                            <td className="px-2.5 py-1.5 border-r text-muted-foreground text-[11px]">{r.creditedDate || '—'}</td>
-                            <td className="px-3 py-1.5 border-r text-muted-foreground text-[11px] max-w-[200px] truncate" title={r.note || ''}>
-                              {r.note || '—'}
-                            </td>
-                            <td className="px-2.5 py-1.5 text-center">
-                              {r.isValid ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                                  <CheckCircle2 className="h-3 w-3" /> Ready
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-semibold">
-                                  <AlertCircle className="h-3 w-3" /> Invalid
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                              {/* Guest Ledger */}
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono">{money(r.guestBase, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.guestTaxes, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.guestServiceCharge, 'INR')}</td>
+                              <td className="px-3 py-1.5 border-r text-right font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/5">
+                                {money(r.guestTotal, 'INR')}
+                              </td>
+
+                              {/* Host Ledger */}
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono">{money(r.hostBase, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostRateAdjustment, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostServiceFee, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostTaxes, 'INR')}</td>
+                              <td className="px-2.5 py-1.5 border-r text-right font-mono text-muted-foreground">{money(r.hostAdditionalIncome, 'INR')}</td>
+                              <td className="px-3 py-1.5 border-r text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
+                                {money(r.hostTotal, 'INR')}
+                              </td>
+
+                              {/* Dynamic Custom Fields Values */}
+                              {activeMappedDynamicFields.map((df) => (
+                                <td key={df.key} className="px-3 py-1.5 border-r font-mono text-[11px] bg-purple-500/5 font-medium text-purple-700 dark:text-purple-300">
+                                  {r.customFields?.[df.key] !== undefined ? String(r.customFields[df.key]) : '—'}
+                                </td>
+                              ))}
+
+                              {/* Settlement */}
+                              <td className="px-2.5 py-1.5 border-r font-mono text-[11px]">{r.contactPhone || '—'}</td>
+                              <td className="px-3 py-1.5 border-r font-semibold text-emerald-600 dark:text-emerald-400">
+                                {r.amountCreditedBank || '—'}
+                              </td>
+                              <td className="px-2.5 py-1.5 border-r text-muted-foreground text-[11px]">{r.creditedDate || '—'}</td>
+                              <td className="px-3 py-1.5 border-r text-muted-foreground text-[11px] max-w-[200px] truncate" title={r.note || ''}>
+                                {r.note || '—'}
+                              </td>
+                              <td className="px-2.5 py-1.5 text-center min-w-[160px]">
+                                {isInvalid ? (
+                                  <div className="flex flex-col items-center">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-600 border border-rose-500/30">
+                                      <AlertCircle className="h-3 w-3" /> INVALID
+                                    </span>
+                                    <span className="text-[9px] text-rose-500 max-w-[140px] truncate mt-0.5" title={analysis?.reason || 'Format error'}>
+                                      {analysis?.reason || 'Format error'}
+                                    </span>
+                                  </div>
+                                ) : isDuplicate ? (
+                                  <div className="flex flex-col items-center">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                      <AlertCircle className="h-3 w-3" /> DUPLICATE (SKIPPED)
+                                    </span>
+                                    <span className="text-[9px] text-amber-700 dark:text-amber-300 max-w-[150px] truncate mt-0.5" title={analysis?.reason}>
+                                      {analysis?.reason}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                    <CheckCircle2 className="h-3 w-3" /> 🟢 NEW DATA
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1047,62 +1242,81 @@ export function CsvImportModal({
                           <th className="px-3 py-2 text-right">Guest Charge</th>
                           <th className="px-3 py-2 text-right">Host Payout</th>
                           <th className="px-3 py-2">Bank Credited</th>
-                          <th className="px-3 py-2 text-center">Status</th>
+                          <th className="px-3 py-2 text-center">Import Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {parsedRows.map((r, idx) => (
-                          <tr key={idx} className={r.isValid ? 'hover:bg-muted/30' : 'bg-rose-500/5'}>
-                            <td className="px-3 py-2 text-muted-foreground">{r.rawLineIndex}</td>
-                            <td className="px-3 py-2">
-                              <span className="font-medium text-foreground">{r.guestName}</span>
-                              {r.reconciliationNote && (
-                                <span className="block text-[10px] font-medium text-blue-600 dark:text-blue-400 mt-0.5">
-                                  ⚡ {r.reconciliationNote}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              {r.roomLabel ? (
-                                <span className="font-mono bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[11px]">
-                                  {r.roomLabel}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-3 py-2">{r.source}</td>
-                            <td className="px-3 py-2 font-mono text-[11px]">
-                              {r.checkInDate} ({r.nights}n)
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono font-medium">
-                              {money(r.guestTotal, 'INR')}
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                              {money(r.hostTotal, 'INR')}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground">
-                              {r.amountCreditedBank ? (
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                  {r.amountCreditedBank}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              {r.isValid ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                  <CheckCircle2 className="h-3 w-3" /> Ready
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-medium">
-                                  <AlertCircle className="h-3 w-3" /> Invalid
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredRows.map((r, idx) => {
+                          const analysis = analysisMap.get(r.rawLineIndex);
+                          const isDuplicate = analysis?.status === 'duplicate';
+                          const isInvalid = !r.isValid || analysis?.status === 'invalid';
+
+                          return (
+                            <tr
+                              key={idx}
+                              className={
+                                isInvalid
+                                  ? 'bg-rose-500/5'
+                                  : isDuplicate
+                                  ? 'bg-amber-500/10 hover:bg-amber-500/15'
+                                  : 'hover:bg-muted/30'
+                              }
+                            >
+                              <td className="px-3 py-2 text-muted-foreground">{r.rawLineIndex}</td>
+                              <td className="px-3 py-2">
+                                <span className="font-medium text-foreground">{r.guestName}</span>
+                                {r.reconciliationNote && (
+                                  <span className="block text-[10px] font-medium text-blue-600 dark:text-blue-400 mt-0.5">
+                                    ⚡ {r.reconciliationNote}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {r.roomLabel ? (
+                                  <span className="font-mono bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[11px]">
+                                    {r.roomLabel}
+                                  </span>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td className="px-3 py-2">{r.source}</td>
+                              <td className="px-3 py-2 font-mono text-[11px]">
+                                {r.checkInDate} ({r.nights}n)
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-medium">
+                                {money(r.guestTotal, 'INR')}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                                {money(r.hostTotal, 'INR')}
+                              </td>
+                              <td className="px-3 py-2 text-muted-foreground">
+                                {r.amountCreditedBank ? (
+                                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {r.amountCreditedBank}
+                                  </span>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-center min-w-[150px]">
+                                {isInvalid ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-bold">
+                                    <AlertCircle className="h-3 w-3" /> INVALID
+                                  </span>
+                                ) : isDuplicate ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-300 font-bold" title={analysis?.reason}>
+                                    <AlertCircle className="h-3 w-3" /> DUPLICATE
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                    <CheckCircle2 className="h-3 w-3" /> 🟢 NEW DATA
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1136,11 +1350,19 @@ export function CsvImportModal({
                 variant="blue-accent"
                 size="sm"
                 className="text-xs font-semibold"
-                disabled={validCount === 0 || isPending}
+                disabled={(analysisResult ? analysisResult.newCount : validCount) === 0 || isPending || isAnalyzing}
                 onClick={handleImportSubmit}
               >
                 {isPending ? (
                   'Importing & Saving Records...'
+                ) : isAnalyzing ? (
+                  'Scanning Database...'
+                ) : analysisResult ? (
+                  <>
+                    Import {analysisResult.newCount} New Booking{analysisResult.newCount === 1 ? '' : 's'}
+                    {analysisResult.duplicateCount > 0 ? ` (Skipping ${analysisResult.duplicateCount} Duplicate${analysisResult.duplicateCount === 1 ? '' : 's'})` : ''}{' '}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </>
                 ) : (
                   <>
                     Import & Save {validCount} Booking{validCount === 1 ? '' : 's'} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />

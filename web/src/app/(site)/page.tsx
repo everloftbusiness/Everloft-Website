@@ -1,18 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+
+export const revalidate = 3600;
 import {
-  Star,
-  ShieldCheck,
   Zap,
   Tag,
   ArrowRight,
   Sparkles,
   Award,
-  Home,
-  Building2,
-  TreePalm,
-  Building,
-  Gem,
   Handshake,
   KeyRound,
   Scale,
@@ -34,7 +29,6 @@ import { PublicPropertyCard, listPublicActiveProperties } from "@/features/prope
 import { homepageFaqs } from "@/lib/data/faqs";
 
 // Modular marketing sections
-import { DirectBookingComparison } from "@/components/marketing/direct-booking-comparison";
 import { ReasonsToLove } from "@/components/marketing/reasons-to-love";
 import { PopularLocations, type LocationSummary } from "@/components/marketing/popular-locations";
 import { HowItWorks } from "@/components/marketing/how-it-works";
@@ -42,7 +36,6 @@ import { MapBanner } from "@/components/marketing/map-banner";
 
 import {
   Calendar,
-  CheckCircle,
   Headphones,
   Lock,
   Percent,
@@ -62,15 +55,6 @@ const HOSPITALITY_BADGES = [
   { icon: Calendar, label: "Flexible Cancellation" },
   { icon: Headphones, label: "24/7 Guest Support" },
   { icon: Lock, label: "Secure Payments" },
-];
-
-const COLLECTION = [
-  { type: "Villa", icon: Home, description: "Private pools & serene gardens" },
-  { type: "Apartment", icon: Building2, description: "City-centre prime comfort" },
-  { type: "Holiday Home", icon: TreePalm, description: "Family-sized getaways" },
-  { type: "Boutique Stay", icon: Sparkles, description: "Intimate & characterful" },
-  { type: "Penthouse", icon: Building, description: "Skyline & panoramic views" },
-  { type: "Luxury Home", icon: Gem, description: "Signature statement stays" },
 ];
 
 const WHAT_MAKES_EVERLOFT = [

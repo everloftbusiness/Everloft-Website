@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardSession } from "@/lib/dashboard/session";
+import { isBackgroundJobAllowed } from "@/lib/env-guard";
 import { createDraftProperty } from "@/features/properties/services/properties.service";
 import { parseAirbnbListing, normalizeAmenityName } from "@/features/properties/services/airbnb-importer.service";
 import { uploadFile, computeChecksum, BUCKETS } from "@/lib/storage/r2";
 import { createFileRecord } from "@/lib/storage/file-service";
 import { randomUUID } from "crypto";
+
+const MAX_AIRBNB_PHOTOS = 20;
+const PHOTO_CONCURRENCY_LIMIT = 3;
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB limit per photo
 
 function revalidate(propertyId: string) {
   revalidatePath(`/dashboard/properties/${propertyId}/setup`);
@@ -25,6 +30,31 @@ export type ImportAirbnbResult = {
   importedAmenitiesCount?: number;
 };
 
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrencyLimit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < items.length) {
+      const currentIndex = index++;
+      try {
+        const val = await fn(items[currentIndex], currentIndex);
+        results[currentIndex] = { status: "fulfilled", value: val };
+      } catch (err) {
+        results[currentIndex] = { status: "rejected", reason: err };
+      }
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrencyLimit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 export async function importAirbnbPropertyAction(
   airbnbUrl: string,
   targetPropertyId?: string
@@ -41,10 +71,13 @@ export async function importAirbnbPropertyAction(
     return { success: false, error: "You don't have permission to import properties." };
   }
 
+  if (!isBackgroundJobAllowed("Airbnb Property Import")) {
+    return { success: false, error: "Import skipped: Background jobs are disabled in this environment." };
+  }
+
   try {
     // 1. Parse Airbnb Listing
     const extracted = await parseAirbnbListing(airbnbUrl);
-
     const supabase = await createClient();
 
     // 2. Obtain or Create Property ID
@@ -111,7 +144,6 @@ export async function importAirbnbPropertyAction(
         updated_by: session.userId,
       }).eq("id", propertyId);
 
-      // Save Boolean & Preset rules matching STANDARD_HOUSE_RULES so presets list checkboxes tick automatically
       await supabase.from("property_rules").delete().eq("property_id", propertyId);
       const ruleRows = [
         { rule_key: "smoking", rule_text: extracted.houseRules.smokingAllowed ? "Smoking allowed" : "No smoking" },
@@ -144,7 +176,6 @@ export async function importAirbnbPropertyAction(
 
         let amenityId = masterMap.get(lowerName) || slugMap.get(norm.slug);
         if (!amenityId) {
-          // Insert missing amenity into master table with smart category
           const { data: created } = await supabase
             .from("amenity_master")
             .insert({
@@ -170,7 +201,6 @@ export async function importAirbnbPropertyAction(
       }
 
       if (targetAmenityIds.length > 0) {
-        // Delete existing amenities & insert new ones
         await supabase.from("property_amenities").delete().eq("property_id", propertyId);
         const { error: insertAmenityError } = await supabase.from("property_amenities").insert(
           targetAmenityIds.map((amenityId) => ({
@@ -186,121 +216,171 @@ export async function importAirbnbPropertyAction(
       }
     }
 
-    // 8. Store High-Res Photos to R2 & DB (with automatic fallback to Airbnb CDN publicUrl if R2 is not configured)
+    // 8. Bounded Photos Import (Max 20 photos, worker-pool concurrency 3, AbortController timeouts)
     let importedPhotosCount = 0;
     if (extracted.photos && extracted.photos.length > 0) {
-      const photosToProcess = extracted.photos;
+      const photosToProcess = extracted.photos.slice(0, MAX_AIRBNB_PHOTOS);
 
-      await Promise.allSettled(
-        photosToProcess.map(async (photo, idx) => {
+      await runWithConcurrency(photosToProcess, PHOTO_CONCURRENCY_LIMIT, async (photo, idx) => {
+        try {
+          const isCover = idx === 0;
+          const filename = `airbnb_${extracted.roomId}_${idx + 1}.jpg`;
+          const defaultObjectKey = `airbnb/${extracted.roomId}/${randomUUID()}-${filename}`;
+
+          let bucket: import("@/lib/storage/r2").Bucket = BUCKETS.propertyImages;
+          let objectKey = defaultObjectKey;
+          let publicUrl: string | null = photo.url;
+          let mimeType = "image/jpeg";
+          let sizeBytes = 100000;
+          let checksum = randomUUID().replace(/-/g, "");
+          let thumbnailKey: string | null = null;
+          let metadata: Record<string, unknown> = {};
+
           try {
-            const isCover = idx === 0;
-            const filename = `airbnb_${extracted.roomId}_${idx + 1}.jpg`;
-            const defaultObjectKey = `airbnb/${extracted.roomId}/${randomUUID()}-${filename}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            let bucket: import("@/lib/storage/r2").Bucket = BUCKETS.propertyImages;
-            let objectKey = defaultObjectKey;
-            let publicUrl: string | null = photo.url;
-            let mimeType = "image/jpeg";
-            let sizeBytes = 100000;
-            let checksum = randomUUID().replace(/-/g, "");
-            let thumbnailKey: string | null = null;
-            let metadata: Record<string, unknown> = {};
-
-            // Try uploading binary to Cloudflare R2 if available
+            let res: Response;
             try {
-              const res = await fetch(photo.url, {
+              res = await fetch(photo.url, {
                 headers: {
                   "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                 },
+                signal: controller.signal,
               });
-
-              if (res.ok) {
-                const arrayBuffer = await res.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
-                if (buffer.length >= 5000) {
-                  checksum = computeChecksum(buffer);
-                  sizeBytes = buffer.length;
-
-                  const uploaded = await uploadFile({
-                    bucket: BUCKETS.propertyImages,
-                    key: `${session.userId}/${randomUUID()}-${filename}`,
-                    body: buffer,
-                    contentType: "image/jpeg",
-                    makePublic: true,
-                  });
-
-                  bucket = uploaded.bucket;
-                  objectKey = uploaded.key;
-                  publicUrl = uploaded.publicUrl || photo.url;
-                  mimeType = uploaded.contentType;
-                  thumbnailKey = uploaded.thumbnailKey;
-                  metadata = uploaded.metadata;
-                }
-              }
-            } catch (r2Err) {
-              console.warn(`R2 upload skipped for photo ${idx + 1}, storing direct public URL:`, r2Err);
+            } finally {
+              clearTimeout(timeoutId);
             }
 
-            const fileRow = await createFileRecord({
-              bucket,
-              objectKey,
-              originalName: filename,
-              mimeType,
-              sizeBytes,
-              checksum,
-              thumbnailKey,
-              folderPath: `${propertyId}/gallery`,
-              isPublic: true,
-              publicUrl,
-              ownerType: "property",
-              ownerId: propertyId,
-              uploadedBy: session.userId,
-              metadata,
-            });
+            if (res.ok) {
+              const contentType = res.headers.get("content-type") || "";
+              const contentLength = Number(res.headers.get("content-length") || 0);
 
-            const { count: existingCount } = await supabase
+              if (contentType && !contentType.includes("image/")) {
+                console.warn(`Photo ${idx + 1} skipped: invalid content type ${contentType}`);
+                return;
+              }
+
+              if (contentLength > MAX_IMAGE_SIZE_BYTES) {
+                console.warn(`Photo ${idx + 1} skipped: oversized image (${contentLength} bytes)`);
+                return;
+              }
+
+              let buffer: Buffer | null = null;
+
+              // If Content-Length is missing or zero, read streaming body chunk by chunk to prevent allocating > 10MB
+              if (res.body && typeof res.body.getReader === "function") {
+                const reader = res.body.getReader();
+                const chunks: Uint8Array[] = [];
+                let totalBytes = 0;
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  if (value) {
+                    totalBytes += value.length;
+                    if (totalBytes > MAX_IMAGE_SIZE_BYTES) {
+                      await reader.cancel();
+                      console.warn(`Photo ${idx + 1} skipped: streaming body exceeded ${MAX_IMAGE_SIZE_BYTES} bytes`);
+                      return;
+                    }
+                    chunks.push(value);
+                  }
+                }
+                const combined = new Uint8Array(totalBytes);
+                let offset = 0;
+                for (const chunk of chunks) {
+                  combined.set(chunk, offset);
+                  offset += chunk.length;
+                }
+                buffer = Buffer.from(combined);
+              } else {
+                const arrayBuffer = await res.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
+              }
+
+              if (buffer && buffer.length <= MAX_IMAGE_SIZE_BYTES && buffer.length >= 5000) {
+                checksum = computeChecksum(buffer);
+                sizeBytes = buffer.length;
+
+                const uploaded = await uploadFile({
+                  bucket: BUCKETS.propertyImages,
+                  key: `${session.userId}/${randomUUID()}-${filename}`,
+                  body: buffer,
+                  contentType: "image/jpeg",
+                  makePublic: true,
+                });
+
+                bucket = uploaded.bucket;
+                objectKey = uploaded.key;
+                publicUrl = uploaded.publicUrl || photo.url;
+                mimeType = uploaded.contentType;
+                thumbnailKey = uploaded.thumbnailKey;
+                metadata = uploaded.metadata;
+              }
+            }
+          } catch {
+            console.warn(`R2 upload fallback for photo index ${idx + 1}`);
+          }
+
+          const fileRow = await createFileRecord({
+            bucket,
+            objectKey,
+            originalName: filename,
+            mimeType,
+            sizeBytes,
+            checksum,
+            thumbnailKey,
+            folderPath: `${propertyId}/gallery`,
+            isPublic: true,
+            publicUrl,
+            ownerType: "property",
+            ownerId: propertyId,
+            uploadedBy: session.userId,
+            metadata,
+          });
+
+          const { count: existingCount } = await supabase
+            .from("property_photos")
+            .select("id", { count: "exact", head: true })
+            .eq("property_id", propertyId)
+            .is("deleted_at", null);
+
+          const { data: newPhotoId, error: rpcError } = await supabase.rpc("create_property_photo", {
+            p_property_id: propertyId,
+            p_file_id: fileRow.id,
+            p_sort_order: (existingCount || 0) + idx,
+          });
+
+          if (rpcError) {
+            console.error(`create_property_photo RPC error for photo ${idx + 1}:`, rpcError.message);
+          } else if (newPhotoId) {
+            const spaceTag = (photo as { spaceTag?: string }).spaceTag || (idx === 0 ? "Exterior" : "Living Room");
+            await supabase
               .from("property_photos")
-              .select("id", { count: "exact", head: true })
-              .eq("property_id", propertyId)
-              .is("deleted_at", null);
+              .update({
+                tags: [spaceTag],
+                caption: photo.caption || (isCover ? "Cover Image" : `${spaceTag} ${idx + 1}`),
+                ...(isCover ? { is_cover: true } : {}),
+                updated_by: session.userId,
+              })
+              .eq("id", newPhotoId as string);
 
-            const { data: newPhotoId, error: rpcError } = await supabase.rpc("create_property_photo", {
-              p_property_id: propertyId,
-              p_file_id: fileRow.id,
-              p_sort_order: (existingCount || 0) + idx,
-            });
-
-            if (rpcError) {
-              console.error(`create_property_photo RPC error for photo ${idx + 1}:`, rpcError);
-            } else if (newPhotoId) {
-              const spaceTag = (photo as any).spaceTag || (idx === 0 ? "Exterior" : "Living Room");
+            if (isCover) {
               await supabase
                 .from("property_photos")
-                .update({
-                  tags: [spaceTag],
-                  caption: photo.caption || (isCover ? "Cover Image" : `${spaceTag} ${idx + 1}`),
-                  ...(isCover ? { is_cover: true } : {}),
-                  updated_by: session.userId,
-                })
-                .eq("id", newPhotoId as string);
-
-              if (isCover) {
-                await supabase
-                  .from("property_photos")
-                  .update({ is_cover: false, updated_by: session.userId })
-                  .eq("property_id", propertyId)
-                  .neq("id", newPhotoId as string);
-              }
-
-              importedPhotosCount++;
+                .update({ is_cover: false, updated_by: session.userId })
+                .eq("property_id", propertyId)
+                .neq("id", newPhotoId as string);
             }
-          } catch (imgErr) {
-            console.warn(`Failed to import Airbnb photo ${idx + 1}:`, imgErr);
+
+            importedPhotosCount++;
           }
-        })
-      );
+        } catch {
+          console.warn(`Failed to import Airbnb photo index ${idx + 1}`);
+        }
+      });
     }
 
     revalidate(propertyId);
@@ -312,7 +392,7 @@ export async function importAirbnbPropertyAction(
       importedAmenitiesCount,
     };
   } catch (err: unknown) {
-    console.error("Error importing Airbnb listing:", err);
+    console.error("Error importing Airbnb listing:", err instanceof Error ? err.message : String(err));
     return {
       success: false,
       error: err instanceof Error ? err.message : "Failed to import property from Airbnb link.",

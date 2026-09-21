@@ -107,33 +107,6 @@ export function generateICalFeed(propertyName: string, blocks: CalendarBlock[]):
 export async function getPropertyCalendarBlocks(propertyId: string): Promise<CalendarBlock[]> {
   const supabase = createAdminClient();
 
-  // Non-blocking background check for stale iCal feeds (>15 mins)
-  (async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: feeds } = await (supabase as any)
-        .from("property_integrations")
-        .select("last_synced_at, listing_url")
-        .eq("property_id", propertyId)
-        .is("deleted_at", null);
-
-      if (feeds && feeds.length > 0) {
-        const nowMs = Date.now();
-        const STALE_MS = 15 * 60 * 1000;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const hasStaleFeed = feeds.some((f: any) => {
-          if (!f.listing_url || !f.listing_url.startsWith("http")) return false;
-          if (!f.last_synced_at) return true;
-          return nowMs - new Date(f.last_synced_at).getTime() > STALE_MS;
-        });
-
-        if (hasStaleFeed) {
-          syncAllICalFeeds(propertyId).catch((e) => console.error("Background iCal sync error:", e));
-        }
-      }
-    } catch {}
-  })();
-
   // 1. Primary Source of Truth: Dedicated property_availability_blocks SQL table in Supabase
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -241,14 +214,14 @@ export async function savePropertyCalendarBlocks(propertyId: string, blocks: Cal
   let isSaved = false;
   if (existing && existing.length > 0) {
     const primaryId = existing[0].id;
+    const updatePayload: Record<string, unknown> = {
+      rule_text: ruleText,
+      deleted_at: null,
+      ...(userId ? { updated_by: userId } : {}),
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateErr } = await supabase
-      .from("property_rules")
-      .update({
-        rule_text: ruleText,
-        deleted_at: null,
-        ...(userId ? { updated_by: userId } : {}),
-      } as any)
+    const { error: updateErr } = await (supabase.from("property_rules") as any)
+      .update(updatePayload)
       .eq("id", primaryId);
 
     if (existing.length > 1) {
@@ -538,18 +511,33 @@ export async function saveAirbnbICalUrl(propertyId: string, url: string): Promis
  */
 export async function syncAllICalFeeds(
   propertyId: string,
-  forceSync = false
+  forceSync = false,
+  parentSignal?: AbortSignal
 ): Promise<{
   success: boolean;
   totalSyncedEvents: number;
   syncedFeedsCount: number;
   message: string;
 }> {
+  const { isBackgroundJobAllowed } = await import("@/lib/env-guard");
+  if (!isBackgroundJobAllowed("iCal Multi-Channel Sync")) {
+    return {
+      success: true,
+      totalSyncedEvents: 0,
+      syncedFeedsCount: 0,
+      message: "Sync skipped: Execution in Vercel Preview or disabled environment.",
+    };
+  }
+
   try {
-    const feeds = await getICalChannelFeeds(propertyId);
-    if (feeds.length === 0) {
+    const rawFeeds = await getICalChannelFeeds(propertyId);
+    if (rawFeeds.length === 0) {
       return { success: true, totalSyncedEvents: 0, syncedFeedsCount: 0, message: "No external calendar feeds configured." };
     }
+
+    // Requirement: Enforce maximum of 5 feeds per property
+    const MAX_FEEDS_PER_PROPERTY = 5;
+    const feeds = rawFeeds.slice(0, MAX_FEEDS_PER_PROPERTY);
 
     const existingBlocks = await getPropertyCalendarBlocks(propertyId);
     const manualAndGuestBlocks = existingBlocks.filter(
@@ -568,18 +556,25 @@ export async function syncAllICalFeeds(
     // 15-minute smart cache cooldown (900,000 ms) unless forceSync is explicitly requested
     const SYNC_COOLDOWN_MS = 15 * 60 * 1000;
     let feedsAttempted = 0;
+    let successfullySyncedFeedsCount = 0;
 
     for (const feed of feeds) {
+      if (parentSignal?.aborted) {
+        console.warn("[iCal Sync] Execution aborted by parent AbortSignal deadline.");
+        break;
+      }
+
       const lastSyncedMs = feed.lastSyncedAt ? new Date(feed.lastSyncedAt).getTime() : 0;
       const isWithinCooldown = !forceSync && lastSyncedMs > 0 && nowMs - lastSyncedMs < SYNC_COOLDOWN_MS;
 
       if (isWithinCooldown) {
-        // Skip external HTTP request, serve cached dates from property_availability_blocks DB
+        // Serve cached dates from property_availability_blocks DB
         updatedFeeds.push(feed);
         const retainedForFeed = existingChannelBlocks.filter(
           (b) => b.channelName?.toLowerCase() === feed.channelName.toLowerCase() || b.id.includes(feed.id)
         );
         newChannelBlocks.push(...retainedForFeed);
+        successfullySyncedFeedsCount++;
         continue;
       }
 
@@ -587,60 +582,83 @@ export async function syncAllICalFeeds(
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const FETCH_TIMEOUT_MS = 5000;
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-        const res = await fetch(feed.icalUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            "Accept": "text/calendar, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "max-age=900",
-          },
-          signal: controller.signal,
-          next: { revalidate: 900 },
-        });
-        clearTimeout(timeoutId);
+        const handleParentAbort = () => {
+          controller.abort();
+        };
 
-        if (res.ok) {
-          const icsText = await res.text();
-          const parsedEvents = parseICalFeed(icsText);
-
-          if (parsedEvents.length > 0) {
-            parsedEvents.forEach((evt) => {
-              newChannelBlocks.push({
-                id: `ch_${feed.id}_${evt.uid.replace(/[^a-zA-Z0-9]/g, "")}`,
-                propertyId,
-                startDate: evt.startDate,
-                endDate: evt.endDate,
-                reason: "channel_sync",
-                channelName: feed.channelName,
-                notes: `${feed.channelName}: ${evt.summary || "Reservation"}`,
-              });
-            });
+        if (parentSignal) {
+          if (parentSignal.aborted) {
+            controller.abort();
           } else {
-            // Retain previous blocks if 0 events returned (e.g. rate limit or empty response)
+            parentSignal.addEventListener("abort", handleParentAbort, { once: true });
+          }
+        }
+
+        try {
+          const res = await fetch(feed.icalUrl, {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+              Accept: "text/calendar, text/plain, */*",
+              "Accept-Language": "en-US,en;q=0.9",
+              "Cache-Control": "max-age=900",
+            },
+            signal: controller.signal,
+            next: { revalidate: 900 },
+          });
+
+          if (res.ok) {
+            const icsText = await res.text();
+            const parsedEvents = parseICalFeed(icsText);
+
+            if (parsedEvents.length > 0) {
+              parsedEvents.forEach((evt) => {
+                newChannelBlocks.push({
+                  id: `ch_${feed.id}_${evt.uid.replace(/[^a-zA-Z0-9]/g, "")}`,
+                  propertyId,
+                  startDate: evt.startDate,
+                  endDate: evt.endDate,
+                  reason: "channel_sync",
+                  channelName: feed.channelName,
+                  notes: `${feed.channelName}: ${evt.summary || "Reservation"}`,
+                });
+              });
+            } else {
+              // Retain previous blocks if 0 events returned (e.g. empty feed)
+              const retainedForFeed = existingChannelBlocks.filter(
+                (b) => b.channelName?.toLowerCase() === feed.channelName.toLowerCase()
+              );
+              newChannelBlocks.push(...retainedForFeed);
+            }
+
+            updatedFeeds.push({ ...feed, lastSyncedAt: nowIso });
+            successfullySyncedFeedsCount++;
+          } else {
+            // HTTP error -> retain existing blocks, do NOT count as successfully synced feed
             const retainedForFeed = existingChannelBlocks.filter(
               (b) => b.channelName?.toLowerCase() === feed.channelName.toLowerCase()
             );
             newChannelBlocks.push(...retainedForFeed);
+            updatedFeeds.push(feed);
           }
-
-          updatedFeeds.push({ ...feed, lastSyncedAt: nowIso });
-        } else {
-          // HTTP error -> retain existing blocks to prevent losing reservations
+        } catch {
+          // Timeout or network error -> retain existing blocks, do NOT count as successfully synced feed
           const retainedForFeed = existingChannelBlocks.filter(
             (b) => b.channelName?.toLowerCase() === feed.channelName.toLowerCase()
           );
           newChannelBlocks.push(...retainedForFeed);
           updatedFeeds.push(feed);
+        } finally {
+          clearTimeout(timeoutId);
+          if (parentSignal) {
+            parentSignal.removeEventListener("abort", handleParentAbort);
+          }
         }
       } catch {
-        // Timeout or network error -> retain existing blocks
-        const retainedForFeed = existingChannelBlocks.filter(
-          (b) => b.channelName?.toLowerCase() === feed.channelName.toLowerCase()
-        );
-        newChannelBlocks.push(...retainedForFeed);
-        updatedFeeds.push(feed);
+        // Outer safety catch for unexpected feed processing errors
       }
     }
 
@@ -651,8 +669,8 @@ export async function syncAllICalFeeds(
     return {
       success: true,
       totalSyncedEvents: newChannelBlocks.length,
-      syncedFeedsCount: updatedFeeds.length,
-      message: `Synced ${newChannelBlocks.length} reservation dates across ${updatedFeeds.length} channels (${feedsAttempted} freshly checked)!`,
+      syncedFeedsCount: successfullySyncedFeedsCount,
+      message: `Synced ${newChannelBlocks.length} reservation dates across ${successfullySyncedFeedsCount} channels (${feedsAttempted} freshly checked)!`,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error during multi-channel iCal sync";
