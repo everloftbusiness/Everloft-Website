@@ -197,7 +197,11 @@ export async function importBookingsAction(
       importedCount++;
     } catch (err) {
       // Sanitized log without guest PII
-      console.error(`Import error on line index ${r.rawLineIndex}:`, err instanceof Error ? err.message : 'Validation/Save failed');
+      console.error(
+        'Import error on line index:',
+        r.rawLineIndex,
+        err instanceof Error ? err.message : 'Validation/Save failed'
+      );
       errors.push(`Row ${r.rawLineIndex}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
