@@ -1,34 +1,90 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getDashboardSession } from '@/lib/dashboard/session';
 import { getBookingOptions, saveBooking, finalizeBooking, recordPayment } from '../services/bookings.service';
 import { bookingSchema, paymentSchema } from '../schemas/booking.schema';
 import type { ParsedImportRow } from '../utils/csv-parser';
 import type { FinancialLine } from '../types/booking.types';
 
+const MAX_IMPORT_ROWS = 500;
+
 export async function importBookingsAction(
   rows: ParsedImportRow[],
   defaultPropertyId: string
 ) {
+  // 1. Authorization Guard
+  const session = await getDashboardSession();
+  if (!session) {
+    throw new Error('Unauthorized: Authentication required.');
+  }
+  if (!session.permissions.includes('manage_bookings') && session.role !== 'super_admin' && session.role !== 'finance_admin' && session.role !== 'operations_manager') {
+    throw new Error('Forbidden: Insufficient permissions (manage_bookings required).');
+  }
+
+  // 2. Row Boundary Guard
   if (!rows || rows.length === 0) {
     throw new Error('No valid rows provided for import.');
+  }
+  if (rows.length > MAX_IMPORT_ROWS) {
+    throw new Error(`Import payload exceeds maximum limit of ${MAX_IMPORT_ROWS} rows per request (received ${rows.length} rows).`);
   }
 
   const properties = await getBookingOptions();
   let importedCount = 0;
   const errors: string[] = [];
 
-  // Build lookup set of existing active bookings to prevent duplicate stay creation
+  // Pre-determine target property ID for each row to build precise query filter
+  const rowPropertyIds: string[] = [];
+  for (const r of rows) {
+    if (!r.isValid) continue;
+    const matchedProp = properties.find(
+      (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
+    ) || properties[0];
+    const targetPropertyId = matchedProp ? matchedProp.id : defaultPropertyId;
+    rowPropertyIds.push(targetPropertyId);
+  }
+
+  // Deduplicate property IDs in batch
+  const batchPropertyIds = Array.from(new Set(rowPropertyIds.filter(Boolean)));
+
+  // 3. Scoped duplicate check query (restricted by date window AND batch property IDs)
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const admin = createAdminClient();
-  const { data: existingBookings } = await (admin as any)
-    .from('bookings')
-    .select('property_id, guest_name, check_in_date')
-    .is('deleted_at', null);
+
+  const validCheckInDates = rows.filter((r) => r.isValid && r.checkInDate).map((r) => r.checkInDate);
+  const minDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a < b ? a : b)) : null;
+  const maxDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a > b ? a : b)) : null;
+
+  type BookingLookupRow = { property_id: string; guest_name: string | null; check_in_date: string };
+  const existingBookings: BookingLookupRow[] = [];
+
+  if (batchPropertyIds.length > 0) {
+    // Chunk property IDs in batches of 50 if necessary
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < batchPropertyIds.length; i += CHUNK_SIZE) {
+      const chunk = batchPropertyIds.slice(i, i + CHUNK_SIZE);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = (admin as any)
+        .from('bookings')
+        .select('property_id, guest_name, check_in_date')
+        .is('deleted_at', null)
+        .in('property_id', chunk);
+
+      if (minDate && maxDate) {
+        query = query.gte('check_in_date', minDate).lte('check_in_date', maxDate);
+      }
+
+      const { data: chunkData } = await query;
+      if (chunkData && Array.isArray(chunkData)) {
+        existingBookings.push(...(chunkData as BookingLookupRow[]));
+      }
+    }
+  }
 
   const existingSet = new Set(
-    (existingBookings ?? []).map(
-      (b: any) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
+    existingBookings.map(
+      (b) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
     )
   );
 
@@ -40,7 +96,6 @@ export async function importBookingsAction(
     if (!r.isValid) continue;
 
     try {
-      // Match Property by unit label or use defaultPropertyId
       const matchedProp = properties.find(
         (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
       ) || properties[0];
@@ -49,7 +104,6 @@ export async function importBookingsAction(
 
       const lookupKey = `${targetPropertyId}_${r.guestName.trim().toLowerCase()}_${r.checkInDate}`;
       if (existingSet.has(lookupKey)) {
-        // Skip duplicate stay already registered in database
         continue;
       }
       existingSet.add(lookupKey);
@@ -60,7 +114,6 @@ export async function importBookingsAction(
 
       const lines: FinancialLine[] = [];
 
-      // Guest Lines
       if (r.guestBase > 0) {
         lines.push({ side: 'guest', category: 'accommodation', label: 'Base Fare', amount: r.guestBase.toFixed(2) });
       }
@@ -74,7 +127,6 @@ export async function importBookingsAction(
         lines.push({ side: 'guest', category: 'accommodation', label: 'Total Charge', amount: r.guestTotal.toFixed(2) });
       }
 
-      // Host Lines
       if (r.hostBase > 0) {
         lines.push({ side: 'host', category: 'accommodation', label: 'Host Base Payout', amount: r.hostBase.toFixed(2) });
       }
@@ -115,7 +167,7 @@ export async function importBookingsAction(
         notes: r.note ? `${r.note} (Imported)` : 'Imported from Google Sheet',
         lines: lines.map((l) => ({
           side: l.side,
-          category: l.category as any,
+          category: l.category as 'accommodation' | 'tax' | 'cleaning_fee' | 'security_deposit' | 'host_service_fee' | 'guest_service_fee' | 'rate_adjustment' | 'additional_income' | 'custom',
           label: l.label,
           amount: l.amount,
         })),
@@ -124,7 +176,6 @@ export async function importBookingsAction(
       const validatedInput = bookingSchema.parse(bookingPayload);
       const bookingId = await saveBooking(validatedInput);
 
-      // Record Bank Payment if Credited Bank Info exists
       if (r.amountCreditedBank) {
         const paymentAmount = isDirect ? r.guestTotal : r.hostTotal;
         const paymentPayload = {
@@ -142,12 +193,12 @@ export async function importBookingsAction(
         await recordPayment(validatedPayment);
       }
 
-      // Finalize financial breakdown
       await finalizeBooking(bookingId);
       importedCount++;
     } catch (err) {
-      console.error(`Row ${r.rawLineIndex} import failed:`, err);
-      errors.push(`Row ${r.rawLineIndex} (${r.guestName}): ${err instanceof Error ? err.message : String(err)}`);
+      // Sanitized log without guest PII
+      console.error(`Import error on line index ${r.rawLineIndex}:`, err instanceof Error ? err.message : 'Validation/Save failed');
+      errors.push(`Row ${r.rawLineIndex}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -156,6 +207,14 @@ export async function importBookingsAction(
 }
 
 export async function syncPinnacleSheetAction(defaultPropertyId: string) {
+  const session = await getDashboardSession();
+  if (!session) {
+    throw new Error('Unauthorized: Authentication required.');
+  }
+  if (!session.permissions.includes('manage_bookings') && session.role !== 'super_admin' && session.role !== 'finance_admin') {
+    throw new Error('Forbidden: Insufficient permissions.');
+  }
+
   const { fetchSheetData } = await import('@/lib/dashboard/sheets');
   const { parseGoogleSheetCsv } = await import('../utils/csv-parser');
 
@@ -165,7 +224,6 @@ export async function syncPinnacleSheetAction(defaultPropertyId: string) {
       return { success: false, message: 'No rows found in Pinnacle Income tab.' };
     }
 
-    // Convert raw JSON rows to CSV text for robust header detection & parsing
     const keys = Object.keys(rawRows[0] || {});
     const csvLines = [
       keys.join(','),
@@ -199,3 +257,170 @@ export async function syncPinnacleSheetAction(defaultPropertyId: string) {
   }
 }
 
+export type ImportRowAnalysis = {
+  rawLineIndex: number;
+  guestName: string;
+  roomLabel: string;
+  checkInDate: string;
+  checkOutDate: string;
+  propertyId: string;
+  propertyName: string;
+  status: 'new' | 'duplicate' | 'invalid';
+  reason?: string;
+  guestTotal: number;
+  hostTotal: number;
+};
+
+export async function analyzeImportRowsAction(
+  rows: ParsedImportRow[],
+  defaultPropertyId: string
+) {
+  const session = await getDashboardSession();
+  if (!session) {
+    throw new Error('Unauthorized: Authentication required.');
+  }
+  if (!session.permissions.includes('manage_bookings') && session.role !== 'super_admin' && session.role !== 'finance_admin' && session.role !== 'operations_manager') {
+    throw new Error('Forbidden: Insufficient permissions.');
+  }
+
+  if (!rows || rows.length === 0) {
+    return {
+      success: true,
+      total: 0,
+      newCount: 0,
+      duplicateCount: 0,
+      invalidCount: 0,
+      analyzedRows: [],
+    };
+  }
+
+  const properties = await getBookingOptions();
+
+  const rowPropertyMap = new Map<number, { id: string; name: string }>();
+  const rowPropertyIds: string[] = [];
+
+  rows.forEach((r) => {
+    if (!r.isValid) return;
+    const matchedProp = properties.find(
+      (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
+    ) || properties[0];
+    const targetProp = matchedProp ? { id: matchedProp.id, name: matchedProp.name } : { id: defaultPropertyId, name: 'Default Property' };
+    rowPropertyMap.set(r.rawLineIndex, targetProp);
+    rowPropertyIds.push(targetProp.id);
+  });
+
+  const batchPropertyIds = Array.from(new Set(rowPropertyIds.filter(Boolean)));
+  const validCheckInDates = rows.filter((r) => r.isValid && r.checkInDate).map((r) => r.checkInDate);
+  const minDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a < b ? a : b)) : null;
+  const maxDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a > b ? a : b)) : null;
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+
+  type BookingLookupRow = { property_id: string; guest_name: string | null; check_in_date: string };
+  const existingBookings: BookingLookupRow[] = [];
+
+  if (batchPropertyIds.length > 0) {
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < batchPropertyIds.length; i += CHUNK_SIZE) {
+      const chunk = batchPropertyIds.slice(i, i + CHUNK_SIZE);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = (admin as any)
+        .from('bookings')
+        .select('property_id, guest_name, check_in_date')
+        .is('deleted_at', null)
+        .in('property_id', chunk);
+
+      if (minDate && maxDate) {
+        query = query.gte('check_in_date', minDate).lte('check_in_date', maxDate);
+      }
+
+      const { data: chunkData } = await query;
+      if (chunkData && Array.isArray(chunkData)) {
+        existingBookings.push(...(chunkData as BookingLookupRow[]));
+      }
+    }
+  }
+
+  const existingSet = new Set(
+    existingBookings.map(
+      (b) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
+    )
+  );
+
+  const seenInBatchSet = new Set<string>();
+  const analyzedRows: ImportRowAnalysis[] = [];
+  let newCount = 0;
+  let duplicateCount = 0;
+  let invalidCount = 0;
+
+  for (const r of rows) {
+    const propInfo = rowPropertyMap.get(r.rawLineIndex) || { id: defaultPropertyId, name: 'Default Property' };
+
+    if (!r.isValid) {
+      invalidCount++;
+      analyzedRows.push({
+        rawLineIndex: r.rawLineIndex,
+        guestName: r.guestName || 'Unknown Guest',
+        roomLabel: r.roomLabel || '—',
+        checkInDate: r.checkInDate || '—',
+        checkOutDate: r.checkOutDate || '—',
+        propertyId: propInfo.id,
+        propertyName: propInfo.name,
+        status: 'invalid',
+        reason: r.validationError || 'Invalid formatting or missing mandatory fields',
+        guestTotal: r.guestTotal || 0,
+        hostTotal: r.hostTotal || 0,
+      });
+      continue;
+    }
+
+    const key = `${propInfo.id}_${r.guestName.trim().toLowerCase()}_${r.checkInDate}`;
+    const isDbDuplicate = existingSet.has(key);
+    const isBatchDuplicate = seenInBatchSet.has(key);
+
+    if (isDbDuplicate || isBatchDuplicate) {
+      duplicateCount++;
+      analyzedRows.push({
+        rawLineIndex: r.rawLineIndex,
+        guestName: r.guestName,
+        roomLabel: r.roomLabel,
+        checkInDate: r.checkInDate,
+        checkOutDate: r.checkOutDate,
+        propertyId: propInfo.id,
+        propertyName: propInfo.name,
+        status: 'duplicate',
+        reason: isDbDuplicate
+          ? `Existing reservation found in database for ${r.guestName} on ${r.checkInDate}`
+          : `Duplicate row within this import file for ${r.guestName} on ${r.checkInDate}`,
+        guestTotal: r.guestTotal,
+        hostTotal: r.hostTotal,
+      });
+    } else {
+      seenInBatchSet.add(key);
+      newCount++;
+      analyzedRows.push({
+        rawLineIndex: r.rawLineIndex,
+        guestName: r.guestName,
+        roomLabel: r.roomLabel,
+        checkInDate: r.checkInDate,
+        checkOutDate: r.checkOutDate,
+        propertyId: propInfo.id,
+        propertyName: propInfo.name,
+        status: 'new',
+        reason: 'Ready to create new booking',
+        guestTotal: r.guestTotal,
+        hostTotal: r.hostTotal,
+      });
+    }
+  }
+
+  return {
+    success: true,
+    total: rows.length,
+    newCount,
+    duplicateCount,
+    invalidCount,
+    analyzedRows,
+  };
+}

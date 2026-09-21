@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import {
   Search,
   SlidersHorizontal,
-  Download,
   FileSpreadsheet,
   Plus,
   Eye,
@@ -25,7 +24,6 @@ import {
   Receipt,
   ArrowUpDown,
   Filter,
-  RefreshCw,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -176,7 +174,7 @@ export function BookingRegister({
   function handleDeleteAllBookings() {
     startDeleteAllTransition(async () => {
       try {
-        await deleteAllBookingsAction();
+        await deleteAllBookingsAction('DELETE_ALL_BOOKINGS');
         toast.success('All bookings permanently deleted');
         setConfirmDeleteAllOpen(false);
         setDrawerRow(null);
