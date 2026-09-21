@@ -65,6 +65,9 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run Vitest Unit Tests
+        env:
+          VERCEL_ENV: ""
+          DISABLE_BACKGROUND_JOBS: ""
         run: npm test
 
       - name: Run Next.js Build Check
