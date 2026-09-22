@@ -1,4 +1,9 @@
 import "server-only";
+import { fetchTrustedUrl } from "@/lib/security/trusted-fetch";
+
+const AIRBNB_HOSTS = new Set([
+  "abnb.me", "www.abnb.me", "airbnb.com", "www.airbnb.com", "airbnb.co.in", "www.airbnb.co.in",
+]);
 
 export type ExtractedAirbnbProperty = {
   url: string;
@@ -52,7 +57,7 @@ export function extractAirbnbRoomId(urlInput: string): string | null {
 function sanitizePropertyName(rawName: string): string {
   if (!rawName || typeof rawName !== "string") return "";
 
-  let cleaned = rawName
+  const cleaned = rawName
     // Strip 10-digit Indian mobile numbers and international numbers
     .replace(/\b\d{10}\b/g, "")
     .replace(/\+?91[\s-]?\d{10}/g, "")
@@ -87,7 +92,7 @@ function sanitizePropertyName(rawName: string): string {
  * Normalizes verbose Airbnb amenity titles into clean Everloft canonical names, slugs and smart categories.
  */
 export function normalizeAmenityName(rawName: string): { name: string; slug: string; category: string } {
-  let name = rawName.trim();
+  const name = rawName.trim();
   const lower = name.toLowerCase();
 
   if (/generator|diesel generator/i.test(lower)) return { name: "Generator", slug: "generator", category: "smart_home" };
@@ -160,7 +165,7 @@ export function normalizeAmenityName(rawName: string): { name: string; slug: str
  * Normalizes Airbnb photo URLs to high resolution (1200px width).
  */
 function normalizePhotoUrl(rawUrl: string): string {
-  let url = rawUrl.replace(/\\u0026/g, "&").replace(/&amp;/g, "&");
+  const url = rawUrl.replace(/\\u0026/g, "&").replace(/&amp;/g, "&");
   if (url.includes("a0.muscache.com")) {
     const baseUrl = url.split("?")[0];
     return `${baseUrl}?im_w=1200`;
@@ -225,20 +230,29 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
     targetUrl = `https://${targetUrl}`;
   }
 
+  let inputUrl: URL;
+  try {
+    inputUrl = new URL(targetUrl);
+  } catch {
+    throw new Error("Invalid Airbnb listing URL.");
+  }
+  if (inputUrl.protocol !== "https:" || !AIRBNB_HOSTS.has(inputUrl.hostname.toLowerCase())) {
+    throw new Error("Please provide an HTTPS Airbnb listing link.");
+  }
+
   let roomId = extractAirbnbRoomId(targetUrl);
 
   // Follow redirect if needed (for short URLs like abnb.me)
-  if (!roomId || targetUrl.includes("abnb.me")) {
+  if (inputUrl.hostname === "abnb.me" || inputUrl.hostname === "www.abnb.me") {
     try {
-      const res = await fetch(targetUrl, {
-        redirect: "follow",
+      const { url: resolvedUrl } = await fetchTrustedUrl(targetUrl, AIRBNB_HOSTS, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
           "Accept-Language": "en-US,en;q=0.9",
         },
       });
-      targetUrl = res.url;
+      targetUrl = resolvedUrl;
       roomId = extractAirbnbRoomId(targetUrl);
     } catch {
       // ignore
@@ -251,7 +265,7 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
 
   const cleanFetchUrl = `https://www.airbnb.co.in/rooms/${roomId}?locale=en&currency=INR`;
 
-  const response = await fetch(cleanFetchUrl, {
+  const { response } = await fetchTrustedUrl(cleanFetchUrl, AIRBNB_HOSTS, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -292,7 +306,7 @@ export async function parseAirbnbListing(urlInput: string): Promise<ExtractedAir
   let latitude: number | undefined;
   let longitude: number | undefined;
   let nightlyPrice: number | undefined;
-  let currency = "INR";
+  const currency = "INR";
   let propertyType = "Apartment";
 
   const photosMap = new Map<string, { url: string; caption: string; spaceTag: string }>();

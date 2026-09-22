@@ -9,10 +9,12 @@ import { parseAirbnbListing, normalizeAmenityName } from "@/features/properties/
 import { uploadFile, computeChecksum, BUCKETS } from "@/lib/storage/r2";
 import { createFileRecord } from "@/lib/storage/file-service";
 import { randomUUID } from "crypto";
+import { fetchTrustedUrl, isTrustedHttpsUrl } from "@/lib/security/trusted-fetch";
 
 const MAX_AIRBNB_PHOTOS = 20;
 const PHOTO_CONCURRENCY_LIMIT = 3;
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB limit per photo
+const AIRBNB_IMAGE_HOSTS = new Set(["a0.muscache.com"]);
 
 function revalidate(propertyId: string) {
   revalidatePath(`/dashboard/properties/${propertyId}/setup`);
@@ -223,6 +225,10 @@ export async function importAirbnbPropertyAction(
 
       await runWithConcurrency(photosToProcess, PHOTO_CONCURRENCY_LIMIT, async (photo, idx) => {
         try {
+          if (!isTrustedHttpsUrl(photo.url, AIRBNB_IMAGE_HOSTS)) {
+            console.warn(`Photo ${idx + 1} skipped: untrusted image URL`);
+            return;
+          }
           const isCover = idx === 0;
           const filename = `airbnb_${extracted.roomId}_${idx + 1}.jpg`;
           const defaultObjectKey = `airbnb/${extracted.roomId}/${randomUUID()}-${filename}`;
@@ -242,13 +248,14 @@ export async function importAirbnbPropertyAction(
 
             let res: Response;
             try {
-              res = await fetch(photo.url, {
+              const result = await fetchTrustedUrl(photo.url, AIRBNB_IMAGE_HOSTS, {
                 headers: {
                   "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                 },
                 signal: controller.signal,
               });
+              res = result.response;
             } finally {
               clearTimeout(timeoutId);
             }
