@@ -1,7 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSignedDownloadUrl, type Bucket } from "@/lib/storage/r2";
 import type { Database } from "@/lib/supabase/types";
 import type {
   PropertyListItem,
@@ -15,13 +14,13 @@ import type {
 type PropertiesUpdate = Database["public"]["Tables"]["properties"]["Update"];
 
 /**
- * Guest-facing collection for the marketing site. The service role is used
+ * Guest-facing collection for the marketing site. The server-side secret key is used
  * deliberately because public visitors have no Supabase session and RLS keeps
  * operational property/file data private. This function selects only active
  * listings and the small set of display-safe fields below.
  */
 export async function listPublicActiveProperties(limit = 6): Promise<PublicPropertyListItem[]> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  if (!process.env.SUPABASE_SECRET_KEY) return [];
 
   const supabase = createAdminClient();
   const { data: activeStatus, error: statusError } = await supabase

@@ -87,7 +87,7 @@ def main():
     load_env(env_file)
 
     supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
-    supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_service_key = os.environ.get("SUPABASE_SECRET_KEY")
     r2_public_base = os.environ.get("R2_PUBLIC_BASE_URL", "https://pub-ceafc7e3144f4cf0be1a828c0ec9f85c.r2.dev")
 
     if not supabase_url or not supabase_service_key:

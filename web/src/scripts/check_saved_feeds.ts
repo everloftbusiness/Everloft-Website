@@ -4,9 +4,9 @@ import { getICalChannelFeeds, syncAllICalFeeds, getPropertyCalendarBlocks } from
 
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY;
 if (!supabaseServiceKey) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to run script.");
+  throw new Error("SUPABASE_SECRET_KEY is required to run script.");
 }
 
 async function main() {

@@ -5,7 +5,7 @@ import * as path from "path";
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseKey = process.env.SUPABASE_SECRET_KEY!;
 const DEFAULT_R2_PUBLIC_BASE_URL = "https://pub-ceafc7e3144f4cf0be1a828c0ec9f85c.r2.dev";
 
 async function main() {
