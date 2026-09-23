@@ -59,3 +59,13 @@ documented shared passwords must be considered exposed and rotated.
 - **Uncut Label Rendering**: Check-in labels (e.g. `"Owner Stay / Maintenance"`) use `whitespace-nowrap overflow-visible` so full text flows across stay dates without truncate clipping.
 - **Solid Check-Out Caps**: Check-out morning bars use 100% solid `#222222` color with 0% opacity drop and NO `"Out"` text.
 - **Label Priority**: `getChannelLabel(block)` evaluates `block.notes` ➔ `block.channelName` ➔ `block.reason` (e.g. `"Owner Stay / Maintenance"`).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -43,11 +43,14 @@ async function forwardToGoogleSheet(data: z.infer<typeof schema>) {
 
 export async function POST(request: Request) {
   const clientIp = getClientIp(request);
-  const rateLimit = checkRateLimit("contact_form", clientIp, { windowMs: 60_000, maxRequests: 5 });
+  const rateLimit = await checkRateLimit("contact_form", clientIp, { windowMs: 60_000, maxRequests: 5 });
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many contact submissions. Please wait a minute." },
-      { status: 429 }
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) },
+      }
     );
   }
 

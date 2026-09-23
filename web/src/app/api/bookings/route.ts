@@ -10,6 +10,17 @@ const DEMO_COUPONS: Record<string, number> = {
   WELCOME5: 0.05,
 };
 
+export function isPublicBookingEnabled(): boolean {
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production";
+
+  if (isProd) {
+    return process.env.ENABLE_PUBLIC_BOOKING === "true";
+  }
+  return process.env.ENABLE_PUBLIC_BOOKING !== "false";
+}
+
 const bookingSchema = z.object({
   propertySlug: z.string().trim().min(1).max(100),
   checkIn: z.string().trim(),
@@ -20,22 +31,32 @@ const bookingSchema = z.object({
   guestPhone: z.string().trim().min(6).max(25),
   specialRequests: z.string().trim().max(1000).optional(),
   couponCode: z.string().trim().max(30).optional(),
-  paymentProvider: z.enum(["razorpay", "demo"]).default("razorpay"),
   captchaToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
-  // 1. Rate Limiting (Max 5 booking creation attempts per minute per IP)
-  const clientIp = getClientIp(request);
-  const rateLimit = checkRateLimit("booking_create", clientIp, { windowMs: 60_000, maxRequests: 5 });
-  if (!rateLimit.allowed) {
+  // 1. Check Feature Flag: Enable Public Booking
+  if (!isPublicBookingEnabled()) {
     return NextResponse.json(
-      { error: "Too many booking requests. Please wait a minute before trying again." },
-      { status: 429 }
+      { error: "Public online booking creation is currently disabled. Please contact us or submit an inquiry." },
+      { status: 403 }
     );
   }
 
-  // 2. Parse Input & Validate Schema
+  // 2. Rate Limiting (Max 5 booking creation attempts per minute per IP)
+  const clientIp = getClientIp(request);
+  const rateLimit = await checkRateLimit("booking_create", clientIp, { windowMs: 60_000, maxRequests: 5 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many booking requests. Please wait a minute before trying again." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) },
+      }
+    );
+  }
+
+  // 3. Parse Input & Validate Schema
   let body: unknown;
   try {
     body = await request.json();
@@ -45,29 +66,20 @@ export async function POST(request: Request) {
 
   const parsed = bookingSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Validation failed" }, { status: 400 });
   }
   const data = parsed.data;
 
-  // 3. CAPTCHA Verification
-  const isCaptchaValid = await verifyCaptchaToken(data.captchaToken);
+  // 4. CAPTCHA Verification
+  const isCaptchaValid = await verifyCaptchaToken(data.captchaToken, {
+    action: "booking_request",
+    request,
+  });
   if (!isCaptchaValid) {
     return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
   }
 
-  // 4. Enforce Production Rules (No Demo Payment Provider in Production)
-  const isProduction =
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production";
-
-  if (isProduction && data.paymentProvider === "demo") {
-    return NextResponse.json(
-      { error: "Demo payment method is disabled in production environments." },
-      { status: 400 }
-    );
-  }
-
-  // 5. Fetch Property & Check Active Status & Guest Limits
+  // 5. Fetch Property & Check Guest Limits
   const property = await prisma.property.findUnique({ where: { slug: data.propertySlug } });
   if (!property) {
     return NextResponse.json({ error: "Property not found" }, { status: 404 });
@@ -98,7 +110,7 @@ export async function POST(request: Request) {
   const discount = Math.round(subtotal * discountPct);
   const total = subtotal + property.cleaningFee + serviceFee - discount;
 
-  // 6. Transactional Availability Lock & Booking Creation
+  // 6. Booking Creation: Requests are ALWAYS PENDING and UNPAID
   try {
     const booking = await prisma.$transaction(async (tx) => {
       // Check for overlapping confirmed or pending bookings
@@ -119,7 +131,6 @@ export async function POST(request: Request) {
 
       const normalizedEmail = data.guestEmail.toLowerCase().trim();
 
-      // Create new booking: MUST remain PENDING & UNPAID until payment is verified server-side
       return await tx.booking.create({
         data: {
           reservationCode: generateReservationCode(),
@@ -142,7 +153,6 @@ export async function POST(request: Request) {
           currency: property.currency,
           status: "PENDING",
           paymentStatus: "UNPAID",
-          paymentProvider: data.paymentProvider,
         },
       });
     });
@@ -161,8 +171,7 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
-    // Log error cleanly without guest PII
-    console.error("Booking creation failed:", err instanceof Error ? err.message : "Internal Error");
+    console.error("Booking creation error");
     return NextResponse.json({ error: "Failed to process booking request" }, { status: 500 });
   }
 }
