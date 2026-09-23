@@ -96,9 +96,9 @@ export async function getOverviewData(): Promise<OverviewData> {
         detail: process.env.NEXT_PUBLIC_SUPABASE_URL ? "Configured" : "Missing NEXT_PUBLIC_SUPABASE_URL",
       },
       {
-        label: "Service role (admin ops)",
-        ok: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-        detail: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Configured" : "Missing SUPABASE_SERVICE_ROLE_KEY",
+        label: "Supabase admin key",
+        ok: Boolean(process.env.SUPABASE_SECRET_KEY),
+        detail: process.env.SUPABASE_SECRET_KEY ? "Configured" : "Missing SUPABASE_SECRET_KEY",
       },
       {
         label: "Cloudflare R2 storage",

@@ -45,16 +45,10 @@ Open **[http://localhost:3000](http://localhost:3000)**.
 | **Add New Property** | `/dashboard/properties/new` | Multi-step property onboarding wizard |
 | **Password Reset** | `/forgot-password` | Self-service password recovery flow |
 
-### Seeded Test Accounts (Supabase Auth)
-| Role | Email / Username | Password |
-|---|---|---|
-| **Super Admin** | `superadmin@everloft.co.in` | `Ever@123` |
-| **Operations Manager** | `opsadmin@everloft.co.in` | *(same / reset)* |
-| **Property Owner** | `owner01@everloft.co.in` | *(same / reset)* |
-| **Investor** | `investor01@everloft.co.in` | *(same / reset)* |
-| **Housekeeping** | `housekeep01@everloft.co.in` | *(same / reset)* |
-| **Maintenance** | `maint01@everloft.co.in` | *(same / reset)* |
-| **Guest** | `guest01@everloft.co.in` | *(same / reset)* |
+### Test Accounts (Supabase Auth)
+Create test users in Supabase Auth as described below. Keep their credentials in an
+approved private password manager, never in this public repository. Any previously
+documented shared passwords must be considered exposed and rotated.
 
 ---
 
@@ -85,7 +79,7 @@ npm install
    default roles and the permission catalogue.
 4. Copy `.env.example` to `.env` and fill in the real values from
    **Supabase → Settings → API** (`NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`).
 5. Regenerate typed DB bindings once the project is linked (optional but
    recommended — replaces the hand-written `src/lib/supabase/types.ts`):
    ```bash

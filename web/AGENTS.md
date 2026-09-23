@@ -7,14 +7,10 @@
 
 ---
 
-## 2. Seeded Test Accounts (Supabase Auth)
-- **Super Admin:** `superadmin@everloft.co.in` / `Ever@123`
-- **Operations Manager:** `opsadmin@everloft.co.in` / `Ever@123`
-- **Property Owner:** `owner01@everloft.co.in` / `Ever@123`
-- **Investor:** `investor01@everloft.co.in` / `Ever@123`
-- **Housekeeping:** `housekeep01@everloft.co.in` / `Ever@123`
-- **Maintenance:** `maint01@everloft.co.in` / `Ever@123`
-- **Guest:** `guest01@everloft.co.in` / `Ever@123`
+## 2. Test Accounts (Supabase Auth)
+Never put test-account passwords in this public repository. Provision users through
+Supabase Auth and keep credentials in an approved private password manager. Previously
+documented shared passwords must be considered exposed and rotated.
 
 ---
 
@@ -63,4 +59,3 @@
 - **Uncut Label Rendering**: Check-in labels (e.g. `"Owner Stay / Maintenance"`) use `whitespace-nowrap overflow-visible` so full text flows across stay dates without truncate clipping.
 - **Solid Check-Out Caps**: Check-out morning bars use 100% solid `#222222` color with 0% opacity drop and NO `"Out"` text.
 - **Label Priority**: `getChannelLabel(block)` evaluates `block.notes` ➔ `block.channelName` ➔ `block.reason` (e.g. `"Owner Stay / Maintenance"`).
-

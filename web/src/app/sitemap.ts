@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://everloft.co.in";
 
@@ -23,17 +23,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
+    if (!process.env.SUPABASE_SECRET_KEY) {
       return staticEntries;
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createAdminClient();
+    const { data: activeStatus, error: statusError } = await supabase
+      .from("property_status")
+      .select("id")
+      .eq("slug", "active")
+      .maybeSingle();
+    if (statusError || !activeStatus) return staticEntries;
+
     const { data: properties } = await supabase
       .from("properties")
       .select("slug, updated_at")
+      .eq("status_id", activeStatus.id)
       .is("deleted_at", null);
 
     if (!properties || properties.length === 0) {

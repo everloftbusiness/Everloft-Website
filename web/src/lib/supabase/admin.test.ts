@@ -22,13 +22,13 @@ describe("Admin Supabase Client Guard", () => {
     );
   });
 
-  it("throws explicit error when SUPABASE_SECRET_KEY and SUPABASE_SERVICE_ROLE_KEY are missing", () => {
+  it("throws explicit error when SUPABASE_SECRET_KEY is missing", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://synthetic.supabase.co";
     delete process.env.SUPABASE_SECRET_KEY;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     expect(() => createAdminClient()).toThrow(
-      "SUPABASE_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY is missing. Privileged admin operations are unavailable in this environment."
+      "SUPABASE_SECRET_KEY is missing. Privileged admin operations are unavailable in this environment."
     );
   });
 
@@ -42,13 +42,11 @@ describe("Admin Supabase Client Guard", () => {
     expect(client).toBeDefined();
   });
 
-  it("successfully constructs admin client when valid URL and legacy SUPABASE_SERVICE_ROLE_KEY are supplied", () => {
+  it("does not fall back to the retired legacy service-role key", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://synthetic.supabase.co";
     delete process.env.SUPABASE_SECRET_KEY;
     process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key-token";
 
-    expect(() => createAdminClient()).not.toThrow();
-    const client = createAdminClient();
-    expect(client).toBeDefined();
+    expect(() => createAdminClient()).toThrow("SUPABASE_SECRET_KEY is missing");
   });
 });

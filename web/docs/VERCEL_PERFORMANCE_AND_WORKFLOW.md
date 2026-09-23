@@ -41,7 +41,7 @@ npm run build
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Public (Client + Server) | Supabase project endpoint URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public (Client + Server) | Anonymous Supabase key (bound by RLS). |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Production/Staging Server ONLY** | Sensitive admin key. **NEVER** expose to browser. |
+| `SUPABASE_SECRET_KEY` | **Production/Staging Server ONLY** | Sensitive admin key. **NEVER** expose to browser. |
 | `VERCEL_ENV` | Vercel System | Set automatically by Vercel (`production`, `preview`, `development`). |
 | `DISABLE_BACKGROUND_JOBS` | Staging / Preview / Test | Set to `"true"` to disable all background sync jobs. |
 
@@ -78,7 +78,7 @@ Before merging feature branches into `main`:
 3. [ ] **Production Build**: `npm run build` succeeds locally without warnings or un-handled promise rejections.
 4. [ ] **Environment Guard**: Confirm no floating background promises or un-awaited sync calls remain in Server Actions or API routes.
 5. [ ] **Database Migrations**: Any database migrations have been reviewed, formatted, and staged safely.
-6. [ ] **Secrets Verification**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is restricted to Server-side runtime context.
+6. [ ] **Secrets Verification**: Ensure `SUPABASE_SECRET_KEY` is restricted to Server-side runtime context.
 
 ---
 

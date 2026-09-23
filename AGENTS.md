@@ -36,18 +36,11 @@ in `web/`. Scope file searches to `web/` by default.
 - **Super Admin Workspace:** [http://localhost:3000/dashboard/super-admin](http://localhost:3000/dashboard/super-admin)
 - **Platform Overview:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
-### 3. Seeded Test Accounts (Supabase Auth)
-| Role | Email / Username | Password | Notes |
-|---|---|---|---|
-| **Super Admin** | `superadmin@everloft.co.in` | `Ever@123` | Full system access, property setup, financials |
-| **Operations Manager** | `opsadmin@everloft.co.in` | *(same / reset)* | Operations & bookings overview |
-| **Property Owner** | `owner01@everloft.co.in` | *(same / reset)* | Revenue waterfall, bookings, owner statements |
-| **Investor** | `investor01@everloft.co.in` | *(same / reset)* | Portfolio value, returns, equity distribution |
-| **Housekeeping** | `housekeep01@everloft.co.in` | *(same / reset)* | Cleaning tasks & room readiness |
-| **Maintenance** | `maint01@everloft.co.in` | *(same / reset)* | Repair tickets & work orders |
-| **Guest** | `guest01@everloft.co.in` | *(same / reset)* | Stay details, digital key, concierge |
-
-*Password recovery / resets can be done via [http://localhost:3000/forgot-password](http://localhost:3000/forgot-password) or the Supabase project dashboard (`cvgrwujjaakqrxasixyf`).*
+### 3. Test Accounts (Supabase Auth)
+Never commit account passwords or other credentials to this public repository. Provision
+test users in Supabase Auth and store credentials in an approved private password manager.
+Password recovery is available at [http://localhost:3000/forgot-password](http://localhost:3000/forgot-password).
+Previously documented shared test passwords must be considered exposed and rotated.
 
 ---
 
@@ -81,4 +74,3 @@ in `web/`. Scope file searches to `web/` by default.
    - **Uncut Text Flow**: Check-in labels (e.g. `Owner Stay / Maintenance`) use `whitespace-nowrap overflow-visible` to flow smoothly across stay dates without truncate clipping.
    - **Clean Check-Out Caps**: Check-out morning bars render in 100% solid `#222222` with 0% opacity drop and NO `"Out"` text.
    - **Label Resolution**: `getChannelLabel(block)` checks `block.notes` ➔ `block.channelName` ➔ `block.reason` (e.g. `"Owner Stay / Maintenance"`).
-
