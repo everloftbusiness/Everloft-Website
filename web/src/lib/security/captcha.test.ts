@@ -46,17 +46,34 @@ describe('Cloudflare Turnstile CAPTCHA Verification', () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
+  it('rejects expired or duplicate token', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: false, 'error-codes': ['timeout-or-duplicate'] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('expired-token');
+    expect(result).toBe(false);
+  });
+
   it('accepts verification when siteverify returns success and action matches', async () => {
     (process.env as Record<string, string>).NODE_ENV = 'production';
     process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, action: 'contact_form' }),
+      json: async () => ({ success: true, action: 'contact_form', hostname: 'everloft.co.in' }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await verifyCaptchaToken('valid-token', { action: 'contact_form' });
+    const result = await verifyCaptchaToken('valid-token', {
+      action: 'contact_form',
+      expectedHostname: 'everloft.co.in',
+    });
     expect(result).toBe(true);
   });
 
@@ -71,6 +88,37 @@ describe('Cloudflare Turnstile CAPTCHA Verification', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await verifyCaptchaToken('valid-token', { action: 'contact_form' });
+    expect(result).toBe(false);
+  });
+
+  it('rejects verification when expected action is configured but action is missing from response', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }), // missing action field entirely
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token', { action: 'contact_form' });
+    expect(result).toBe(false);
+  });
+
+  it('rejects verification when hostname mismatches', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, action: 'contact_form', hostname: 'malicious-phishing.com' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token', {
+      action: 'contact_form',
+      expectedHostname: 'everloft.co.in',
+    });
     expect(result).toBe(false);
   });
 });

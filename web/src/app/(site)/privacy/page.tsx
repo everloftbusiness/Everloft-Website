@@ -14,9 +14,9 @@ export default function PrivacyPage() {
         <p>
            Everloft Hospitality Pvt. Ltd. (&ldquo;Everloft&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) respects your privacy. This
           placeholder policy outlines, at a high level, the categories of information we collect
-          when you use this website and make a booking: contact details you provide (name,
-          email, phone), booking details (dates, guests, property selected), and payment
-          confirmation metadata from our payment partner — we do not store full card details.
+          when you use this website and make a booking enquiry: contact details you provide (name,
+          email, phone), booking details (dates, guests, property selected), and reservation
+          preferences.
         </p>
         <p>
           We use this information to process bookings, communicate with you about your stay,

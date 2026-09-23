@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts", "date-fns", "framer-motion"],
-    serverActions: { bodySizeLimit: "500mb" },
+    serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
     return [

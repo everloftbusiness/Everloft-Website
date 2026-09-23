@@ -1,33 +1,149 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { checkRateLimit, resetMemoryRateLimits } from './rate-limit';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  checkRateLimit,
+  resetMemoryRateLimits,
+  hashClientIdentifier,
+  getClientIp,
+} from "./rate-limit";
 
-describe('Durable Rate Limiter Namespace Isolation', () => {
+describe("Atomic Durable Rate Limiter", () => {
+  const originalEnv = { ...process.env };
+
   beforeEach(() => {
     resetMemoryRateLimits();
+    process.env = { ...originalEnv };
+    delete process.env.SUPABASE_SECRET_KEY;
+    delete process.env.VERCEL_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV = "test";
   });
 
-  it('isolates rate limit counts between distinct namespaces', async () => {
-    const ip = '192.168.1.50';
-
-    // Exhaust 'contact_form' namespace (limit 2)
-    const r1 = await checkRateLimit('contact_form', ip, { maxRequests: 2 });
-    const r2 = await checkRateLimit('contact_form', ip, { maxRequests: 2 });
-    const r3 = await checkRateLimit('contact_form', ip, { maxRequests: 2 });
-
-    expect(r1.allowed).toBe(true);
-    expect(r2.allowed).toBe(true);
-    expect(r3.allowed).toBe(false);
-
-    // 'newsletter_sub' namespace for SAME IP should still be allowed!
-    const rNewsletter = await checkRateLimit('newsletter_sub', ip, { maxRequests: 2 });
-    expect(rNewsletter.allowed).toBe(true);
-    expect(rNewsletter.remaining).toBe(1);
+  afterEach(() => {
+    process.env = originalEnv;
+    vi.restoreAllMocks();
   });
 
-  it('calculates remaining requests accurately', async () => {
-    const ip = '10.0.0.1';
-    const res = await checkRateLimit('login', ip, { maxRequests: 5 });
-    expect(res.allowed).toBe(true);
-    expect(res.remaining).toBe(4);
+  it("hashes client identifier using HMAC and does not expose raw IPs", () => {
+    const rawIp = "192.168.1.100";
+    const hashed1 = hashClientIdentifier(rawIp);
+    const hashed2 = hashClientIdentifier(rawIp);
+    const hashedOther = hashClientIdentifier("192.168.1.101");
+
+    expect(hashed1).toBe(hashed2);
+    expect(hashed1).not.toBe(rawIp);
+    expect(hashed1).not.toBe(hashedOther);
+    expect(hashed1).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hex string
+  });
+
+  it("extracts client IP safely from x-forwarded-for or x-real-ip", () => {
+    const req1 = new Request("http://localhost", {
+      headers: { "x-forwarded-for": "203.0.113.195, 70.41.3.18" },
+    });
+    expect(getClientIp(req1)).toBe("203.0.113.195");
+
+    const req2 = new Request("http://localhost", {
+      headers: { "x-real-ip": "198.51.100.4" },
+    });
+    expect(getClientIp(req2)).toBe("198.51.100.4");
+
+    const req3 = new Request("http://localhost");
+    expect(getClientIp(req3)).toBe("127.0.0.1");
+  });
+
+  it("permits requests within max limit and denies subsequent requests", async () => {
+    const ip = "10.0.0.1";
+    const namespace = "test_limiter";
+
+    for (let i = 0; i < 3; i++) {
+      const res = await checkRateLimit(namespace, ip, {
+        windowMs: 60_000,
+        maxRequests: 3,
+      });
+      expect(res.allowed).toBe(true);
+      expect(res.remaining).toBe(2 - i);
+    }
+
+    // 4th request exceeds max
+    const blockedRes = await checkRateLimit(namespace, ip, {
+      windowMs: 60_000,
+      maxRequests: 3,
+    });
+    expect(blockedRes.allowed).toBe(false);
+    expect(blockedRes.remaining).toBe(0);
+  });
+
+  it("resets count when time window expires", async () => {
+    const ip = "10.0.0.2";
+    const namespace = "window_test";
+
+    // Allow 1 request per 100ms
+    const first = await checkRateLimit(namespace, ip, {
+      windowMs: 50,
+      maxRequests: 1,
+    });
+    expect(first.allowed).toBe(true);
+
+    const second = await checkRateLimit(namespace, ip, {
+      windowMs: 50,
+      maxRequests: 1,
+    });
+    expect(second.allowed).toBe(false);
+
+    // Wait 60ms for window to expire
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    const third = await checkRateLimit(namespace, ip, {
+      windowMs: 50,
+      maxRequests: 1,
+    });
+    expect(third.allowed).toBe(true);
+  });
+
+  it("maintains separate limits for different namespaces and different IPs", async () => {
+    const ipA = "10.0.0.3";
+    const ipB = "10.0.0.4";
+
+    const resA = await checkRateLimit("login", ipA, { maxRequests: 1 });
+    const resB = await checkRateLimit("login", ipB, { maxRequests: 1 });
+    const resAOtherNs = await checkRateLimit("contact", ipA, { maxRequests: 1 });
+
+    expect(resA.allowed).toBe(true);
+    expect(resB.allowed).toBe(true);
+    expect(resAOtherNs.allowed).toBe(true);
+  });
+
+  it("handles concurrent requests without throwing", async () => {
+    const ip = "10.0.0.5";
+    const namespace = "concurrency_test";
+
+    const results = await Promise.all([
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+      checkRateLimit(namespace, ip, { maxRequests: 5 }),
+    ]);
+
+    const allowed = results.filter((r) => r.allowed);
+    const denied = results.filter((r) => !r.allowed);
+
+    expect(allowed.length).toBe(5);
+    expect(denied.length).toBe(1);
+  });
+
+  it("fails closed in Production when database RPC errors", async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    process.env.SUPABASE_SECRET_KEY = "dummy-secret-key";
+
+    // Dynamic import to mock createAdminClient
+    const adminModule = await import("@/lib/supabase/admin");
+    vi.spyOn(adminModule, "createAdminClient").mockImplementation(() => ({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: new Error("DB connection failure") }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any));
+
+    const result = await checkRateLimit("prod_test", "1.2.3.4", { maxRequests: 5 });
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
   });
 });

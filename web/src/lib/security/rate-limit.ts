@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type MemoryRecord = {
@@ -19,8 +20,21 @@ export type RateLimitResult = {
 };
 
 /**
- * Durable Rate Limiter for Vercel Serverless environment.
- * Uses Supabase DB when available, with in-memory fallback for tests/offline runs.
+ * Returns a keyed HMAC hash of the client identifier (e.g. IP address)
+ * using a server-side salt so raw IP addresses are never persisted in the database.
+ */
+export function hashClientIdentifier(identifier: string): string {
+  const salt =
+    process.env.RATE_LIMIT_SALT ||
+    process.env.SUPABASE_SECRET_KEY ||
+    "everloft-rate-limit-default-salt";
+  return crypto.createHmac("sha256", salt).update(identifier.trim()).digest("hex");
+}
+
+/**
+ * Atomic Durable Rate Limiter for Vercel Serverless environment.
+ * Executes atomic check_rate_limit RPC in Supabase Postgres.
+ * Fails closed in production environments if the database is unavailable.
  */
 export async function checkRateLimit(
   namespace: string,
@@ -29,71 +43,74 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const windowMs = options.windowMs ?? 60_000;
   const maxRequests = options.maxRequests ?? 10;
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
   const now = Date.now();
   const resetTime = now + windowMs;
 
-  // 1. Try Supabase DB Durable Rate Limit if SUPABASE_SECRET_KEY is configured
-  if (process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  const isProduction =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production";
+
+  // Use hashed identifier for privacy preservation
+  const hashedId = hashClientIdentifier(identifier);
+  const compositeKey = `${namespace}:${hashedId}`;
+
+  // 1. Try Supabase Atomic Postgres RPC if configured
+  if (process.env.SUPABASE_SECRET_KEY) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabase = createAdminClient() as any;
-      const compositeKey = `${namespace}:${identifier}`;
+      const { data, error } = await supabase.rpc("check_rate_limit", {
+        p_key: compositeKey,
+        p_max_requests: maxRequests,
+        p_window_seconds: windowSeconds,
+      });
 
-      // Query durable rate limit table
-      const { data: existing } = await supabase
-        .from("rate_limits")
-        .select("id, count, reset_at")
-        .eq("key", compositeKey)
-        .maybeSingle();
-
-      if (existing) {
-        const resetAtMs = new Date(existing.reset_at).getTime();
-        if (now > resetAtMs) {
-          // Window expired: reset count
-          await supabase
-            .from("rate_limits")
-            .update({ count: 1, reset_at: new Date(resetTime).toISOString() })
-            .eq("id", existing.id);
-
-          return { allowed: true, remaining: maxRequests - 1, resetTime };
-        }
-
-        if (existing.count >= maxRequests) {
-          return { allowed: false, remaining: 0, resetTime: resetAtMs };
-        }
-
-        // Increment count
-        await supabase
-          .from("rate_limits")
-          .update({ count: existing.count + 1 })
-          .eq("id", existing.id);
-
-        return { allowed: true, remaining: maxRequests - (existing.count + 1), resetTime: resetAtMs };
-      } else {
-        // First request: insert record
-        await supabase.from("rate_limits").insert({
-          key: compositeKey,
-          count: 1,
-          reset_at: new Date(resetTime).toISOString(),
-        });
-
-        return { allowed: true, remaining: maxRequests - 1, resetTime };
+      if (error) {
+        throw error;
       }
-    } catch {
-      // Fallback to memory store if DB table doesn't exist yet or connection fails
+
+      if (data && typeof data === "object") {
+        return {
+          allowed: Boolean(data.allowed),
+          remaining: Number(data.remaining ?? 0),
+          resetTime: Number(data.reset_time ?? resetTime),
+        };
+      }
+    } catch (err) {
+      if (isProduction) {
+        console.error(
+          "Durable rate limiter database failure in production:",
+          err instanceof Error ? err.message : "RPC Error"
+        );
+        // Fail closed in production to prevent serverless abuse on DB degradation
+        return {
+          allowed: false,
+          remaining: 0,
+          resetTime: now + 60_000,
+        };
+      }
+      // Non-production fallback to memory store
     }
+  } else if (isProduction) {
+    console.error("Durable rate limiter: SUPABASE_SECRET_KEY missing in production.");
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: now + 60_000,
+    };
   }
 
-  // 2. In-Memory Store Fallback (Isolated per namespace)
+  // 2. In-Memory Store Fallback (used in local development and unit tests)
   if (!memoryStores.has(namespace)) {
     memoryStores.set(namespace, new Map());
   }
 
   const store = memoryStores.get(namespace)!;
-  const current = store.get(identifier);
+  const current = store.get(hashedId);
 
   if (!current || now > current.resetTime) {
-    store.set(identifier, { count: 1, resetTime });
+    store.set(hashedId, { count: 1, resetTime });
     return { allowed: true, remaining: maxRequests - 1, resetTime };
   }
 

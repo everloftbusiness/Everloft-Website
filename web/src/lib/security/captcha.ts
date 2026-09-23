@@ -5,7 +5,16 @@
 
 export type TurnstileVerifyOptions = {
   action?: string;
+  expectedHostname?: string;
   request?: Request;
+};
+
+type TurnstileSiteVerifyResponse = {
+  success: boolean;
+  hostname?: string;
+  action?: string;
+  "error-codes"?: string[];
+  challenge_ts?: string;
 };
 
 export async function verifyCaptchaToken(
@@ -31,7 +40,7 @@ export async function verifyCaptchaToken(
     return true; // Local dev fallback when Turnstile is unconfigured
   }
 
-  if (!token || typeof token !== "string" || !token.trim()) {
+  if (!token || typeof token !== "string" || !token.trim() || token.length > 2048) {
     return false;
   }
 
@@ -61,24 +70,29 @@ export async function verifyCaptchaToken(
 
     if (!res.ok) return false;
 
-    const outcome = (await res.json()) as {
-      success: boolean;
-      hostname?: string;
-      action?: string;
-      "error-codes"?: string[];
-    };
+    const outcome = (await res.json()) as TurnstileSiteVerifyResponse;
 
-    if (!outcome.success) return false;
-
-    // Validate action if requested
-    if (options.action && outcome.action && outcome.action !== options.action) {
-      console.warn(`Turnstile action mismatch: expected ${options.action}, got ${outcome.action}`);
+    if (!outcome.success) {
       return false;
     }
 
+    // Strict action validation: if expected action is configured, missing or mismatched action must fail
+    if (options.action) {
+      if (!outcome.action || outcome.action !== options.action) {
+        return false;
+      }
+    }
+
+    // Hostname validation
+    if (options.expectedHostname) {
+      if (!outcome.hostname || outcome.hostname.toLowerCase() !== options.expectedHostname.toLowerCase()) {
+        return false;
+      }
+    }
+
     return true;
-  } catch (err) {
-    console.error("Turnstile verification error:", err instanceof Error ? err.message : "Fetch error");
+  } catch {
+    // Fail closed without leaking internals, tokens, or PII
     return false;
   }
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, MapPin, ShieldCheck, Zap, Tag, Headset, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, ShieldCheck, Sparkles, Tag, Headset, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { InstagramIcon, FacebookIcon } from "@/components/icons/social-icons";
 
@@ -28,13 +28,13 @@ const LEGAL_LINKS = [
 const GUARANTEES = [
   {
     icon: ShieldCheck,
-    title: "Secure Payments",
-    subtitle: "100% safe & encrypted",
+    title: "Direct Concierge",
+    subtitle: "Personalized assistance",
   },
   {
-    icon: Zap,
-    title: "Instant Confirmation",
-    subtitle: "Book in seconds",
+    icon: Sparkles,
+    title: "Handpicked Stays",
+    subtitle: "100% verified properties",
   },
   {
     icon: Tag,

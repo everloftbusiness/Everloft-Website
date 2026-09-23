@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { verifyCaptchaToken } from "@/lib/security/captcha";
 
 const schema = z.object({
   email: z.string().trim().email().max(150),
@@ -35,7 +36,15 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 400 });
   }
-  const { email, password, rememberMe } = parsed.data;
+  const { email, password, rememberMe, captchaToken } = parsed.data;
+
+  const isCaptchaValid = await verifyCaptchaToken(captchaToken, {
+    action: "auth_login",
+    request,
+  });
+  if (!isCaptchaValid) {
+    return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({

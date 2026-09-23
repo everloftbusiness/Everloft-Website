@@ -66,7 +66,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const isCaptchaValid = await verifyCaptchaToken(parsed.data.captchaToken);
+  const isCaptchaValid = await verifyCaptchaToken(parsed.data.captchaToken, {
+    action: "contact_form",
+    request,
+  });
   if (!isCaptchaValid) {
     return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
   }

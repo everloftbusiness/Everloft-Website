@@ -12,7 +12,7 @@ export const faqCategories: FaqCategory[] = [
       {
         question: "How do I book a stay with Everloft?",
         answer:
-          "Choose your property, select your dates and guest count, and complete checkout in three simple steps. Every booking is confirmed instantly and directly with Everloft — there's no third-party host to coordinate with.",
+          "Choose your property, select your dates and guest count, and submit a direct booking enquiry. Our reservations concierge verifies availability and confirms your stay within 2 hours.",
       },
       {
         question: "Can I modify my dates after booking?",
@@ -33,17 +33,17 @@ export const faqCategories: FaqCategory[] = [
       {
         question: "What payment methods are accepted?",
         answer:
-          "We accept all major credit and debit cards, UPI, net banking, and popular wallets through our secure payment partner, Razorpay. All transactions are encrypted end to end.",
+          "Once your booking enquiry is verified and accepted, our team provides official payment instructions for direct bank transfer (NEFT/IMPS/RTGS) or verified UPI.",
       },
       {
         question: "Do you offer flexible payment plans?",
         answer:
-          "For bookings over 5 nights, we offer a split payment option — 50% at booking and 50% seven days before check-in. This is shown automatically at checkout when eligible.",
+          "For longer stays, custom split-payment options can be arranged directly with our concierge team during reservation confirmation.",
       },
       {
         question: "Will I get an invoice for my stay?",
         answer:
-          "Yes, a GST-compliant invoice is emailed immediately after payment and is also downloadable anytime from your booking confirmation page.",
+          "Yes, a GST-compliant tax invoice is provided once your booking is confirmed and payment is settled.",
       },
     ],
   },
