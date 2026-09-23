@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { verifyCaptchaToken } from "@/lib/security/captcha";
 
 const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  subject: z.string().min(2),
-  message: z.string().min(5),
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().max(150),
+  phone: z.string().trim().max(25).optional(),
+  subject: z.string().trim().min(2).max(200),
+  message: z.string().trim().min(5).max(2000),
+  captchaToken: z.string().optional(),
 });
 
 async function forwardToGoogleSheet(data: z.infer<typeof schema>) {
@@ -39,12 +42,42 @@ async function forwardToGoogleSheet(data: z.infer<typeof schema>) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit("contact_form", clientIp, { windowMs: 60_000, maxRequests: 5 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many contact submissions. Please wait a minute." },
+      { status: 429 }
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
   }
-  const message = await prisma.contactMessage.create({ data: parsed.data });
+
+  const isCaptchaValid = await verifyCaptchaToken(parsed.data.captchaToken);
+  if (!isCaptchaValid) {
+    return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
+  }
+
+  const message = await prisma.contactMessage.create({
+    data: {
+      name: parsed.data.name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      subject: parsed.data.subject,
+      message: parsed.data.message,
+    },
+  });
+
   await forwardToGoogleSheet(parsed.data);
-  return NextResponse.json({ id: message.id });
+  return NextResponse.json({ ok: true, id: message.id });
 }

@@ -7,6 +7,19 @@ import { getDashboardSession } from "@/lib/dashboard/session";
 import { uploadFile, computeChecksum, deleteObject, BUCKETS, type Bucket } from "@/lib/storage/r2";
 import { createFileRecord } from "@/lib/storage/file-service";
 import { randomUUID } from "crypto";
+import { fetchTrustedUrl } from "@/lib/security/trusted-fetch";
+
+const GOOGLE_MAP_HOSTS = new Set([
+  "maps.app.goo.gl", "goo.gl", "google.com", "www.google.com", "maps.google.com", "www.google.co.in",
+]);
+
+async function requireLocationLookupAccess() {
+  const session = await getDashboardSession();
+  if (!session) throw new Error("Sign in required.");
+  if (!session.permissions.includes("edit_property") && !session.permissions.includes("manage_properties")) {
+    throw new Error("You don't have permission to edit properties.");
+  }
+}
 
 async function requireEditAccess(propertyId: string) {
   if (!z.string().uuid().safeParse(propertyId).success) throw new Error("Invalid property.");
@@ -104,20 +117,28 @@ export type ResolvedLocation = {
 };
 
 export async function resolveGoogleMapLocationAction(input: string): Promise<ResolvedLocation | null> {
+  await requireLocationLookupAccess();
   let url = input.trim();
   if (!url) return null;
 
   // 1. Follow short link redirect if applicable (maps.app.goo.gl or goo.gl/maps)
-  if (url.includes("goo.gl") || url.includes("maps.app.goo.gl")) {
+  let isGoogleShortLink = false;
+  try {
+    const parsed = new URL(url);
+    isGoogleShortLink = parsed.protocol === "https:" &&
+      (parsed.hostname === "maps.app.goo.gl" || parsed.hostname === "goo.gl");
+  } catch {
+    // Free-text place searches do not need a URL.
+  }
+  if (isGoogleShortLink) {
     try {
-      const res = await fetch(url, {
-        redirect: "follow",
+      const { response: res, url: resolvedUrl } = await fetchTrustedUrl(url, GOOGLE_MAP_HOSTS, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
-      url = res.url;
+      url = resolvedUrl;
       // If the URL didn't contain coordinates directly, check if HTML body contains meta search query
       if (!url.includes("search/") && !url.includes("@")) {
         const text = await res.text();
@@ -174,6 +195,10 @@ export async function resolveGoogleMapLocationAction(input: string): Promise<Res
 }
 
 export async function reverseGeocodeCoordsAction(lat: number, lng: number): Promise<ResolvedLocation> {
+  await requireLocationLookupAccess();
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    throw new Error("Invalid coordinates.");
+  }
   let address = "";
   let city = "";
   let state = "Karnataka";
@@ -258,6 +283,7 @@ export async function searchLocationSuggestionsAction(
   currentLat?: number,
   currentLng?: number
 ): Promise<LocationSuggestion[]> {
+  await requireLocationLookupAccess();
   const q = query.trim();
   if (!q || q.length < 2) return [];
 
@@ -487,7 +513,7 @@ export async function addCustomAmenityAction(propertyId: string, name: string, c
 }
 
 export async function deleteCustomAmenityAction(propertyId: string, amenityIdOrName: string) {
-  const session = await requireEditAccess(propertyId);
+  await requireEditAccess(propertyId);
   const supabase = await createClient();
 
   // If amenityIdOrName is in property_rules (custom_amenity)
