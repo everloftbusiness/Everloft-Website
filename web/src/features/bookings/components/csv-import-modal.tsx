@@ -31,7 +31,6 @@ import {
 import { type PropertyOption } from '../types/booking.types';
 import { money } from '../utils/money';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 
 export function CsvImportModal({
@@ -212,14 +211,35 @@ export function CsvImportModal({
     const reader = new FileReader();
 
     if (isExcel) {
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const text = XLSX.utils.sheet_to_csv(worksheet);
-          processContent(text);
+          const buffer = e.target?.result as ArrayBuffer;
+          if (buffer.byteLength > 5 * 1024 * 1024) {
+            setImportError('File size exceeds maximum allowed limit (5 MB).');
+            return;
+          }
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(buffer);
+          const worksheet = workbook.worksheets[0];
+          if (!worksheet) {
+            setImportError('No worksheet found in Excel file.');
+            return;
+          }
+          const csvLines: string[] = [];
+          let rowCount = 0;
+          worksheet.eachRow((row) => {
+            rowCount++;
+            if (rowCount > 5000) return; // Cap at 5000 rows
+            const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+            const line = values.map((val) => {
+              if (val === null || val === undefined) return '';
+              if (typeof val === 'object' && 'result' in val) return String(val.result ?? '');
+              if (typeof val === 'object' && 'text' in val) return String(val.text ?? '');
+              return String(val);
+            }).join(',');
+            csvLines.push(line);
+          });
+          processContent(csvLines.join('\n'));
         } catch {
           setImportError('Failed to read Excel file. Please try exporting as CSV.');
         }

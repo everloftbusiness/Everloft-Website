@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Turnstile } from "@/components/security/turnstile";
 
 export function ContactForm() {
   const searchParams = useSearchParams();
@@ -15,31 +16,40 @@ export function ContactForm() {
 
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    if (propertyParam) {
-      setSubject(`Inquiry for ${propertyParam}`);
-      setMessage(`Hi Everloft team, I'd like to check availability and booking details for "${propertyParam}".`);
-    }
-  }, [propertyParam]);
+  const [subject, setSubject] = useState(propertyParam ? `Inquiry for ${propertyParam}` : "");
+  const [message, setMessage] = useState(
+    propertyParam
+      ? `Hi Everloft team, I'd like to check availability and booking details for "${propertyParam}".`
+      : ""
+  );
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
+    const payload = {
+      ...Object.fromEntries(form),
+      captchaToken,
+    };
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(form)),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Submission failed");
+      }
       setSent(true);
       toast.success("Message sent — we'll be in touch shortly.");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err) {
+      setTurnstileKey((k) => k + 1);
+      setCaptchaToken("");
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -102,7 +112,19 @@ export function ContactForm() {
           />
         </div>
       </div>
-      <Button type="submit" size="xl" className="w-full rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold h-12 shadow-md" disabled={loading}>
+
+      <Turnstile
+        key={turnstileKey}
+        action="contact_form"
+        onVerify={setCaptchaToken}
+      />
+
+      <Button
+        type="submit"
+        size="xl"
+        className="w-full rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold h-12 shadow-md"
+        disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+      >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         Send Inquiry
       </Button>

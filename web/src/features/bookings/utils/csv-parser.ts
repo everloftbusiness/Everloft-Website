@@ -369,7 +369,7 @@ export function parseGoogleSheetCsv(
       notesList.push("Auto-assigned unit 'Whole Villa'");
     }
 
-    let hostBase = colHostBase !== -1 ? parseNumber(r[colHostBase]) : guestBase;
+    const hostBase = colHostBase !== -1 ? parseNumber(r[colHostBase]) : guestBase;
     const hostRateAdjustment = colHostRateAdj !== -1 ? parseNumber(r[colHostRateAdj]) : 0;
     const hostServiceFee = colHostServiceFee !== -1 ? parseNumber(r[colHostServiceFee]) : 0;
     const hostAdditionalIncome = colHostAddIncome !== -1 ? parseNumber(r[colHostAddIncome]) : 0;

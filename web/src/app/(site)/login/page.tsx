@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Logo } from "@/components/logo";
+import { Turnstile } from "@/components/security/turnstile";
 
 const BENEFITS = [
   { icon: ShieldCheck, text: "Role-based session access" },
@@ -40,6 +41,8 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   const {
     register,
@@ -59,7 +62,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, captchaToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to login right now.");
@@ -67,6 +70,8 @@ function LoginForm() {
       router.push(searchParams.get("next") || "/dashboard");
       router.refresh();
     } catch (err) {
+      setTurnstileKey((k) => k + 1);
+      setCaptchaToken("");
       setServerError(err instanceof Error ? err.message : "Unable to login right now.");
     }
   }
@@ -126,8 +131,21 @@ function LoginForm() {
             />
             Remember me
           </label>
+
+          <Turnstile
+            key={turnstileKey}
+            action="auth_login"
+            onVerify={setCaptchaToken}
+          />
+
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-          <Button type="submit" variant="gold" size="xl" className="w-full rounded-xl" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="gold"
+            size="xl"
+            className="w-full rounded-xl"
+            disabled={isSubmitting || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+          >
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Sign In
           </Button>

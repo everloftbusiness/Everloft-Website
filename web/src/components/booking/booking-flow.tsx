@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import {
   ShieldCheck,
-  Lock,
   Loader2,
   Tag,
-  ArrowLeft,
-  ArrowRight,
-  CreditCard,
+  Send,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,10 +19,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PropertyMedia } from "@/components/media/property-media";
 import { DateRangePicker } from "@/components/booking/date-range-picker";
 import { GuestSelector } from "@/components/booking/guest-selector";
-import { BookingProgress } from "@/components/booking/booking-progress";
+import { Turnstile } from "@/components/security/turnstile";
 import { formatCurrency, formatDateRange, nightsBetween } from "@/lib/format";
 
-const DEMO_COUPONS: Record<string, number> = {
+const PROMO_COUPONS: Record<string, number> = {
   EVERLOFT10: 0.1,
   WELCOME5: 0.05,
 };
@@ -52,8 +50,9 @@ export function BookingFlow({
   initialGuests?: number;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   const [range, setRange] = useState<DateRange | undefined>(
     initialCheckIn && initialCheckOut
@@ -73,18 +72,24 @@ export function BookingFlow({
   const nights = range?.from && range?.to ? nightsBetween(range.from, range.to) : 0;
   const subtotal = nights * property.pricePerNight;
   const serviceFee = Math.round(subtotal * property.serviceFeePct);
-  const discountPct = appliedCoupon ? DEMO_COUPONS[appliedCoupon] ?? 0 : 0;
+  const discountPct = appliedCoupon ? PROMO_COUPONS[appliedCoupon] ?? 0 : 0;
   const discount = Math.round(subtotal * discountPct);
   const total = subtotal + (nights > 0 ? property.cleaningFee : 0) + serviceFee - discount;
 
-  const canContinue = useMemo(
-    () => !!range?.from && !!range?.to && guestName.trim().length > 1 && !!guestEmail && !!guestPhone,
-    [range, guestName, guestEmail, guestPhone]
+  const canSubmit = useMemo(
+    () =>
+      !!range?.from &&
+      !!range?.to &&
+      guestName.trim().length > 1 &&
+      !!guestEmail &&
+      !!guestPhone &&
+      agreed,
+    [range, guestName, guestEmail, guestPhone, agreed]
   );
 
   function applyCoupon() {
     const key = couponInput.toUpperCase().trim();
-    if (DEMO_COUPONS[key]) {
+    if (PROMO_COUPONS[key]) {
       setAppliedCoupon(key);
       toast.success(`Coupon ${key} applied`);
     } else {
@@ -92,9 +97,11 @@ export function BookingFlow({
     }
   }
 
-  async function handleConfirm(paymentProvider: "razorpay" | "demo") {
-    if (!range?.from || !range?.to) return;
+  async function handleSubmitEnquiry(e: React.FormEvent) {
+    e.preventDefault();
+    if (!range?.from || !range?.to || !canSubmit) return;
     setSubmitting(true);
+
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -109,128 +116,150 @@ export function BookingFlow({
           guestPhone,
           specialRequests,
           couponCode: appliedCoupon ?? undefined,
-          paymentProvider,
+          captchaToken,
         }),
       });
-      if (!res.ok) throw new Error();
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Enquiry submission failed");
+      }
+
       const { reservationCode } = await res.json();
       router.push(`/booking/confirmation/${reservationCode}`);
-    } catch {
-      toast.error("Something went wrong confirming your booking. Please try again.");
+    } catch (err) {
+      setTurnstileKey((k) => k + 1);
+      setCaptchaToken("");
+      toast.error(
+        err instanceof Error ? err.message : "Something went wrong submitting your enquiry. Please try again."
+      );
       setSubmitting(false);
     }
   }
 
-  const razorpayConfigured = !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-
   return (
     <div className="site-container grid gap-12 pt-28 pb-24 lg:grid-cols-[1fr_380px]">
       <div>
-        <h1 className="heading-display mb-8 text-2xl sm:text-3xl">Complete your booking</h1>
-        <BookingProgress current={step} />
+        <h1 className="heading-display mb-3 text-2xl sm:text-3xl">Reserve your stay</h1>
+        <p className="text-sm text-muted-foreground mb-8">
+          Submit a direct booking enquiry. Our reservations concierge will review your requested dates,
+          confirm availability, and provide secure settlement instructions.
+        </p>
 
-        {step === 1 && (
-          <div className="mt-10 space-y-8">
-            <div>
-              <h2 className="mb-4 text-lg font-bold text-primary">Your stay</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <DateRangePicker range={range} onChange={setRange} />
-                <GuestSelector guests={guests} onChange={setGuests} maxGuests={property.guests} />
-              </div>
+        <form onSubmit={handleSubmitEnquiry} className="space-y-8">
+          <div>
+            <h2 className="mb-4 text-lg font-bold text-primary">Your stay</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DateRangePicker range={range} onChange={setRange} />
+              <GuestSelector guests={guests} onChange={setGuests} maxGuests={property.guests} />
             </div>
-
-            <div>
-              <h2 className="mb-4 text-lg font-bold text-primary">Guest details</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <Label htmlFor="guestName" className="mb-1.5">Full name</Label>
-                  <Input id="guestName" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="As per government ID" required />
-                </div>
-                <div>
-                  <Label htmlFor="guestEmail" className="mb-1.5">Email</Label>
-                  <Input id="guestEmail" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="you@example.com" required />
-                </div>
-                <div>
-                  <Label htmlFor="guestPhone" className="mb-1.5">Phone</Label>
-                  <Input id="guestPhone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="+91 90000 00000" required />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="specialRequests" className="mb-1.5">Special requests (optional)</Label>
-                  <Textarea id="specialRequests" value={specialRequests} onChange={(e) => setSpecialRequests(e.target.value)} placeholder="Early check-in, dietary preferences, celebration setup…" rows={3} />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-1.5">Promo code</Label>
-              <div className="flex gap-2">
-                <Input value={couponInput} onChange={(e) => setCouponInput(e.target.value)} placeholder="Enter code" className="max-w-xs" />
-                <Button type="button" variant="outline" onClick={applyCoupon}>
-                  <Tag className="h-4 w-4" /> Apply
-                </Button>
-              </div>
-            </div>
-
-            <Button
-              size="xl"
-              variant="gold"
-              className="w-full rounded-xl sm:w-auto"
-              disabled={!canContinue}
-              onClick={() => setStep(2)}
-            >
-              Continue to Payment <ArrowRight className="h-4 w-4" />
-            </Button>
           </div>
-        )}
 
-        {step === 2 && (
-          <div className="mt-10 space-y-8">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="mb-4 text-lg font-bold text-primary">Payment</h2>
-              {razorpayConfigured ? (
-                <p className="text-sm text-muted-foreground">
-                  You&apos;ll be redirected to Razorpay&apos;s secure checkout to complete payment.
-                </p>
-              ) : (
-                <div className="rounded-xl border border-dashed border-gold/50 bg-gold-soft p-4 text-sm text-foreground/80">
-                  Payment gateway not yet configured for this environment — this is a demo
-                  confirmation. Set <code className="rounded bg-white/60 px-1">NEXT_PUBLIC_RAZORPAY_KEY_ID</code> to enable live Razorpay checkout.
-                </div>
-              )}
-
-              <div className="mt-5 flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-gold" /> 256-bit encryption</span>
-                <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-gold" /> PCI-DSS compliant</span>
+          <div>
+            <h2 className="mb-4 text-lg font-bold text-primary">Guest details</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label htmlFor="guestName" className="mb-1.5">Full name</Label>
+                <Input
+                  id="guestName"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="As per government ID"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="guestEmail" className="mb-1.5">Email</Label>
+                <Input
+                  id="guestEmail"
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="guestPhone" className="mb-1.5">Phone</Label>
+                <Input
+                  id="guestPhone"
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="+91 90000 00000"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="specialRequests" className="mb-1.5">Special requests (optional)</Label>
+                <Textarea
+                  id="specialRequests"
+                  value={specialRequests}
+                  onChange={(e) => setSpecialRequests(e.target.value)}
+                  placeholder="Early check-in, celebration setup, dietary preferences…"
+                  rows={3}
+                />
               </div>
             </div>
+          </div>
 
-            <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-              <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} className="mt-0.5" />
-              I agree to Everloft&apos;s <a href="/terms" className="text-primary underline">Terms of Service</a> and{" "}
-              <a href="/privacy" className="text-primary underline">Cancellation Policy</a>.
-            </label>
-
-            <div className="flex gap-3">
-              <Button variant="outline" size="xl" className="rounded-xl" onClick={() => setStep(1)}>
-                <ArrowLeft className="h-4 w-4" /> Back
-              </Button>
-              <Button
-                size="xl"
-                variant="gold"
-                className="flex-1 rounded-xl"
-                disabled={!agreed || submitting}
-                onClick={() => handleConfirm(razorpayConfigured ? "razorpay" : "demo")}
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="h-4 w-4" />
-                )}
-                {razorpayConfigured ? "Pay & Confirm Booking" : "Confirm Booking (Demo)"}
+          <div>
+            <Label className="mb-1.5">Promo code</Label>
+            <div className="flex gap-2">
+              <Input
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                placeholder="Enter code"
+                className="max-w-xs"
+              />
+              <Button type="button" variant="outline" onClick={applyCoupon}>
+                <Tag className="h-4 w-4" /> Apply
               </Button>
             </div>
           </div>
-        )}
+
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-2 text-base font-bold text-primary flex items-center gap-2">
+              <Info className="h-4 w-4 text-gold" /> Direct Enquiry Process
+            </h2>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Everloft verifies every stay directly with our on-ground property teams. Upon submitting
+              your enquiry, your dates are placed on temporary hold. Our team will reach out via WhatsApp
+              or phone within 2 hours to confirm details and share payment instructions (direct bank transfer / UPI).
+            </p>
+          </div>
+
+          <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+            <Checkbox
+              checked={agreed}
+              onCheckedChange={(v) => setAgreed(!!v)}
+              className="mt-0.5"
+            />
+            I agree to Everloft&apos;s <a href="/terms" className="text-primary underline">Terms of Service</a> and{" "}
+            <a href="/privacy" className="text-primary underline">Cancellation Policy</a>.
+          </label>
+
+          <Turnstile
+            key={turnstileKey}
+            action="booking_request"
+            onVerify={setCaptchaToken}
+          />
+
+          <Button
+            type="submit"
+            size="xl"
+            variant="gold"
+            className="w-full rounded-xl sm:w-auto"
+            disabled={!canSubmit || submitting || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+          >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Submit Booking Enquiry
+          </Button>
+        </form>
       </div>
 
       <aside className="lg:sticky lg:top-28">
@@ -279,11 +308,19 @@ export function BookingFlow({
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-3 text-base font-bold text-primary">
-                <span>Total</span>
+                <span>Estimated Total (inc. GST)</span>
                 <span>{formatCurrency(total, property.currency)}</span>
               </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Settled offline after reservation confirmation.
+              </p>
             </div>
           )}
+
+          <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground border-t border-border pt-4">
+            <ShieldCheck className="h-4 w-4 text-gold shrink-0" />
+            <span>Guaranteed direct reservation directly managed by Everloft.</span>
+          </div>
         </div>
       </aside>
     </div>

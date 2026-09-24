@@ -5,10 +5,13 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Turnstile } from "@/components/security/turnstile";
 
 export function NewsletterForm({ className }: { className?: string }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,13 +21,18 @@ export function NewsletterForm({ className }: { className?: string }) {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, captchaToken }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Subscription failed");
+      }
       toast.success("You're subscribed — welcome to Everloft.");
       setEmail("");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err) {
+      setTurnstileKey((k) => k + 1);
+      setCaptchaToken("");
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -46,12 +54,19 @@ export function NewsletterForm({ className }: { className?: string }) {
           variant="gold"
           size="icon-lg"
           className="shrink-0 rounded-full"
-          disabled={loading}
+          disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
           aria-label="Subscribe"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
         </Button>
       </div>
+      <Turnstile
+        key={turnstileKey}
+        action="newsletter_subscribe"
+        onVerify={setCaptchaToken}
+        theme="dark"
+        className="mt-2 min-h-[50px]"
+      />
     </form>
   );
 }

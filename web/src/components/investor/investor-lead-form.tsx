@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Turnstile } from "@/components/security/turnstile";
 
 const RANGES = ["₹10L – ₹25L", "₹25L – ₹50L", "₹50L – ₹1Cr", "₹1Cr+"];
 
@@ -21,23 +22,35 @@ export function InvestorLeadForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [investmentRange, setInvestmentRange] = useState(RANGES[0]);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const payload = { ...Object.fromEntries(form), investmentRange };
+    const payload = {
+      ...Object.fromEntries(form),
+      investmentRange,
+      captchaToken,
+    };
+
     try {
       const res = await fetch("/api/investor-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Submission failed");
+      }
       setSent(true);
       toast.success("Thank you — our investment team will follow up within 2 business days.");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err) {
+      setTurnstileKey((k) => k + 1);
+      setCaptchaToken("");
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -87,7 +100,20 @@ export function InvestorLeadForm() {
           <Textarea id="message" name="message" rows={3} />
         </div>
       </div>
-      <Button type="submit" variant="gold" size="xl" className="w-full rounded-xl" disabled={loading}>
+
+      <Turnstile
+        key={turnstileKey}
+        action="investor_lead"
+        onVerify={setCaptchaToken}
+      />
+
+      <Button
+        type="submit"
+        variant="gold"
+        size="xl"
+        className="w-full rounded-xl"
+        disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+      >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
         Request Investor Deck
       </Button>

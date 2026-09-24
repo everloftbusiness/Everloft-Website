@@ -3,7 +3,6 @@ import Image from "next/image";
 
 export const revalidate = 3600;
 import {
-  Zap,
   Tag,
   ArrowRight,
   Sparkles,
@@ -37,14 +36,14 @@ import { MapBanner } from "@/components/marketing/map-banner";
 import {
   Calendar,
   Headphones,
-  Lock,
   Percent,
+  ShieldCheck,
 } from "lucide-react";
 
 const HERO_TRUST_PILLS = [
   { icon: Tag, label: "Best Price Guarantee" },
   { icon: Percent, label: "No Platform Fees" },
-  { icon: Zap, label: "Instant Confirmation" },
+  { icon: Sparkles, label: "Direct Reservation Enquiry" },
   { icon: Calendar, label: "Free Cancellation*" },
 ];
 
@@ -54,7 +53,7 @@ const HOSPITALITY_BADGES = [
   { icon: Sparkles, label: "Direct Booking Benefits" },
   { icon: Calendar, label: "Flexible Cancellation" },
   { icon: Headphones, label: "24/7 Guest Support" },
-  { icon: Lock, label: "Secure Payments" },
+  { icon: ShieldCheck, label: "Verified Direct Stays" },
 ];
 
 const WHAT_MAKES_EVERLOFT = [
