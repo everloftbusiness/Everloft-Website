@@ -146,4 +146,51 @@ describe("Atomic Durable Rate Limiter", () => {
     expect(result.allowed).toBe(false);
     expect(result.remaining).toBe(0);
   });
+
+  it("refuses hardcoded default salt and fails closed in Production when salt and secret key are missing", async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    delete process.env.RATE_LIMIT_SALT;
+    delete process.env.SUPABASE_SECRET_KEY;
+
+    expect(() => hashClientIdentifier("1.2.3.4")).toThrow(
+      /RATE_LIMIT_SALT .* must be configured in Preview and Production/
+    );
+
+    const result = await checkRateLimit("prod_test", "1.2.3.4", { maxRequests: 5 });
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it("refuses hardcoded default salt and fails closed in Vercel Preview when salt and secret key are missing", async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+    (process.env as Record<string, string | undefined>).VERCEL_ENV = "preview";
+    delete process.env.RATE_LIMIT_SALT;
+    delete process.env.SUPABASE_SECRET_KEY;
+
+    expect(() => hashClientIdentifier("1.2.3.4")).toThrow(
+      /RATE_LIMIT_SALT .* must be configured in Preview and Production/
+    );
+
+    const result = await checkRateLimit("preview_test", "1.2.3.4", { maxRequests: 5 });
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  it("permits hashing when RATE_LIMIT_SALT is provided in Production", () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    process.env.RATE_LIMIT_SALT = "custom-prod-salt-xyz";
+    delete process.env.SUPABASE_SECRET_KEY;
+
+    const hash = hashClientIdentifier("1.2.3.4");
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("permits hashing when SUPABASE_SECRET_KEY is used as fallback in Production", () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    delete process.env.RATE_LIMIT_SALT;
+    process.env.SUPABASE_SECRET_KEY = "fallback-secret-key-xyz";
+
+    const hash = hashClientIdentifier("1.2.3.4");
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  });
 });

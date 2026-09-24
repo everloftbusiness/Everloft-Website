@@ -139,7 +139,13 @@ function LoginForm() {
           />
 
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-          <Button type="submit" variant="gold" size="xl" className="w-full rounded-xl" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="gold"
+            size="xl"
+            className="w-full rounded-xl"
+            disabled={isSubmitting || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+          >
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Sign In
           </Button>

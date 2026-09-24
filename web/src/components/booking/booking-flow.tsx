@@ -250,7 +250,7 @@ export function BookingFlow({
             size="xl"
             variant="gold"
             className="w-full rounded-xl sm:w-auto"
-            disabled={!canSubmit || submitting}
+            disabled={!canSubmit || submitting || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

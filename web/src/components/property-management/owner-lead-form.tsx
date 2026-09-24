@@ -110,7 +110,13 @@ export function OwnerLeadForm() {
         onVerify={setCaptchaToken}
       />
 
-      <Button type="submit" variant="gold" size="xl" className="w-full rounded-xl" disabled={loading}>
+      <Button
+        type="submit"
+        variant="gold"
+        size="xl"
+        className="w-full rounded-xl"
+        disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+      >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
         Schedule Consultation
       </Button>

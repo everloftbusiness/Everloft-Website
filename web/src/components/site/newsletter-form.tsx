@@ -54,7 +54,7 @@ export function NewsletterForm({ className }: { className?: string }) {
           variant="gold"
           size="icon-lg"
           className="shrink-0 rounded-full"
-          disabled={loading}
+          disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
           aria-label="Subscribe"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}

@@ -119,7 +119,12 @@ export function ContactForm() {
         onVerify={setCaptchaToken}
       />
 
-      <Button type="submit" size="xl" className="w-full rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold h-12 shadow-md" disabled={loading}>
+      <Button
+        type="submit"
+        size="xl"
+        className="w-full rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold h-12 shadow-md"
+        disabled={loading || (Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) && !captchaToken)}
+      >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         Send Inquiry
       </Button>

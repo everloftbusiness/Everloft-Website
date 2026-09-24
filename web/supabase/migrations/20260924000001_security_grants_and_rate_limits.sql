@@ -80,17 +80,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   public.files
 TO authenticated;
 
--- Bookings and settlements (if tables exist in live schema)
+-- Bookings and payments (if tables exist in live schema)
+-- Authenticated role is restricted to SELECT only; writes are performed through restricted SECURITY DEFINER RPCs.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'bookings') THEN
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.bookings TO authenticated;';
+    EXECUTE 'GRANT SELECT ON TABLE public.bookings TO authenticated;';
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'booking_payments') THEN
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.booking_payments TO authenticated;';
-  END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'booking_settlements') THEN
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.booking_settlements TO authenticated;';
+    EXECUTE 'GRANT SELECT ON TABLE public.booking_payments TO authenticated;';
   END IF;
 END $$;
 
@@ -99,20 +97,21 @@ END $$;
 -- 3. public.user_permissions View Security Hardening
 -- ----------------------------------------------------------------------------
 -- Change view to security_invoker = true so underlying table RLS applies.
-CREATE OR REPLACE VIEW public.user_permissions WITH (security_invoker = true) AS
-SELECT 
-    ur.user_id,
-    r.id AS role_id,
-    r.slug AS role_slug,
-    r.name AS role_name,
-    p.id AS permission_id,
-    p.slug AS permission_slug,
-    p.name AS permission_name,
-    p.slug AS permission_key
+CREATE OR REPLACE VIEW public.user_permissions
+WITH (security_invoker = true) AS
+SELECT
+  ur.user_id,
+  p.key AS permission_key
 FROM public.user_roles ur
-JOIN public.roles r ON ur.role_id = r.id AND r.deleted_at IS NULL
-JOIN public.role_permissions rp ON r.id = rp.role_id AND rp.deleted_at IS NULL
-JOIN public.permissions p ON rp.permission_id = p.id AND p.deleted_at IS NULL
+JOIN public.roles r
+  ON r.id = ur.role_id
+ AND r.deleted_at IS NULL
+JOIN public.role_permissions rp
+  ON rp.role_id = r.id
+ AND rp.deleted_at IS NULL
+JOIN public.permissions p
+  ON p.id = rp.permission_id
+ AND p.deleted_at IS NULL
 WHERE ur.deleted_at IS NULL;
 
 -- Revoke all access from PUBLIC and anon; grant only to authenticated and service_role
@@ -250,7 +249,7 @@ CREATE TABLE IF NOT EXISTS public.rate_limits (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS rate_limits_key_idx ON public.rate_limits (key);
+-- Note: UNIQUE(key) already creates a unique index; explicit rate_limits_key_idx is omitted.
 CREATE INDEX IF NOT EXISTS rate_limits_reset_at_idx ON public.rate_limits (reset_at);
 
 ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
@@ -279,6 +278,19 @@ DECLARE
   v_allowed boolean;
   v_remaining integer;
 BEGIN
+  -- Validate inputs
+  IF p_key IS NULL OR length(trim(p_key)) = 0 OR length(p_key) > 255 THEN
+    RAISE EXCEPTION 'Invalid rate limit key: must be non-empty and <= 255 characters';
+  END IF;
+
+  IF p_max_requests IS NULL OR p_max_requests < 1 OR p_max_requests > 100000 THEN
+    RAISE EXCEPTION 'Invalid max requests: must be between 1 and 100000';
+  END IF;
+
+  IF p_window_seconds IS NULL OR p_window_seconds < 1 OR p_window_seconds > 2592000 THEN
+    RAISE EXCEPTION 'Invalid window seconds: must be between 1 and 2592000';
+  END IF;
+
   -- 1. Periodic probabilistic prune of expired records older than 24 hours (1 in 100 chance)
   IF random() < 0.01 THEN
     DELETE FROM public.rate_limits WHERE reset_at < (v_now - INTERVAL '24 hours');

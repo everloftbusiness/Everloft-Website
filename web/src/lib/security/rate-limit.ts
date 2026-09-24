@@ -19,15 +19,39 @@ export type RateLimitResult = {
   resetTime: number;
 };
 
+function isPreviewOrProduction(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production" ||
+    process.env.VERCEL_ENV === "preview"
+  );
+}
+
+/**
+ * Returns the salt used for hashing client identifiers.
+ * In Preview/Production environments, requires RATE_LIMIT_SALT (or explicitly documented
+ * fallback SUPABASE_SECRET_KEY). Never allows a hardcoded default salt in Preview or Production.
+ */
+export function getRateLimitSalt(): string {
+  const salt = process.env.RATE_LIMIT_SALT || process.env.SUPABASE_SECRET_KEY;
+  if (isPreviewOrProduction()) {
+    if (!salt || !salt.trim()) {
+      throw new Error(
+        "RATE_LIMIT_SALT (or fallback SUPABASE_SECRET_KEY) must be configured in Preview and Production."
+      );
+    }
+    return salt.trim();
+  }
+  // Local development / unit test fallback only
+  return salt?.trim() || "everloft-rate-limit-dev-test-salt";
+}
+
 /**
  * Returns a keyed HMAC hash of the client identifier (e.g. IP address)
  * using a server-side salt so raw IP addresses are never persisted in the database.
  */
 export function hashClientIdentifier(identifier: string): string {
-  const salt =
-    process.env.RATE_LIMIT_SALT ||
-    process.env.SUPABASE_SECRET_KEY ||
-    "everloft-rate-limit-default-salt";
+  const salt = getRateLimitSalt();
   return crypto.createHmac("sha256", salt).update(identifier.trim()).digest("hex");
 }
 
@@ -50,6 +74,21 @@ export async function checkRateLimit(
   const isProduction =
     process.env.NODE_ENV === "production" ||
     process.env.VERCEL_ENV === "production";
+
+  // Fail closed in Preview/Production if salt is missing
+  if (isPreviewOrProduction()) {
+    const salt = process.env.RATE_LIMIT_SALT || process.env.SUPABASE_SECRET_KEY;
+    if (!salt || !salt.trim()) {
+      console.error(
+        "Durable rate limiter: RATE_LIMIT_SALT or SUPABASE_SECRET_KEY required in Preview/Production."
+      );
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: now + 60_000,
+      };
+    }
+  }
 
   // Use hashed identifier for privacy preservation
   const hashedId = hashClientIdentifier(identifier);

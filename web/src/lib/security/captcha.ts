@@ -17,6 +17,37 @@ type TurnstileSiteVerifyResponse = {
   challenge_ts?: string;
 };
 
+/**
+ * Resolves the trusted set of hostnames permitted to issue Cloudflare Turnstile tokens.
+ * Defaults to "www.everloft.co.in,everloft.co.in".
+ * Also incorporates VERCEL_URL for Preview deployments if present.
+ */
+export function getTrustedTurnstileHostnames(): Set<string> {
+  const allowed = new Set<string>();
+  const rawList = process.env.TURNSTILE_ALLOWED_HOSTNAMES ?? "www.everloft.co.in,everloft.co.in";
+
+  for (const item of rawList.split(",")) {
+    const clean = item.trim().toLowerCase().replace(/\.+$/, "");
+    if (clean) {
+      allowed.add(clean);
+    }
+  }
+
+  if (process.env.VERCEL_URL) {
+    const cleanVercel = process.env.VERCEL_URL
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "")
+      .replace(/\.+$/, "");
+    if (cleanVercel) {
+      allowed.add(cleanVercel);
+    }
+  }
+
+  return allowed;
+}
+
 export async function verifyCaptchaToken(
   token?: string | null,
   options: TurnstileVerifyOptions = {}
@@ -83,9 +114,25 @@ export async function verifyCaptchaToken(
       }
     }
 
-    // Hostname validation
+    // Central Hostname validation: outcome.hostname must exist and match trusted allowlist
+    if (!outcome.hostname || typeof outcome.hostname !== "string") {
+      return false;
+    }
+
+    const normalizedHostname = outcome.hostname.trim().toLowerCase().replace(/\.+$/, "");
+    if (!normalizedHostname) {
+      return false;
+    }
+
+    const trustedHostnames = getTrustedTurnstileHostnames();
+    if (!trustedHostnames.has(normalizedHostname)) {
+      return false;
+    }
+
+    // If caller provided an expected hostname, require exact match
     if (options.expectedHostname) {
-      if (!outcome.hostname || outcome.hostname.toLowerCase() !== options.expectedHostname.toLowerCase()) {
+      const normalizedExpected = options.expectedHostname.trim().toLowerCase().replace(/\.+$/, "");
+      if (normalizedHostname !== normalizedExpected) {
         return false;
       }
     }

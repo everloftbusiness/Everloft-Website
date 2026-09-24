@@ -121,4 +121,96 @@ describe('Cloudflare Turnstile CAPTCHA Verification', () => {
     });
     expect(result).toBe(false);
   });
+
+  it('rejects verification when outcome hostname is missing', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }), // missing hostname
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(false);
+  });
+
+  it('rejects verification when outcome hostname is wrong/untrusted', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'evil-attacker.com' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(false);
+  });
+
+  it('accepts verification for production hostname (www.everloft.co.in and everloft.co.in)', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'www.everloft.co.in' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(true);
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'everloft.co.in' }),
+    });
+    const result2 = await verifyCaptchaToken('valid-token');
+    expect(result2).toBe(true);
+  });
+
+  it('accepts verification for exact Vercel Preview hostname from VERCEL_URL', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+    process.env.VERCEL_URL = 'everloft-preview-git-fix-security.vercel.app';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'everloft-preview-git-fix-security.vercel.app' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(true);
+  });
+
+  it('normalizes case, whitespace, and trailing dots in hostname validation', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: '  WWW.EVERLOFT.CO.IN.  ' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(true);
+  });
+
+  it('rejects verification for a malicious suffix such as www.everloft.co.in.attacker.example', async () => {
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    process.env.TURNSTILE_SECRET_KEY = 'secret-key-123';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'www.everloft.co.in.attacker.example' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyCaptchaToken('valid-token');
+    expect(result).toBe(false);
+  });
 });
