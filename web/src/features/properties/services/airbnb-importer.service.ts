@@ -165,7 +165,9 @@ export function normalizeAmenityName(rawName: string): { name: string; slug: str
  * Normalizes Airbnb photo URLs to high resolution (1200px width).
  */
 function normalizePhotoUrl(rawUrl: string): string {
-  const url = rawUrl.replace(/\\u0026/g, "&").replace(/&amp;/g, "&");
+  // Decode either representation in one pass so a replacement produced by
+  // one rule cannot be decoded again by a later rule.
+  const url = rawUrl.replace(/\\u0026|&amp;/g, "&");
   if (url.includes("a0.muscache.com")) {
     const baseUrl = url.split("?")[0];
     return `${baseUrl}?im_w=1200`;
