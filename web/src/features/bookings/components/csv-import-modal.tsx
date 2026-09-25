@@ -32,6 +32,8 @@ import { type PropertyOption } from '../types/booking.types';
 import { money } from '../utils/money';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
+import { SyncProgressOverlay, type SyncProgressState } from './sync-progress-tracker';
+import { calculateProgressAndEta, chunkArray } from '../utils/sync-progress';
 
 export function CsvImportModal({
   properties,
@@ -83,6 +85,7 @@ export function CsvImportModal({
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [syncProgress, setSyncProgress] = useState<SyncProgressState | null>(null);
 
   // Pre-scan parsed rows against database to categorize New vs Duplicate vs Invalid Data
   useEffect(() => {
@@ -503,22 +506,118 @@ export function CsvImportModal({
     }
 
     setImportError(null);
+    const startTime = Date.now();
+    const totalRows = rowsToImport.length;
+    const propertyObj = properties.find((p) => p.id === selectedPropertyId);
+    const propertyName = propertyObj ? propertyObj.name : 'Property';
+
+    setSyncProgress({
+      active: true,
+      title: `Importing Records into ${propertyName}`,
+      currentStep: `Preparing ${totalRows} records for database import...`,
+      totalUnits: totalRows,
+      completedUnits: 0,
+      percent: 0,
+      elapsedSeconds: 0,
+      estimatedRemainingSeconds: null,
+      speedUnitsPerSec: 0,
+      successCount: 0,
+      duplicateCount: analysisResult?.duplicateCount || 0,
+      failedCount: 0,
+      isComplete: false,
+    });
+
+    const ticker = setInterval(() => {
+      setSyncProgress((prev) => {
+        if (!prev || !prev.active || prev.isComplete) return prev;
+        const now = Date.now();
+        const calc = calculateProgressAndEta(startTime, prev.completedUnits, prev.totalUnits, now);
+        return {
+          ...prev,
+          elapsedSeconds: calc.elapsedSeconds,
+          estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+          speedUnitsPerSec: calc.speedUnitsPerSec,
+        };
+      });
+    }, 400);
+
     startTransition(async () => {
       try {
-        const res = await importBookingsAction(rowsToImport, selectedPropertyId);
-        if (res.success) {
-          setImportSuccessMessage(`Successfully imported ${res.count} new booking record${res.count === 1 ? '' : 's'}!`);
-          setTimeout(() => {
-            setIsOpen(false);
-            setImportSuccessMessage(null);
-            setCsvText('');
-            setParsedRows([]);
-            setAnalysisResult(null);
-            if (onImportComplete) onImportComplete();
-          }, 1500);
+        const chunks = chunkArray(rowsToImport, 25);
+        let cumulativeCompleted = 0;
+        let cumulativeSuccess = 0;
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          setSyncProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  currentStep: `Saving batch ${i + 1} of ${chunks.length} (${chunk.length} records)...`,
+                }
+              : null
+          );
+
+          const res = await importBookingsAction(chunk, selectedPropertyId);
+          cumulativeCompleted += chunk.length;
+          cumulativeSuccess += res.count;
+
+          const now = Date.now();
+          const calc = calculateProgressAndEta(startTime, cumulativeCompleted, totalRows, now);
+
+          setSyncProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  completedUnits: cumulativeCompleted,
+                  percent: calc.percent,
+                  elapsedSeconds: calc.elapsedSeconds,
+                  estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+                  speedUnitsPerSec: calc.speedUnitsPerSec,
+                  successCount: cumulativeSuccess,
+                }
+              : null
+          );
         }
+
+        clearInterval(ticker);
+
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                percent: 100,
+                estimatedRemainingSeconds: 0,
+                currentStep: `Successfully saved ${cumulativeSuccess} records into database!`,
+              }
+            : null
+        );
+
+        setImportSuccessMessage(`Successfully imported ${cumulativeSuccess} new booking record${cumulativeSuccess === 1 ? '' : 's'}!`);
+        setTimeout(() => {
+          setIsOpen(false);
+          setImportSuccessMessage(null);
+          setSyncProgress(null);
+          setCsvText('');
+          setParsedRows([]);
+          setAnalysisResult(null);
+          if (onImportComplete) onImportComplete();
+        }, 1500);
       } catch (err) {
-        setImportError(err instanceof Error ? err.message : 'Import failed.');
+        clearInterval(ticker);
+        const msg = err instanceof Error ? err.message : 'Import failed.';
+        setImportError(msg);
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                errorMessage: msg,
+                currentStep: `Failed: ${msg}`,
+              }
+            : null
+        );
       }
     });
   }
@@ -1392,6 +1491,14 @@ export function CsvImportModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Real-time Percentage & ETA Sync Progress Overlay */}
+      {syncProgress?.active && (
+        <SyncProgressOverlay
+          state={syncProgress}
+          onDismiss={() => setSyncProgress(null)}
+        />
       )}
     </>
   );

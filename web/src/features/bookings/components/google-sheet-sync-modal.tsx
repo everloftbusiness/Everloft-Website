@@ -25,6 +25,7 @@ import {
   syncSinglePropertyTabAction,
   syncAllPropertyTabsAction,
   previewGoogleSheetTabAction,
+  fetchTabRowsForInteractiveSyncAction,
   type TabSyncResult,
   type GoogleSheetTabPreviewResult,
 } from '../actions/dynamic-sheet-sync.action';
@@ -32,6 +33,12 @@ import { importBookingsAction, type ImportRowAnalysis } from '../actions/import.
 import { money } from '../utils/money';
 import { toast } from 'sonner';
 import { FormattedDateTime, LocalTimezoneBadge } from '@/components/ui/formatted-date-time';
+import {
+  SyncProgressOverlay,
+  type SyncProgressState,
+  formatEtaDisplay,
+} from './sync-progress-tracker';
+import { calculateProgressAndEta, chunkArray } from '../utils/sync-progress';
 
 type PropertyMapping = {
   propertyId: string;
@@ -98,6 +105,9 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
 
   const [activeSyncingKey, setActiveSyncingKey] = useState<string | null>(null);
   const [isSyncingAll, startTransitionSyncAll] = useTransition();
+
+  // Real-Time Progress, Percentage & ETA Estimation State
+  const [syncProgress, setSyncProgress] = useState<SyncProgressState | null>(null);
 
   // Google Sheet Live Row Preview / Inspection Modal State
   const [activePreview, setActivePreview] = useState<GoogleSheetTabPreviewResult | null>(null);
@@ -219,8 +229,39 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
     const key = `${propertyId}_${tabType}`;
     setActiveSyncingKey(key);
 
+    const startTime = Date.now();
+    setSyncProgress({
+      active: true,
+      title: `Syncing ${propertyName} (${tabName})`,
+      currentStep: `Connecting to Google Drive and reading tab "${tabName}"...`,
+      totalUnits: 100,
+      completedUnits: 5,
+      percent: 5,
+      elapsedSeconds: 0,
+      estimatedRemainingSeconds: null,
+      speedUnitsPerSec: 0,
+      successCount: 0,
+      duplicateCount: 0,
+      failedCount: 0,
+      isComplete: false,
+    });
+
+    const ticker = setInterval(() => {
+      setSyncProgress((prev) => {
+        if (!prev || !prev.active || prev.isComplete) return prev;
+        const now = Date.now();
+        const calc = calculateProgressAndEta(startTime, prev.completedUnits, prev.totalUnits, now);
+        return {
+          ...prev,
+          elapsedSeconds: calc.elapsedSeconds,
+          estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+          speedUnitsPerSec: calc.speedUnitsPerSec,
+        };
+      });
+    }, 400);
+
     try {
-      const res = await syncSinglePropertyTabAction({
+      const fetchRes = await fetchTabRowsForInteractiveSyncAction({
         spreadsheetUrlOrId: spreadsheetUrl,
         propertyId,
         propertyName,
@@ -228,16 +269,128 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         tabType,
       });
 
-      setTabResults((prev) => ({ ...prev, [key]: res }));
-      saveSyncTimestamp(key);
+      if (!fetchRes.success || !fetchRes.rows || fetchRes.rows.length === 0) {
+        clearInterval(ticker);
+        const errMsg = fetchRes.message || 'No valid rows found in tab.';
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                percent: 100,
+                currentStep: errMsg,
+                errorMessage: errMsg,
+              }
+            : null
+        );
 
-      if (res.success) {
-        toast.success(res.message);
-      } else {
-        toast.error(res.message, { duration: 5000 });
+        setTabResults((prev) => ({
+          ...prev,
+          [key]: {
+            propertyId,
+            propertyName,
+            tabName,
+            tabType,
+            success: false,
+            message: errMsg,
+            timestamp: new Date().toISOString(),
+          },
+        }));
+
+        if (fetchRes.requiresPermission) {
+          toast.error('Google Sheet access restricted (Sign-in required)', { duration: 6000 });
+        } else {
+          toast.error(errMsg);
+        }
+        return;
       }
+
+      const totalRows = fetchRes.rows.length;
+      const chunks = chunkArray(fetchRes.rows, 25);
+      let cumulativeCompleted = 0;
+      let cumulativeSuccess = 0;
+      let cumulativeDuplicates = 0;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: `Syncing ${propertyName} (${tabName})`,
+                currentStep: `Processing batch ${i + 1} of ${chunks.length} (${chunk.length} records)...`,
+                totalUnits: totalRows,
+              }
+            : null
+        );
+
+        const importRes = await importBookingsAction(chunk, propertyId);
+        cumulativeCompleted += chunk.length;
+        cumulativeSuccess += importRes.count;
+        cumulativeDuplicates += chunk.length - importRes.count;
+
+        const now = Date.now();
+        const calc = calculateProgressAndEta(startTime, cumulativeCompleted, totalRows, now);
+
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                completedUnits: cumulativeCompleted,
+                totalUnits: totalRows,
+                percent: calc.percent,
+                elapsedSeconds: calc.elapsedSeconds,
+                estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+                speedUnitsPerSec: calc.speedUnitsPerSec,
+                successCount: cumulativeSuccess,
+                duplicateCount: cumulativeDuplicates,
+              }
+            : null
+        );
+      }
+
+      clearInterval(ticker);
+
+      setSyncProgress((prev) =>
+        prev
+          ? {
+              ...prev,
+              isComplete: true,
+              percent: 100,
+              estimatedRemainingSeconds: 0,
+              currentStep: `Completed! Synced ${cumulativeSuccess} new booking(s) (${cumulativeDuplicates} duplicates skipped).`,
+            }
+          : null
+      );
+
+      const syncResult: TabSyncResult = {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: true,
+        count: cumulativeSuccess,
+        message: `✓ Synced ${cumulativeSuccess} ${tabType} row(s) from tab '${tabName}'.`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setTabResults((prev) => ({ ...prev, [key]: syncResult }));
+      saveSyncTimestamp(key);
+      toast.success(syncResult.message);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sync failed');
+      clearInterval(ticker);
+      const msg = err instanceof Error ? err.message : 'Sync failed';
+      setSyncProgress((prev) =>
+        prev
+          ? {
+              ...prev,
+              isComplete: true,
+              errorMessage: msg,
+              currentStep: `Failed: ${msg}`,
+            }
+          : null
+      );
+      toast.error(msg);
     } finally {
       setActiveSyncingKey(null);
     }
@@ -294,65 +447,335 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
       return;
     }
 
-    startTransitionPreviewImport(async () => {
-      try {
-        const res = await importBookingsAction(validNewRows, activePreview.propertyId);
-        if (res.success) {
-          toast.success(`Successfully imported ${res.count} new booking(s) from tab '${activePreview.tabName}'!`);
+    const previewData = activePreview;
+    const previewAnalysis = activePreview.analysis;
+    const startTime = Date.now();
+    const totalRows = validNewRows.length;
 
-          const key = `${activePreview.propertyId}_${activePreview.tabType}`;
-          setTabResults((prev) => ({
+    startTransitionPreviewImport(async () => {
+      setSyncProgress({
+        active: true,
+        title: `Importing Tab "${previewData.tabName}"`,
+        currentStep: `Preparing ${totalRows} verified records...`,
+        totalUnits: totalRows,
+        completedUnits: 0,
+        percent: 0,
+        elapsedSeconds: 0,
+        estimatedRemainingSeconds: null,
+        speedUnitsPerSec: 0,
+        successCount: 0,
+        duplicateCount: previewAnalysis.duplicateCount,
+        failedCount: 0,
+        isComplete: false,
+      });
+
+      const ticker = setInterval(() => {
+        setSyncProgress((prev) => {
+          if (!prev || !prev.active || prev.isComplete) return prev;
+          const now = Date.now();
+          const calc = calculateProgressAndEta(startTime, prev.completedUnits, prev.totalUnits, now);
+          return {
             ...prev,
-            [key]: {
-              propertyId: activePreview.propertyId,
-              propertyName: activePreview.propertyName,
-              tabName: activePreview.tabName,
-              tabType: activePreview.tabType,
-              success: true,
-              count: res.count,
-              message: `✓ Synced ${res.count} ${activePreview.tabType} row(s) from tab '${activePreview.tabName}'.`,
-            },
-          }));
-          saveSyncTimestamp(key);
-          setActivePreview(null);
+            elapsedSeconds: calc.elapsedSeconds,
+            estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+            speedUnitsPerSec: calc.speedUnitsPerSec,
+          };
+        });
+      }, 400);
+
+      try {
+        const chunks = chunkArray(validNewRows, 25);
+        let cumulativeCompleted = 0;
+        let cumulativeSuccess = 0;
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          setSyncProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  currentStep: `Writing batch ${i + 1} of ${chunks.length} (${chunk.length} records) to database...`,
+                }
+              : null
+          );
+
+          const res = await importBookingsAction(chunk, previewData.propertyId);
+          cumulativeCompleted += chunk.length;
+          cumulativeSuccess += res.count;
+
+          const now = Date.now();
+          const calc = calculateProgressAndEta(startTime, cumulativeCompleted, totalRows, now);
+
+          setSyncProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  completedUnits: cumulativeCompleted,
+                  percent: calc.percent,
+                  elapsedSeconds: calc.elapsedSeconds,
+                  estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+                  speedUnitsPerSec: calc.speedUnitsPerSec,
+                  successCount: cumulativeSuccess,
+                }
+              : null
+          );
         }
+
+        clearInterval(ticker);
+
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                percent: 100,
+                estimatedRemainingSeconds: 0,
+                currentStep: `Successfully saved ${cumulativeSuccess} records into database!`,
+              }
+            : null
+        );
+
+        const key = `${previewData.propertyId}_${previewData.tabType}`;
+        setTabResults((prev) => ({
+          ...prev,
+          [key]: {
+            propertyId: previewData.propertyId,
+            propertyName: previewData.propertyName,
+            tabName: previewData.tabName,
+            tabType: previewData.tabType,
+            success: true,
+            count: cumulativeSuccess,
+            message: `✓ Synced ${cumulativeSuccess} ${previewData.tabType} row(s) from tab '${previewData.tabName}'.`,
+            timestamp: new Date().toISOString(),
+          },
+        }));
+
+        saveSyncTimestamp(key);
+        toast.success(`Successfully imported ${cumulativeSuccess} new booking(s) from tab '${previewData.tabName}'!`);
+        setActivePreview(null);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Import failed.');
+        clearInterval(ticker);
+        const msg = err instanceof Error ? err.message : 'Import failed.';
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                errorMessage: msg,
+                currentStep: `Failed: ${msg}`,
+              }
+            : null
+        );
+        toast.error(msg);
       }
     });
   }
 
   function handleSyncAll() {
     startTransitionSyncAll(async () => {
+      const startTime = Date.now();
+
+      type TabTarget = {
+        propertyId: string;
+        propertyName: string;
+        tabName: string;
+        tabType: 'income' | 'expense';
+      };
+
+      const targets: TabTarget[] = [];
+      for (const m of mappings) {
+        if (m.incomeTab?.trim()) {
+          targets.push({
+            propertyId: m.propertyId,
+            propertyName: m.propertyName,
+            tabName: m.incomeTab.trim(),
+            tabType: 'income',
+          });
+        }
+        if (m.expenseTab?.trim()) {
+          targets.push({
+            propertyId: m.propertyId,
+            propertyName: m.propertyName,
+            tabName: m.expenseTab.trim(),
+            tabType: 'expense',
+          });
+        }
+      }
+
+      if (targets.length === 0) {
+        toast.error('No property sheet tabs configured to sync.');
+        return;
+      }
+
+      setSyncProgress({
+        active: true,
+        title: 'Syncing All Property Ledgers',
+        currentStep: `Scanning ${targets.length} sheet tabs in Google Drive...`,
+        totalUnits: targets.length * 30,
+        completedUnits: 0,
+        percent: 0,
+        elapsedSeconds: 0,
+        estimatedRemainingSeconds: null,
+        speedUnitsPerSec: 0,
+        successCount: 0,
+        duplicateCount: 0,
+        failedCount: 0,
+        isComplete: false,
+      });
+
+      const ticker = setInterval(() => {
+        setSyncProgress((prev) => {
+          if (!prev || !prev.active || prev.isComplete) return prev;
+          const now = Date.now();
+          const calc = calculateProgressAndEta(startTime, prev.completedUnits, prev.totalUnits, now);
+          return {
+            ...prev,
+            elapsedSeconds: calc.elapsedSeconds,
+            estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+            speedUnitsPerSec: calc.speedUnitsPerSec,
+          };
+        });
+      }, 400);
+
+      const newMap: Record<string, TabSyncResult> = { ...tabResults };
+      const keysToUpdate: string[] = [];
+      let totalSuccessBookings = 0;
+      let totalDuplicatesSkipped = 0;
+      let totalFailedTabs = 0;
+      let totalCompletedRows = 0;
+      let totalDiscoveredRows = 0;
+
       try {
-        const results = await syncAllPropertyTabsAction({
-          spreadsheetUrlOrId: spreadsheetUrl,
-          mappings,
-        });
+        for (let tIdx = 0; tIdx < targets.length; tIdx++) {
+          const target = targets[tIdx];
+          const key = `${target.propertyId}_${target.tabType}`;
+          setActiveSyncingKey(key);
 
-        const newMap: Record<string, TabSyncResult> = { ...tabResults };
-        const keysToUpdate: string[] = [];
-        let successCount = 0;
-        let failCount = 0;
+          setSyncProgress((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  currentStep: `[${tIdx + 1}/${targets.length}] Reading "${target.tabName}" (${target.propertyName})...`,
+                }
+              : null
+          );
 
-        results.forEach((res) => {
-          const key = `${res.propertyId}_${res.tabType}`;
-          newMap[key] = res;
+          const fetchRes = await fetchTabRowsForInteractiveSyncAction({
+            spreadsheetUrlOrId: spreadsheetUrl,
+            propertyId: target.propertyId,
+            propertyName: target.propertyName,
+            tabName: target.tabName,
+            tabType: target.tabType,
+          });
+
+          if (!fetchRes.success || !fetchRes.rows || fetchRes.rows.length === 0) {
+            totalFailedTabs++;
+            newMap[key] = {
+              propertyId: target.propertyId,
+              propertyName: target.propertyName,
+              tabName: target.tabName,
+              tabType: target.tabType,
+              success: false,
+              message: fetchRes.message || 'No valid rows found.',
+              timestamp: new Date().toISOString(),
+            };
+            continue;
+          }
+
+          const tabRows = fetchRes.rows;
+          totalDiscoveredRows += tabRows.length;
+
+          const chunks = chunkArray(tabRows, 25);
+          for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
+            const chunk = chunks[cIdx];
+            setSyncProgress((prev) => {
+              if (!prev) return null;
+              const dynamicTotal = Math.max(prev.totalUnits, totalDiscoveredRows);
+              return {
+                ...prev,
+                currentStep: `[${target.propertyName}] Tab "${target.tabName}": batch ${cIdx + 1}/${chunks.length}...`,
+                totalUnits: dynamicTotal,
+              };
+            });
+
+            const importRes = await importBookingsAction(chunk, target.propertyId);
+            totalCompletedRows += chunk.length;
+            totalSuccessBookings += importRes.count;
+            totalDuplicatesSkipped += chunk.length - importRes.count;
+
+            const now = Date.now();
+            const dynamicTotal = Math.max(totalDiscoveredRows, totalCompletedRows);
+            const calc = calculateProgressAndEta(startTime, totalCompletedRows, dynamicTotal, now);
+
+            setSyncProgress((prev) => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                completedUnits: totalCompletedRows,
+                totalUnits: dynamicTotal,
+                percent: calc.percent,
+                elapsedSeconds: calc.elapsedSeconds,
+                estimatedRemainingSeconds: calc.estimatedRemainingSeconds,
+                speedUnitsPerSec: calc.speedUnitsPerSec,
+                successCount: totalSuccessBookings,
+                duplicateCount: totalDuplicatesSkipped,
+              };
+            });
+          }
+
+          newMap[key] = {
+            propertyId: target.propertyId,
+            propertyName: target.propertyName,
+            tabName: target.tabName,
+            tabType: target.tabType,
+            success: true,
+            count: tabRows.length,
+            message: `✓ Synced tab '${target.tabName}'.`,
+            timestamp: new Date().toISOString(),
+          };
           keysToUpdate.push(key);
-          if (res.success) successCount++;
-          else failCount++;
-        });
+        }
+
+        clearInterval(ticker);
+
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                percent: 100,
+                completedUnits: totalCompletedRows,
+                totalUnits: Math.max(totalCompletedRows, 1),
+                estimatedRemainingSeconds: 0,
+                currentStep: `Finished! Synced ${totalSuccessBookings} new bookings across ${targets.length - totalFailedTabs} tabs (${totalDuplicatesSkipped} duplicates skipped).`,
+              }
+            : null
+        );
 
         setTabResults(newMap);
         saveAllSyncTimestamps(keysToUpdate);
 
-        if (failCount === 0) {
-          toast.success(`✓ Successfully synced all ${successCount} property tab(s)!`);
+        if (totalFailedTabs === 0) {
+          toast.success(`✓ Successfully synced all ${targets.length} property tabs!`);
         } else {
-          toast.warning(`Synced ${successCount} tab(s), ${failCount} tab(s) failed or not found. Check diagnostics below.`);
+          toast.warning(`Synced ${targets.length - totalFailedTabs} tab(s), ${totalFailedTabs} tab(s) had issues.`);
         }
-      } catch {
-        toast.error('Sync all failed.');
+      } catch (err) {
+        clearInterval(ticker);
+        const msg = err instanceof Error ? err.message : 'Sync all failed.';
+        setSyncProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                isComplete: true,
+                errorMessage: msg,
+                currentStep: `Failed: ${msg}`,
+              }
+            : null
+        );
+        toast.error(msg);
+      } finally {
+        setActiveSyncingKey(null);
       }
     });
   }
@@ -377,7 +800,13 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
             </span>
-            Syncing Google Sheet...
+            {syncProgress?.active ? (
+              <span>
+                Syncing: {Math.round(syncProgress.percent)}% ({formatEtaDisplay(syncProgress.estimatedRemainingSeconds, syncProgress.percent)})
+              </span>
+            ) : (
+              <span>Syncing Google Sheet...</span>
+            )}
           </span>
         ) : (
           <span>⚡ Google Sheet Sync</span>
@@ -999,6 +1428,14 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
             </div>
           </div>
         </div>
+      )}
+
+      {/* Real-time Percentage & ETA Sync Progress Overlay */}
+      {syncProgress?.active && (
+        <SyncProgressOverlay
+          state={syncProgress}
+          onDismiss={() => setSyncProgress(null)}
+        />
       )}
     </>
   );

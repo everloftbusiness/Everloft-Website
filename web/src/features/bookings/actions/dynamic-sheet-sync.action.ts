@@ -299,6 +299,155 @@ export async function syncSinglePropertyTabAction({
 }
 
 /**
+ * Fetches and parses tab rows from Google Sheet without saving to DB yet,
+ * enabling client-side chunked sync with real-time percentage, elapsed timer, and ETA calculations!
+ */
+export async function fetchTabRowsForInteractiveSyncAction({
+  spreadsheetUrlOrId,
+  propertyId,
+  propertyName,
+  tabName,
+  tabType,
+}: {
+  spreadsheetUrlOrId: string;
+  propertyId: string;
+  propertyName: string;
+  tabName: string;
+  tabType: 'income' | 'expense';
+}): Promise<{
+  success: boolean;
+  message: string;
+  propertyId: string;
+  propertyName: string;
+  tabName: string;
+  tabType: 'income' | 'expense';
+  rows?: import('../utils/csv-parser').ParsedImportRow[];
+  requiresPermission?: boolean;
+}> {
+  const session = await getDashboardSession();
+  if (!session) {
+    return {
+      propertyId,
+      propertyName,
+      tabName,
+      tabType,
+      success: false,
+      message: 'Unauthorized: Authentication required.',
+    };
+  }
+  if (!session.permissions.includes('manage_bookings') && session.role !== 'super_admin' && session.role !== 'finance_admin' && session.role !== 'operations_manager') {
+    return {
+      propertyId,
+      propertyName,
+      tabName,
+      tabType,
+      success: false,
+      message: 'Forbidden: Insufficient permissions (manage_bookings required).',
+    };
+  }
+
+  const spreadsheetId = await extractSpreadsheetId(spreadsheetUrlOrId);
+  if (!spreadsheetId) {
+    return {
+      propertyId,
+      propertyName,
+      tabName,
+      tabType,
+      success: false,
+      message: 'Invalid Google Sheet URL.',
+    };
+  }
+
+  if (!tabName || !tabName.trim()) {
+    return {
+      propertyId,
+      propertyName,
+      tabName: tabName || '(Not specified)',
+      tabType,
+      success: false,
+      message: `No ${tabType} tab name specified.`,
+    };
+  }
+
+  try {
+    const rawRows = await fetchSheetData(tabName.trim(), spreadsheetId);
+    if (!rawRows || rawRows.length === 0) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        message: `Tab '${tabName}' is empty or contains no readable data.`,
+      };
+    }
+
+    const keys = Object.keys(rawRows[0] || {});
+    const csvLines = [
+      keys.join(','),
+      ...rawRows.map((r) => keys.map((k) => `"${String(r[k] ?? '').replace(/"/g, '""')}"`).join(',')),
+    ];
+    const csvContent = csvLines.join('\n');
+
+    if (csvContent.length > MAX_SHEET_RESPONSE_BYTES) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        message: `Tab '${tabName}' payload exceeds maximum size limit (5 MB).`,
+      };
+    }
+
+    const parsedRows = parseGoogleSheetCsv(csvContent);
+    const validRows = parsedRows.filter((r) => r.isValid);
+
+    if (validRows.length === 0) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        message: `Tab '${tabName}' accessible, but no valid rows passed schema validation.`,
+      };
+    }
+
+    return {
+      propertyId,
+      propertyName,
+      tabName,
+      tabType,
+      success: true,
+      message: `Found ${validRows.length} valid row(s) to sync.`,
+      rows: validRows,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('sign-in') || msg.includes('Anyone with the link')) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        requiresPermission: true,
+        message: 'Permission Restricted: Share Google Sheet to "Anyone with the link can view".',
+      };
+    }
+    return {
+      propertyId,
+      propertyName,
+      tabName,
+      tabType,
+      success: false,
+      message: `Failed to fetch tab '${tabName}': ${msg}`,
+    };
+  }
+}
+
+/**
  * Syncs all mapped property income and expense tabs at once
  */
 export async function syncAllPropertyTabsAction({
