@@ -11,8 +11,8 @@ import { createFileRecord } from "@/lib/storage/file-service";
 import { randomUUID } from "crypto";
 import { fetchTrustedUrl, isTrustedHttpsUrl } from "@/lib/security/trusted-fetch";
 
-export const MAX_AIRBNB_PHOTOS = 120;
-export const PHOTO_CONCURRENCY_LIMIT = 6;
+const MAX_AIRBNB_PHOTOS = 120;
+const PHOTO_CONCURRENCY_LIMIT = 6;
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB limit per photo
 const AIRBNB_IMAGE_HOSTS = new Set(["a0.muscache.com"]);
 
