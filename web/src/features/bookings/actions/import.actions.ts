@@ -6,6 +6,12 @@ import { getBookingOptions, saveBooking, finalizeBooking, recordPayment } from '
 import { bookingSchema, paymentSchema } from '../schemas/booking.schema';
 import type { ParsedImportRow } from '../utils/csv-parser';
 import type { FinancialLine } from '../types/booking.types';
+import {
+  isExactBookingDuplicate,
+  buildBatchDeduplicationKey,
+  type ExistingBookingRecord,
+  type IncomingBookingCandidate,
+} from '../utils/duplicate-detector';
 
 const MAX_IMPORT_ROWS = 500;
 
@@ -56,8 +62,7 @@ export async function importBookingsAction(
   const minDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a < b ? a : b)) : null;
   const maxDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a > b ? a : b)) : null;
 
-  type BookingLookupRow = { property_id: string; guest_name: string | null; check_in_date: string };
-  const existingBookings: BookingLookupRow[] = [];
+  const existingBookings: ExistingBookingRecord[] = [];
 
   if (batchPropertyIds.length > 0) {
     // Chunk property IDs in batches of 50 if necessary
@@ -67,7 +72,7 @@ export async function importBookingsAction(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = (admin as any)
         .from('bookings')
-        .select('property_id, guest_name, check_in_date')
+        .select('id, property_id, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
         .is('deleted_at', null)
         .in('property_id', chunk);
 
@@ -77,16 +82,56 @@ export async function importBookingsAction(
 
       const { data: chunkData } = await query;
       if (chunkData && Array.isArray(chunkData)) {
-        existingBookings.push(...(chunkData as BookingLookupRow[]));
+        for (const item of chunkData) {
+          const accounts = new Set<string>();
+          if (item.notes) {
+            const match = item.notes.match(/(kgb|hdfc|sbi|icici|axis|bank|cash|paytm|everloft - kgb)/i);
+            if (match) accounts.add(match[0].toLowerCase());
+          }
+          existingBookings.push({
+            id: item.id,
+            property_id: item.property_id,
+            guest_name: item.guest_name,
+            check_in_date: item.check_in_date,
+            check_out_date: item.check_out_date,
+            unit_label: item.unit_label,
+            guest_total: item.guest_total !== undefined && item.guest_total !== null ? Number(item.guest_total) : null,
+            host_total: item.host_total !== undefined && item.host_total !== null ? Number(item.host_total) : null,
+            notes: item.notes,
+            accounts,
+          });
+        }
+      }
+    }
+
+    // Attempt to enrich with transaction accounts if available
+    const bookingIds = existingBookings.map((b) => b.id).filter(Boolean);
+    if (bookingIds.length > 0) {
+      try {
+        const { data: txData } = await (admin as any)
+          .from('transactions')
+          .select('related_entity_id, account_label')
+          .is('deleted_at', null)
+          .in('related_entity_id', bookingIds);
+
+        if (txData && Array.isArray(txData)) {
+          for (const tx of txData) {
+            if (tx.related_entity_id && tx.account_label) {
+              const b = existingBookings.find((eb) => eb.id === tx.related_entity_id);
+              if (b) {
+                if (!b.accounts) b.accounts = new Set();
+                b.accounts.add(tx.account_label.trim().toLowerCase());
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-blocking in case transactions table is mocked or unpopulated
       }
     }
   }
 
-  const existingSet = new Set(
-    existingBookings.map(
-      (b) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
-    )
-  );
+  const seenInBatchKeys = new Set<string>();
 
   // Unique Batch ID for this import session
   const batchId = crypto.randomUUID().slice(0, 8).toUpperCase();
@@ -102,11 +147,29 @@ export async function importBookingsAction(
 
       const targetPropertyId = matchedProp ? matchedProp.id : defaultPropertyId;
 
-      const lookupKey = `${targetPropertyId}_${r.guestName.trim().toLowerCase()}_${r.checkInDate}`;
-      if (existingSet.has(lookupKey)) {
+      const candidate: IncomingBookingCandidate = {
+        propertyId: targetPropertyId,
+        guestName: r.guestName,
+        checkInDate: r.checkInDate,
+        unitLabel: r.roomLabel,
+        guestTotal: r.guestTotal,
+        hostTotal: r.hostTotal,
+        amountCreditedBank: r.amountCreditedBank,
+      };
+
+      // 1. Check if exact duplicate exists in DB
+      // (Only considered duplicate if name, price, check-in date, account number, etc. all match)
+      const matchingDbBooking = existingBookings.find((eb) => isExactBookingDuplicate(candidate, eb));
+      if (matchingDbBooking) {
         continue;
       }
-      existingSet.add(lookupKey);
+
+      // 2. Check if identical duplicate within this import batch
+      const batchKey = buildBatchDeduplicationKey(candidate);
+      if (seenInBatchKeys.has(batchKey)) {
+        continue;
+      }
+      seenInBatchKeys.add(batchKey);
 
       const isDirect =
         r.source.toLowerCase().includes('db') ||
@@ -349,8 +412,7 @@ export async function analyzeImportRowsAction(
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const admin = createAdminClient();
 
-  type BookingLookupRow = { property_id: string; guest_name: string | null; check_in_date: string };
-  const existingBookings: BookingLookupRow[] = [];
+  const existingBookings: ExistingBookingRecord[] = [];
 
   if (batchPropertyIds.length > 0) {
     const CHUNK_SIZE = 50;
@@ -359,7 +421,7 @@ export async function analyzeImportRowsAction(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = (admin as any)
         .from('bookings')
-        .select('property_id, guest_name, check_in_date')
+        .select('id, property_id, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
         .is('deleted_at', null)
         .in('property_id', chunk);
 
@@ -369,18 +431,56 @@ export async function analyzeImportRowsAction(
 
       const { data: chunkData } = await query;
       if (chunkData && Array.isArray(chunkData)) {
-        existingBookings.push(...(chunkData as BookingLookupRow[]));
+        for (const item of chunkData) {
+          const accounts = new Set<string>();
+          if (item.notes) {
+            const match = item.notes.match(/(kgb|hdfc|sbi|icici|axis|bank|cash|paytm|everloft - kgb)/i);
+            if (match) accounts.add(match[0].toLowerCase());
+          }
+          existingBookings.push({
+            id: item.id,
+            property_id: item.property_id,
+            guest_name: item.guest_name,
+            check_in_date: item.check_in_date,
+            check_out_date: item.check_out_date,
+            unit_label: item.unit_label,
+            guest_total: item.guest_total !== undefined && item.guest_total !== null ? Number(item.guest_total) : null,
+            host_total: item.host_total !== undefined && item.host_total !== null ? Number(item.host_total) : null,
+            notes: item.notes,
+            accounts,
+          });
+        }
+      }
+    }
+
+    // Attempt to enrich with transaction accounts if available
+    const bookingIds = existingBookings.map((b) => b.id).filter(Boolean);
+    if (bookingIds.length > 0) {
+      try {
+        const { data: txData } = await (admin as any)
+          .from('transactions')
+          .select('related_entity_id, account_label')
+          .is('deleted_at', null)
+          .in('related_entity_id', bookingIds);
+
+        if (txData && Array.isArray(txData)) {
+          for (const tx of txData) {
+            if (tx.related_entity_id && tx.account_label) {
+              const b = existingBookings.find((eb) => eb.id === tx.related_entity_id);
+              if (b) {
+                if (!b.accounts) b.accounts = new Set();
+                b.accounts.add(tx.account_label.trim().toLowerCase());
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-blocking in case transactions table is mocked or unpopulated
       }
     }
   }
 
-  const existingSet = new Set(
-    existingBookings.map(
-      (b) => `${b.property_id}_${(b.guest_name || '').trim().toLowerCase()}_${b.check_in_date}`
-    )
-  );
-
-  const seenInBatchSet = new Set<string>();
+  const seenInBatchKeys = new Set<string>();
   const analyzedRows: ImportRowAnalysis[] = [];
   let newCount = 0;
   let duplicateCount = 0;
@@ -407,12 +507,24 @@ export async function analyzeImportRowsAction(
       continue;
     }
 
-    const key = `${propInfo.id}_${r.guestName.trim().toLowerCase()}_${r.checkInDate}`;
-    const isDbDuplicate = existingSet.has(key);
-    const isBatchDuplicate = seenInBatchSet.has(key);
+    const candidate: IncomingBookingCandidate = {
+      propertyId: propInfo.id,
+      guestName: r.guestName,
+      checkInDate: r.checkInDate,
+      unitLabel: r.roomLabel,
+      guestTotal: r.guestTotal,
+      hostTotal: r.hostTotal,
+      amountCreditedBank: r.amountCreditedBank,
+    };
 
-    if (isDbDuplicate || isBatchDuplicate) {
+    const matchingDbBooking = existingBookings.find((eb) => isExactBookingDuplicate(candidate, eb));
+    const batchKey = buildBatchDeduplicationKey(candidate);
+    const isBatchDuplicate = seenInBatchKeys.has(batchKey);
+
+    if (matchingDbBooking || isBatchDuplicate) {
       duplicateCount++;
+      const priceStr = r.hostTotal > 0 ? `₹${r.hostTotal.toLocaleString('en-IN')}` : `₹${r.guestTotal.toLocaleString('en-IN')}`;
+      const accountStr = r.amountCreditedBank ? ` to ${r.amountCreditedBank}` : '';
       analyzedRows.push({
         rawLineIndex: r.rawLineIndex,
         guestName: r.guestName,
@@ -422,15 +534,28 @@ export async function analyzeImportRowsAction(
         propertyId: propInfo.id,
         propertyName: propInfo.name,
         status: 'duplicate',
-        reason: isDbDuplicate
-          ? `Existing reservation found in database for ${r.guestName} on ${r.checkInDate}`
-          : `Duplicate row within this import file for ${r.guestName} on ${r.checkInDate}`,
+        reason: matchingDbBooking
+          ? `Exact matching booking exists in database for ${r.guestName} on ${r.checkInDate} (${priceStr}${accountStr})`
+          : `Identical row duplicate within this import file (${priceStr}${accountStr})`,
         guestTotal: r.guestTotal,
         hostTotal: r.hostTotal,
       });
     } else {
-      seenInBatchSet.add(key);
+      seenInBatchKeys.add(batchKey);
       newCount++;
+
+      // Check if there is already an existing booking for this guest on this date with different amount or account
+      const hasOtherForSameGuest = existingBookings.some((eb) =>
+        eb.property_id === candidate.propertyId &&
+        eb.check_in_date === candidate.checkInDate &&
+        (eb.guest_name || '').trim().toLowerCase() === (candidate.guestName || '').trim().toLowerCase()
+      );
+
+      let reason = 'Ready to create new booking';
+      if (hasOtherForSameGuest) {
+        reason = `Additional transaction / different amount or account for ${r.guestName}`;
+      }
+
       analyzedRows.push({
         rawLineIndex: r.rawLineIndex,
         guestName: r.guestName,
@@ -440,7 +565,7 @@ export async function analyzeImportRowsAction(
         propertyId: propInfo.id,
         propertyName: propInfo.name,
         status: 'new',
-        reason: 'Ready to create new booking',
+        reason,
         guestTotal: r.guestTotal,
         hostTotal: r.hostTotal,
       });

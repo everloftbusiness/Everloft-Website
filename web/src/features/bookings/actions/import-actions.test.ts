@@ -21,7 +21,7 @@ const mockGetBookingOptions = vi.fn().mockResolvedValue([
   { id: VALID_PROP_ID_2, name: 'Loft Oasis' },
 ]);
 
-const mockSaveBooking = vi.fn().mockResolvedValue('booking-new-id');
+const mockSaveBooking = vi.fn().mockResolvedValue('00000000-0000-4000-8000-000000000099');
 const mockFinalizeBooking = vi.fn().mockResolvedValue(undefined);
 const mockRecordPayment = vi.fn().mockResolvedValue(undefined);
 
@@ -34,7 +34,17 @@ vi.mock('../services/bookings.service', () => ({
 
 const mockDataResult = {
   data: [
-    { property_id: VALID_PROP_ID_1, guest_name: 'Existing Guest', check_in_date: '2026-10-01' },
+    {
+      id: 'existing-b1',
+      property_id: VALID_PROP_ID_1,
+      guest_name: 'Existing Guest',
+      check_in_date: '2026-10-01',
+      check_out_date: '2026-10-03',
+      unit_label: 'Villa Zephyr',
+      guest_total: 1180,
+      host_total: 1000,
+      notes: 'everloft - kgb',
+    },
   ],
   error: null,
 };
@@ -57,7 +67,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
-import { importBookingsAction } from './import.actions';
+import { importBookingsAction, analyzeImportRowsAction } from './import.actions';
 import type { ParsedImportRow } from '../utils/csv-parser';
 
 describe('Scoped Import Bookings Action & Race Safety', () => {
@@ -109,5 +119,57 @@ describe('Scoped Import Bookings Action & Race Safety', () => {
     await importBookingsAction([sampleRow], VALID_PROP_ID_1);
 
     expect(mockInQuery).toHaveBeenCalledWith('property_id', [VALID_PROP_ID_1]);
+  });
+
+  it('3. does NOT skip rows for the same guest on the same day when AMOUNT is different (additional transaction)', async () => {
+    const additionalAmountRow: ParsedImportRow = {
+      ...sampleRow,
+      guestName: 'Existing Guest',
+      checkInDate: '2026-10-01',
+      guestTotal: 500, // Different amount than existing 1180
+      hostTotal: 450, // Different amount than existing 1000
+      guestBase: 400,
+      guestTaxes: 100,
+      hostBase: 450,
+    };
+
+    const res = await importBookingsAction([additionalAmountRow], VALID_PROP_ID_1);
+
+    expect(res.success).toBe(true);
+    expect(res.count).toBe(1);
+    expect(mockSaveBooking).toHaveBeenCalledTimes(1);
+  });
+
+  it('4. does NOT skip rows for the same guest on the same day when ACCOUNT is different', async () => {
+    const differentAccountRow: ParsedImportRow = {
+      ...sampleRow,
+      guestName: 'Existing Guest',
+      checkInDate: '2026-10-01',
+      amountCreditedBank: 'HDFC BANK', // Different bank account than existing 'everloft - kgb'
+    };
+
+    const res = await importBookingsAction([differentAccountRow], VALID_PROP_ID_1);
+
+    expect(res.success).toBe(true);
+    expect(res.count).toBe(1);
+    expect(mockSaveBooking).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. analyzeImportRowsAction flags different amount as new with "Additional transaction" reason', async () => {
+    const additionalRow: ParsedImportRow = {
+      ...sampleRow,
+      rawLineIndex: 5,
+      guestName: 'Existing Guest',
+      checkInDate: '2026-10-01',
+      guestTotal: 750,
+      hostTotal: 650,
+    };
+
+    const analysis = await analyzeImportRowsAction([additionalRow], VALID_PROP_ID_1);
+
+    expect(analysis.newCount).toBe(1);
+    expect(analysis.duplicateCount).toBe(0);
+    expect(analysis.analyzedRows[0].status).toBe('new');
+    expect(analysis.analyzedRows[0].reason).toContain('Additional transaction');
   });
 });
