@@ -24,6 +24,7 @@ export type ParsedImportRow = {
   creditedDate: string | null;
   note: string | null;
   isValid: boolean;
+  isCancelled?: boolean;
   validationError?: string;
   reconciliationNote?: string;
   customFields?: Record<string, string | number>;
@@ -53,6 +54,7 @@ export function parseCsvText(csvText: string): string[][] {
   let currentRow: string[] = [];
   let currentToken = '';
   let inQuotes = false;
+  let parenDepth = 0;
 
   for (let i = 0; i < csvText.length; i++) {
     const char = csvText[i];
@@ -70,7 +72,13 @@ export function parseCsvText(csvText: string): string[][] {
     } else {
       if (char === '"') {
         inQuotes = true;
-      } else if (char === ',') {
+      } else if (char === '(') {
+        parenDepth++;
+        currentToken += char;
+      } else if (char === ')') {
+        parenDepth = Math.max(0, parenDepth - 1);
+        currentToken += char;
+      } else if (char === ',' && parenDepth === 0) {
         currentRow.push(currentToken.trim());
         currentToken = '';
       } else if (char === '\r') {
@@ -82,6 +90,7 @@ export function parseCsvText(csvText: string): string[][] {
         }
         currentRow = [];
         currentToken = '';
+        parenDepth = 0;
       } else {
         currentToken += char;
       }
@@ -109,23 +118,34 @@ export function parseNumber(val: string | undefined): number {
 }
 
 /**
- * Standardizes date strings like "2-Jun-2026", "2026-06-02", "02/06/2026" into YYYY-MM-DD
+ * Standardizes date strings like "2-Jun-2026", "2026-06-02", "02/06/2026", "Date(2025,4,20)" into YYYY-MM-DD
  */
 export function parseDate(val: string | number | undefined): string {
   if (!val) return new Date().toISOString().slice(0, 10);
   const trimmed = String(val).trim();
 
-  // Excel Serial Date Number (e.g. 46175 -> 2026-06-02)
+  // 1. Google Sheets GVIZ Date format: Date(YYYY, M, D) or Date(YYYY, M, D, H, M, S)
+  // NOTE: In Google Sheets GVIZ, months are 0-indexed (0 = Jan, 4 = May, 11 = Dec).
+  const gvizMatch = trimmed.match(/^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})/i);
+  if (gvizMatch) {
+    const year = gvizMatch[1];
+    const monthNum = parseInt(gvizMatch[2], 10) + 1; // +1 to convert 0-indexed to 1-indexed
+    const month = String(monthNum).padStart(2, '0');
+    const day = gvizMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // 2. Excel Serial Date Number (e.g. 46175 -> 2026-06-02)
   if (/^\d{5}$/.test(trimmed)) {
     const serial = parseInt(trimmed, 10);
     const dateMs = (serial - 25569) * 86400 * 1000;
     return new Date(dateMs).toISOString().slice(0, 10);
   }
 
-  // Standard YYYY-MM-DD
+  // 3. Standard ISO YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
 
-  // DD-MMM-YYYY or D-MMM-YYYY (e.g. 2-Jun-2026, 12-Jun-2026)
+  // 4. DD-MMM-YYYY or D-MMM-YYYY (e.g. 2-Jun-2026, 12-Jun-2026)
   const monthMap: Record<string, string> = {
     jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
@@ -140,12 +160,45 @@ export function parseDate(val: string | number | undefined): string {
     return `${year}-${month}-${day}`;
   }
 
+  // 5. YYYY-MMM or YYYY-MMM-DD (e.g. 2026-Aug, 2026-Aug-15)
+  const matchYMD = trimmed.match(/^(\d{4})[-/]([A-Za-z]{3})(?:[-/](\d{1,2}))?$/);
+  if (matchYMD) {
+    const year = matchYMD[1];
+    const month = monthMap[matchYMD[2].toLowerCase()] || '01';
+    const day = (matchYMD[3] || '01').padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // 6. Indian DD/MM/YYYY or DD-MM-YYYY (e.g. 20/05/2025, 05/06/2026)
+  const matchDmy = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (matchDmy) {
+    const first = parseInt(matchDmy[1], 10);
+    const second = parseInt(matchDmy[2], 10);
+    const year = matchDmy[3];
+    let day = first;
+    let month = second;
+    if (second > 12 && first <= 12) {
+      month = first;
+      day = second;
+    }
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
   const d = new Date(trimmed);
   if (!isNaN(d.getTime())) {
     return d.toISOString().slice(0, 10);
   }
 
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Adds days to a YYYY-MM-DD date using UTC calendar math to prevent timezone drift
+ */
+export function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + days));
+  return date.toISOString().slice(0, 10);
 }
 
 export const SYSTEM_MAPPING_FIELDS = [
@@ -247,14 +300,23 @@ export function detectHeaderColumns(csvContent: string): {
   const colGuestService = findCol(['services charge / percentage', 'services charge', 'service charge', 'guest fee']);
   const colGuestTotal = findCol(['total amount', 'guest total']);
 
-  const hostSearchStart = colGuestTotal !== -1 ? colGuestTotal + 1 : colGuestBase + 3;
-  const colHostBase = findCol(['base fair', 'base fare', 'host base'], hostSearchStart);
+  const hostSearchStart = colGuestTotal !== -1 ? colGuestTotal + 1 : (colGuestBase !== -1 ? colGuestBase + 3 : 0);
+  const colHostBase = findCol(['host payout base fair', 'host payout', 'base fair 2', 'host base', 'base fair'], hostSearchStart);
   const colHostRateAdj = findCol(['rate adjustment', 'adjustment'], hostSearchStart);
   const colHostServiceFee = findCol(['service fee / percentage', 'service fee', 'commission'], hostSearchStart);
+  const colHostTax = findCol(['tax / percentage', 'tax', 'tds'], hostSearchStart);
   const colHostAddIncome = findCol(['additional income'], hostSearchStart);
-  const colHostTotal = lowerHeaders.findIndex(
-    (h, idx) => idx >= hostSearchStart && (h === 'total' || h.includes('payout'))
+
+  // Match the exact final Net Host Total column:
+  // We prioritize the exact column 'total' or 'net payout' or 'net total'
+  let colHostTotal = lowerHeaders.findIndex(
+    (h, idx) => idx >= hostSearchStart && (h === 'total' || h === 'net payout' || h === 'net total' || h === 'host total')
   );
+  if (colHostTotal === -1) {
+    colHostTotal = lowerHeaders.findLastIndex
+      ? lowerHeaders.findLastIndex((h, idx) => idx >= hostSearchStart && (h.includes('total') || h.includes('payout')))
+      : lowerHeaders.findIndex((h, idx) => idx >= hostSearchStart && (h.includes('total') || h.includes('payout')));
+  }
 
   const colContact = findCol(['contact', 'phone', 'mobile']);
   const colBank = findCol(['amount credited', 'credited to', 'bank']);
@@ -274,6 +336,7 @@ export function detectHeaderColumns(csvContent: string): {
   if (colHostBase !== -1) suggestedMappings[colHostBase] = 'hostBase';
   if (colHostRateAdj !== -1) suggestedMappings[colHostRateAdj] = 'hostRateAdjustment';
   if (colHostServiceFee !== -1) suggestedMappings[colHostServiceFee] = 'hostServiceFee';
+  if (colHostTax !== -1) suggestedMappings[colHostTax] = 'hostTaxes';
   if (colHostAddIncome !== -1) suggestedMappings[colHostAddIncome] = 'hostAdditionalIncome';
   if (colHostTotal !== -1) suggestedMappings[colHostTotal] = 'hostTotal';
   if (colContact !== -1) suggestedMappings[colContact] = 'contactPhone';
@@ -320,6 +383,7 @@ export function parseGoogleSheetCsv(
   const colHostBase = getColForField('hostBase');
   const colHostRateAdj = getColForField('hostRateAdjustment');
   const colHostServiceFee = getColForField('hostServiceFee');
+  const colHostTax = getColForField('hostTaxes');
   const colHostAddIncome = getColForField('hostAdditionalIncome');
   const colHostTotal = getColForField('hostTotal');
 
@@ -340,10 +404,8 @@ export function parseGoogleSheetCsv(
     const nights = Math.max(1, colNights !== -1 ? parseNumber(r[colNights]) || 1 : 1);
     const checkInDate = colDate !== -1 ? parseDate(r[colDate]) : new Date().toISOString().slice(0, 10);
 
-    // Compute check out date based on nights
-    const inDate = new Date(checkInDate);
-    inDate.setDate(inDate.getDate() + nights);
-    const checkOutDate = inDate.toISOString().slice(0, 10);
+    // Compute check out date based on nights using UTC calendar addition
+    const checkOutDate = addDays(checkInDate, nights);
 
     let guestBase = colGuestBase !== -1 ? parseNumber(r[colGuestBase]) : 0;
     let guestTaxes = colGuestTax !== -1 ? parseNumber(r[colGuestTax]) : 0;
@@ -371,14 +433,15 @@ export function parseGoogleSheetCsv(
 
     const hostBase = colHostBase !== -1 ? parseNumber(r[colHostBase]) : guestBase;
     const hostRateAdjustment = colHostRateAdj !== -1 ? parseNumber(r[colHostRateAdj]) : 0;
-    const hostServiceFee = colHostServiceFee !== -1 ? parseNumber(r[colHostServiceFee]) : 0;
+    const hostServiceFee = colHostServiceFee !== -1 ? Math.abs(parseNumber(r[colHostServiceFee])) : 0;
+    const hostTaxes = colHostTax !== -1 ? Math.abs(parseNumber(r[colHostTax])) : 0;
     const hostAdditionalIncome = colHostAddIncome !== -1 ? parseNumber(r[colHostAddIncome]) : 0;
 
     let hostTotal = 0;
-    if (colHostTotal !== -1 && r[colHostTotal]) {
+    if (colHostTotal !== -1 && r[colHostTotal] !== undefined && r[colHostTotal] !== '') {
       hostTotal = parseNumber(r[colHostTotal]);
     } else {
-      hostTotal = hostBase + hostRateAdjustment + hostAdditionalIncome - hostServiceFee;
+      hostTotal = hostBase + hostRateAdjustment + hostAdditionalIncome - hostServiceFee - hostTaxes;
     }
 
     const contactPhone = colContact !== -1 && r[colContact] ? r[colContact] : null;
@@ -406,7 +469,9 @@ export function parseGoogleSheetCsv(
       });
     }
 
-    const isValid = guestName.length > 0 && guestTotal > 0;
+    const isCancel = (note || '').toLowerCase().includes('cancel') || source.toLowerCase().includes('cancel');
+    const isGrandSummary = (!guestName || guestName === 'Guest' || guestName.toLowerCase() === 'total') && (guestTotal > 100000 || hostTotal > 100000);
+    const isValid = !isGrandSummary && guestName.length > 0 && guestName !== 'Guest' && (guestTotal > 0 || hostTotal > 0 || isCancel);
     const reconciliationNote = notesList.length > 0 ? notesList.join('; ') : undefined;
 
     parsed.push({
@@ -426,13 +491,14 @@ export function parseGoogleSheetCsv(
       hostBase,
       hostRateAdjustment,
       hostServiceFee,
-      hostTaxes: 0,
+      hostTaxes,
       hostAdditionalIncome,
       hostTotal,
       amountCreditedBank,
       creditedDate,
       note,
       isValid,
+      isCancelled: isCancel,
       validationError: !isValid ? 'Missing guest name or non-zero total' : undefined,
       reconciliationNote,
       customFields: Object.keys(customFieldsMap).length > 0 ? customFieldsMap : undefined,

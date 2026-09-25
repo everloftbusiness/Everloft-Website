@@ -130,19 +130,47 @@ export async function importBookingsAction(
       if (r.hostBase > 0) {
         lines.push({ side: 'host', category: 'accommodation', label: 'Host Base Payout', amount: r.hostBase.toFixed(2) });
       }
-      if (r.hostRateAdjustment > 0) {
+      if (r.hostRateAdjustment !== 0) {
         lines.push({ side: 'host', category: 'rate_adjustment', label: 'Rate Adjustment', amount: r.hostRateAdjustment.toFixed(2) });
       }
       if (r.hostServiceFee > 0) {
-        lines.push({ side: 'host', category: 'host_service_fee', label: 'Channel Service Fee', amount: r.hostServiceFee.toFixed(2) });
+        // Channel service fee deduction must be negative so sum(amount) in booking_register computes host_total correctly
+        lines.push({ side: 'host', category: 'host_service_fee', label: 'Channel Service Fee', amount: (-Math.abs(r.hostServiceFee)).toFixed(2) });
+      }
+      if (r.hostTaxes > 0) {
+        // TDS / Tax withholding deduction must be negative
+        lines.push({ side: 'host', category: 'tax', label: 'Taxes & TDS Withholding', amount: (-Math.abs(r.hostTaxes)).toFixed(2) });
       }
       if (r.hostAdditionalIncome > 0) {
         lines.push({ side: 'host', category: 'additional_income', label: 'Additional Income', amount: r.hostAdditionalIncome.toFixed(2) });
       }
+
+      // Reconcile host lines to ensure their net sum matches r.hostTotal exactly
+      const currentHostSum = lines
+        .filter((l) => l.side === 'host')
+        .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
       if (lines.filter((l) => l.side === 'host').length === 0) {
-        lines.push({ side: 'host', category: 'accommodation', label: 'Net Payout', amount: r.hostTotal.toFixed(2) });
+        lines.push({ side: 'host', category: 'accommodation', label: 'Net Payout', amount: (r.hostTotal || 0).toFixed(2) });
+      } else if (r.hostTotal > 0 && Math.abs(currentHostSum - r.hostTotal) >= 0.01) {
+        const diff = Math.round((r.hostTotal - currentHostSum) * 100) / 100;
+        lines.push({
+          side: 'host',
+          category: diff > 0 ? 'additional_income' : 'other',
+          label: diff > 0 ? 'Payout Reconciliation Adjustment' : 'Channel Reconciliation Deduction',
+          amount: diff.toFixed(2),
+        });
       }
 
+      // Ensure checkout is always strictly greater than check-in
+      let checkOutDate = r.checkOutDate;
+      if (!checkOutDate || checkOutDate <= r.checkInDate) {
+        const [y, m, d] = r.checkInDate.split('-').map(Number);
+        const nextDay = new Date(Date.UTC(y, m - 1, d + Math.max(1, r.nights || 1)));
+        checkOutDate = nextDay.toISOString().slice(0, 10);
+      }
+
+      const isCancelled = r.isCancelled || r.source.toLowerCase().includes('cancel') || (r.note || '').toLowerCase().includes('cancel');
       const externalBookingRef = `IMP-${batchId}-${idx + 1}-${r.rawLineIndex}`;
 
       const bookingPayload = {
@@ -158,16 +186,16 @@ export async function importBookingsAction(
         external_booking_ref: externalBookingRef,
         booking_date: r.checkInDate,
         check_in_date: r.checkInDate,
-        check_out_date: r.checkOutDate,
+        check_out_date: checkOutDate,
         adults: 1,
         children: 0,
         currency: 'INR' as const,
-        status: 'confirmed' as const,
+        status: isCancelled ? ('cancelled' as const) : ('confirmed' as const),
         collection_mode: isDirect ? ('direct' as const) : ('platform' as const),
         notes: r.note ? `${r.note} (Imported)` : 'Imported from Google Sheet',
         lines: lines.map((l) => ({
           side: l.side,
-          category: l.category as 'accommodation' | 'tax' | 'cleaning_fee' | 'security_deposit' | 'host_service_fee' | 'guest_service_fee' | 'rate_adjustment' | 'additional_income' | 'custom',
+          category: l.category as 'accommodation' | 'rate_adjustment' | 'cleaning' | 'guest_service_fee' | 'host_service_fee' | 'tax' | 'withholding' | 'additional_income' | 'discount' | 'other',
           label: l.label,
           amount: l.amount,
         })),
@@ -176,8 +204,8 @@ export async function importBookingsAction(
       const validatedInput = bookingSchema.parse(bookingPayload);
       const bookingId = await saveBooking(validatedInput);
 
-      if (r.amountCreditedBank) {
-        const paymentAmount = isDirect ? r.guestTotal : r.hostTotal;
+      const paymentAmount = isDirect ? r.guestTotal : r.hostTotal;
+      if (r.amountCreditedBank && paymentAmount > 0) {
         const paymentPayload = {
           request_id: crypto.randomUUID(),
           booking_id: bookingId,

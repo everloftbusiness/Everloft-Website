@@ -114,4 +114,45 @@ describe('CSV Parser for Google Sheet Import', () => {
     expect(parsed[2].hostAdditionalIncome).toBe(1500);
     expect(parsed[2].hostTotal).toBe(5546.54);
   });
+
+  it('correctly parses Google Sheets GVIZ 0-indexed month dates and calculates checkout dates', () => {
+    // In GVIZ, month is 0-indexed: 4 = May
+    expect(parseDate('Date(2025,4,20)')).toBe('2025-05-20');
+    expect(parseDate('Date(2025,0,15)')).toBe('2025-01-15');
+    expect(parseDate('Date(2025,11,31)')).toBe('2025-12-31');
+  });
+
+  it('correctly maps Pinnacle Income tab columns and computes exact net host payout (₹2,392 vs ₹2,678)', () => {
+    const csvContent = `Date,Guest name,Room,Site,Base fair,Number of days,Taxes / Percentage,Services charge / Percentage,Total Amount,Host payout Base fair 2,rate adjustment,Service fee / Percentage,Tax / Percentage,Additional Income,Total,Contact,Amount Credited,Credited Date,Note
+Date(2025,4,20),Amal Johny,,Airbnb,2600.00,1,130,549.06,3279.06,2600,0,78,130,0,2392.00,,EVERLOFT - KGB,Date(2025,4,21),Verified
+Date(2025,5,10),Rahul Sharma,Pinnacle Loft,MakeMyTrip,5000,3,900,0,5900,5000,0,150,250,0,4600.00,,HDFC BANK,Date(2025,5,13),`;
+
+    const parsed = parseGoogleSheetCsv(csvContent);
+
+    expect(parsed.length).toBe(2);
+
+    // Pinnacle Booking 1: Amal Johny
+    const amal = parsed[0];
+    expect(amal.guestName).toBe('Amal Johny');
+    expect(amal.roomLabel).toBe('Whole Villa'); // Auto-assigned when empty
+    expect(amal.checkInDate).toBe('2025-05-20'); // 4 + 1 = May
+    expect(amal.nights).toBe(1);
+    expect(amal.checkOutDate).toBe('2025-05-21'); // Exactly 2025-05-20 + 1 night
+    expect(amal.guestTotal).toBe(3279.06);
+    expect(amal.hostBase).toBe(2600);
+    expect(amal.hostServiceFee).toBe(78);
+    expect(amal.hostTaxes).toBe(130);
+    // Net host total MUST be 2,392.00 (not 2,678.00 base + fee)
+    expect(amal.hostTotal).toBe(2392);
+    expect(amal.amountCreditedBank).toBe('EVERLOFT - KGB');
+    expect(amal.isValid).toBe(true);
+
+    // Pinnacle Booking 2: Multi-night stay checkout calculation
+    const rahul = parsed[1];
+    expect(rahul.guestName).toBe('Rahul Sharma');
+    expect(rahul.checkInDate).toBe('2025-06-10'); // 5 + 1 = June
+    expect(rahul.nights).toBe(3);
+    expect(rahul.checkOutDate).toBe('2025-06-13'); // 2025-06-10 + 3 nights
+    expect(rahul.hostTotal).toBe(4600);
+  });
 });

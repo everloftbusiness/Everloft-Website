@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,12 +42,10 @@ type PropertyMapping = {
 
 export function GoogleSheetSyncModal({ properties }: { properties: PropertyOption[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [spreadsheetUrl, setSpreadsheetUrl] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('everloft_google_sheet_url') || 'https://docs.google.com/spreadsheets/d/1Q_fEZLHCENn-her2QOSkniZqkP-f6DBe/edit';
-    }
-    return 'https://docs.google.com/spreadsheets/d/1Q_fEZLHCENn-her2QOSkniZqkP-f6DBe/edit';
-  });
+  const [isClientMounted, setIsClientMounted] = useState(false);
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState(
+    'https://docs.google.com/spreadsheets/d/1Q_fEZLHCENn-her2QOSkniZqkP-f6DBe/edit'
+  );
   
   // Connection state
   const [isTesting, setIsTesting] = useState(false);
@@ -60,12 +58,8 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
   } | null>(null);
 
   // Per-property tab mappings state
-  const [mappings, setMappings] = useState<PropertyMapping[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedMappings = localStorage.getItem('everloft_property_sheet_mappings');
-      if (savedMappings) return JSON.parse(savedMappings);
-    }
-    return properties.map((p) => {
+  const [mappings, setMappings] = useState<PropertyMapping[]>(() =>
+    properties.map((p) => {
       const isPinnacle = p.name.toLowerCase().includes('pinnacle');
       return {
         propertyId: p.id,
@@ -73,24 +67,34 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         incomeTab: isPinnacle ? 'Pinnacle Income' : `${p.name} Income`,
         expenseTab: isPinnacle ? 'Pinnacle Expenses' : `${p.name} Expenses`,
       };
-    });
-  });
+    })
+  );
   
   // Tab-by-tab sync results map & timestamps
   const [tabResults, setTabResults] = useState<Record<string, TabSyncResult>>({});
-  const [lastSyncedTimes, setLastSyncedTimes] = useState<Record<string, string>>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTabTimes = localStorage.getItem('everloft_google_sheet_last_sync_times');
-      if (savedTabTimes) return JSON.parse(savedTabTimes);
+  const [lastSyncedTimes, setLastSyncedTimes] = useState<Record<string, string>>({});
+  const [lastGlobalSyncTime, setLastGlobalSyncTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsClientMounted(true);
+    try {
+      if (typeof window !== 'undefined') {
+        const savedUrl = localStorage.getItem('everloft_google_sheet_url');
+        if (savedUrl) setSpreadsheetUrl(savedUrl);
+
+        const savedMappings = localStorage.getItem('everloft_property_sheet_mappings');
+        if (savedMappings) setMappings(JSON.parse(savedMappings));
+
+        const savedTabTimes = localStorage.getItem('everloft_google_sheet_last_sync_times');
+        if (savedTabTimes) setLastSyncedTimes(JSON.parse(savedTabTimes));
+
+        const savedGlobalTime = localStorage.getItem('everloft_google_sheet_last_global_sync');
+        if (savedGlobalTime) setLastGlobalSyncTime(savedGlobalTime);
+      }
+    } catch (e) {
+      console.error('Failed to load saved sheet settings from localStorage:', e);
     }
-    return {};
-  });
-  const [lastGlobalSyncTime, setLastGlobalSyncTime] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('everloft_google_sheet_last_global_sync');
-    }
-    return null;
-  });
+  }, []);
 
   const [activeSyncingKey, setActiveSyncingKey] = useState<string | null>(null);
   const [isSyncingAll, startTransitionSyncAll] = useTransition();
@@ -378,7 +382,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         ) : (
           <span>⚡ Google Sheet Sync</span>
         )}
-        {!isSyncOngoing && lastGlobalSyncTime && (
+        {!isSyncOngoing && isClientMounted && lastGlobalSyncTime && (
           <span className="ml-1.5 text-[10px] font-normal opacity-80 border-l border-purple-500/30 pl-1.5 flex items-center gap-1">
             <Clock className="h-3 w-3 text-purple-500" />
             <FormattedDateTime date={lastGlobalSyncTime} relative includeTimezone={false} />
@@ -585,7 +589,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                 <span className="truncate max-w-[200px]">{incRes.message}</span>
                               </div>
                             )}
-                            {lastSyncedTimes[incKey] && (
+                            {isClientMounted && lastSyncedTimes[incKey] && (
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <Clock className="h-3 w-3 text-purple-500 shrink-0" />
                                 <span>Synced:</span>
@@ -648,7 +652,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                                 <span className="truncate max-w-[200px]">{expRes.message}</span>
                               </div>
                             )}
-                            {lastSyncedTimes[expKey] && (
+                            {isClientMounted && lastSyncedTimes[expKey] && (
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <Clock className="h-3 w-3 text-purple-500 shrink-0" />
                                 <span>Synced:</span>
