@@ -666,7 +666,7 @@ export function CsvImportModal({
             className={`bg-card border border-border/80 shadow-2xl p-6 overflow-y-auto space-y-5 transition-all duration-200 ${
               isFullScreen
                 ? 'w-full h-full max-w-none max-h-none rounded-none'
-                : 'w-full max-w-5xl max-h-[90vh] rounded-2xl animate-in zoom-in-95'
+                : 'w-full max-w-6xl 2xl:max-w-7xl max-h-[92vh] rounded-2xl animate-in zoom-in-95'
             }`}
           >
             {/* Header */}

@@ -18,6 +18,8 @@ import {
   Layers,
   Clock,
   Eye,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { type PropertyOption } from '../types/booking.types';
 import {
@@ -49,6 +51,8 @@ type PropertyMapping = {
 
 export function GoogleSheetSyncModal({ properties }: { properties: PropertyOption[] }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMainFullScreen, setIsMainFullScreen] = useState(false);
+  const [isPreviewFullScreen, setIsPreviewFullScreen] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(
     'https://docs.google.com/spreadsheets/d/1Q_fEZLHCENn-her2QOSkniZqkP-f6DBe/edit'
@@ -820,8 +824,12 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
       </Button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-4xl max-h-[92vh] bg-card border border-border/80 shadow-2xl rounded-2xl p-6 overflow-y-auto space-y-6 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in">
+          <div
+            className={`w-full ${
+              isMainFullScreen ? 'max-w-[98vw] h-[96vh]' : 'max-w-6xl 2xl:max-w-7xl max-h-[92vh]'
+            } bg-card border border-border/80 shadow-2xl rounded-2xl p-5 sm:p-6 overflow-y-auto space-y-6 animate-in zoom-in-95 transition-all duration-200`}
+          >
             {/* Header */}
             <div className="flex items-start justify-between border-b pb-4">
               <div>
@@ -830,21 +838,32 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                     <Sparkles className="h-3.5 w-3.5" /> Dynamic Google Sheet Sync Manager
                   </span>
                 </div>
-                <h2 className="mt-1.5 text-2xl font-bold text-foreground">
+                <h2 className="mt-1.5 text-xl sm:text-2xl font-bold text-foreground">
                   Google Drive Sheet Integration
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   Connect any Google Sheet link, assign income/expense tab names per property, and run granular tab syncs with instant diagnostics.
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsMainFullScreen(!isMainFullScreen)}
+                  title={isMainFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+                >
+                  {isMainFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* STEP 1: Google Drive Share Link & Connection Status */}
@@ -928,14 +947,170 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                 </span>
               </div>
 
-              <div className="rounded-xl border border-border/80 bg-card overflow-x-auto shadow-inner">
-                <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
+              {/* Mobile / Tablet Responsive Stack (Zero Horizontal Scroll) */}
+              <div className="block lg:hidden space-y-3">
+                {properties.map((p) => {
+                  const mapItem = mappings.find((m) => m.propertyId === p.id) || {
+                    propertyId: p.id,
+                    propertyName: p.name,
+                    incomeTab: `${p.name} Income`,
+                    expenseTab: `${p.name} Expenses`,
+                  };
+
+                  const incKey = `${p.id}_income`;
+                  const expKey = `${p.id}_expense`;
+                  const incRes = tabResults[incKey];
+                  const expRes = tabResults[expKey];
+
+                  const isIncSyncing = activeSyncingKey === incKey;
+                  const isExpSyncing = activeSyncingKey === expKey;
+
+                  return (
+                    <div key={p.id} className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5 text-sm">
+                          <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          {p.name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="h-7 text-[11px] font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-500/10"
+                          onClick={async () => {
+                            if (mapItem.incomeTab.trim()) {
+                              await handleSyncSingleTab(p.id, p.name, mapItem.incomeTab, 'income');
+                            }
+                            if (mapItem.expenseTab.trim()) {
+                              await handleSyncSingleTab(p.id, p.name, mapItem.expenseTab, 'expense');
+                            }
+                          }}
+                        >
+                          Sync Both Tabs
+                        </Button>
+                      </div>
+
+                      {/* Income Tab Section */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-muted-foreground">📥 Income Tab:</span>
+                          {isClientMounted && lastSyncedTimes[incKey] && (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-purple-500" />
+                              <FormattedDateTime date={lastSyncedTimes[incKey]} relative className="font-medium text-foreground" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={mapItem.incomeTab}
+                            placeholder="e.g. Pinnacle Income"
+                            onChange={(e) => handleTabNameChange(p.id, 'incomeTab', e.target.value)}
+                            className="h-8 flex-1 min-w-0 rounded border border-input bg-background px-2.5 text-xs font-mono"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="h-8 text-[11px] px-2.5 border-purple-500/30 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 font-semibold shrink-0"
+                            disabled={(isPreviewLoading && previewLoadingKey === incKey) || !mapItem.incomeTab.trim()}
+                            onClick={() => handleOpenPreview(p.id, p.name, mapItem.incomeTab, 'income')}
+                          >
+                            <Eye className={`mr-1 h-3 w-3 ${isPreviewLoading && previewLoadingKey === incKey ? 'animate-spin' : ''}`} />
+                            {isPreviewLoading && previewLoadingKey === incKey ? 'Scanning...' : 'Preview'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="h-8 text-[11px] px-2.5 text-muted-foreground hover:text-foreground shrink-0"
+                            disabled={isIncSyncing || !mapItem.incomeTab.trim()}
+                            onClick={() => handleSyncSingleTab(p.id, p.name, mapItem.incomeTab, 'income')}
+                          >
+                            <RefreshCw className={`mr-1 h-3 w-3 ${isIncSyncing ? 'animate-spin' : ''}`} />
+                            Sync
+                          </Button>
+                        </div>
+                        {incRes && (
+                          <div
+                            className={`text-[10px] font-medium leading-tight flex items-center gap-1 ${
+                              incRes.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {incRes.success ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <AlertCircle className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{incRes.message}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expense Tab Section */}
+                      <div className="space-y-1.5 pt-1 border-t border-border/40">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-muted-foreground">📤 Expense Tab:</span>
+                          {isClientMounted && lastSyncedTimes[expKey] && (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-purple-500" />
+                              <FormattedDateTime date={lastSyncedTimes[expKey]} relative className="font-medium text-foreground" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={mapItem.expenseTab}
+                            placeholder="e.g. Pinnacle Expenses"
+                            onChange={(e) => handleTabNameChange(p.id, 'expenseTab', e.target.value)}
+                            className="h-8 flex-1 min-w-0 rounded border border-input bg-background px-2.5 text-xs font-mono"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="h-8 text-[11px] px-2.5 border-purple-500/30 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 font-semibold shrink-0"
+                            disabled={(isPreviewLoading && previewLoadingKey === expKey) || !mapItem.expenseTab.trim()}
+                            onClick={() => handleOpenPreview(p.id, p.name, mapItem.expenseTab, 'expense')}
+                          >
+                            <Eye className={`mr-1 h-3 w-3 ${isPreviewLoading && previewLoadingKey === expKey ? 'animate-spin' : ''}`} />
+                            {isPreviewLoading && previewLoadingKey === expKey ? 'Scanning...' : 'Preview'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="h-8 text-[11px] px-2.5 text-muted-foreground hover:text-foreground shrink-0"
+                            disabled={isExpSyncing || !mapItem.expenseTab.trim()}
+                            onClick={() => handleSyncSingleTab(p.id, p.name, mapItem.expenseTab, 'expense')}
+                          >
+                            <RefreshCw className={`mr-1 h-3 w-3 ${isExpSyncing ? 'animate-spin' : ''}`} />
+                            Sync
+                          </Button>
+                        </div>
+                        {expRes && (
+                          <div
+                            className={`text-[10px] font-medium leading-tight flex items-center gap-1 ${
+                              expRes.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {expRes.success ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <AlertCircle className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{expRes.message}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Spacious Table (Zero Horizontal Scroll on Desktop) */}
+              <div className="hidden lg:block rounded-xl border border-border/80 bg-card overflow-x-auto shadow-inner">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-muted/80 border-b text-[11px] font-semibold uppercase text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-2.5">Property Name</th>
-                      <th className="px-3 py-2.5">📥 Income Page Tab Name</th>
-                      <th className="px-3 py-2.5">📤 Expense Page Tab Name</th>
-                      <th className="px-3 py-2.5 text-center">Quick Actions</th>
+                      <th className="px-3.5 py-2.5 w-48">Property Name</th>
+                      <th className="px-3.5 py-2.5">📥 Income Page Tab Name</th>
+                      <th className="px-3.5 py-2.5">📤 Expense Page Tab Name</th>
+                      <th className="px-3.5 py-2.5 text-center w-28">Quick Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -958,7 +1133,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                       return (
                         <tr key={p.id} className="hover:bg-muted/20">
                           {/* Property Name */}
-                          <td className="px-3 py-2.5">
+                          <td className="px-3.5 py-2.5">
                             <span className="font-semibold text-foreground flex items-center gap-1.5">
                               <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                               {p.name}
@@ -966,14 +1141,14 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                           </td>
 
                           {/* Income Tab Field & Status */}
-                          <td className="px-3 py-2.5 space-y-1">
+                          <td className="px-3.5 py-2.5 space-y-1">
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
                                 value={mapItem.incomeTab}
                                 placeholder="e.g. Pinnacle Income"
                                 onChange={(e) => handleTabNameChange(p.id, 'incomeTab', e.target.value)}
-                                className="h-8 w-44 rounded border border-input bg-background px-2.5 text-xs font-mono"
+                                className="h-8 w-40 xl:w-48 rounded border border-input bg-background px-2.5 text-xs font-mono"
                               />
                               <Button
                                 type="button"
@@ -1029,14 +1204,14 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                           </td>
 
                           {/* Expense Tab Field & Status */}
-                          <td className="px-3 py-2.5 space-y-1">
+                          <td className="px-3.5 py-2.5 space-y-1">
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
                                 value={mapItem.expenseTab}
                                 placeholder="e.g. Pinnacle Expenses"
                                 onChange={(e) => handleTabNameChange(p.id, 'expenseTab', e.target.value)}
-                                className="h-8 w-44 rounded border border-input bg-background px-2.5 text-xs font-mono"
+                                className="h-8 w-40 xl:w-48 rounded border border-input bg-background px-2.5 text-xs font-mono"
                               />
                               <Button
                                 type="button"
@@ -1092,7 +1267,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                           </td>
 
                           {/* Quick Both Sync Button */}
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-3.5 py-2.5 text-center">
                             <Button
                               type="button"
                               variant="ghost"
@@ -1163,8 +1338,12 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
 
       {/* Interactive Pre-scan Preview Modal for Google Sheet Tab */}
       {activePreview && activePreview.analysis && activePreview.parsedRows && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-5xl max-h-[92vh] bg-card border border-border/80 shadow-2xl rounded-2xl p-6 overflow-y-auto space-y-5 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in">
+          <div
+            className={`w-full ${
+              isPreviewFullScreen ? 'max-w-[98vw] h-[96vh]' : 'max-w-6xl 2xl:max-w-7xl max-h-[92vh]'
+            } bg-card border border-border/80 shadow-2xl rounded-2xl p-5 sm:p-6 overflow-y-auto space-y-5 animate-in zoom-in-95 transition-all duration-200`}
+          >
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b pb-4">
               <div>
@@ -1176,21 +1355,32 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                     Tab: &quot;{activePreview.tabName}&quot;
                   </span>
                 </div>
-                <h2 className="mt-1.5 text-2xl font-bold text-foreground flex items-center gap-2">
+                <h2 className="mt-1.5 text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                   Preview & Reconcile Data: {activePreview.propertyName}
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   Fetched live from Google Sheet. Review categorized new reservations vs database duplicates before importing.
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
-                onClick={() => setActivePreview(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsPreviewFullScreen(!isPreviewFullScreen)}
+                  title={isPreviewFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+                >
+                  {isPreviewFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={() => setActivePreview(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* 3 KPI Summary Cards */}
@@ -1299,19 +1489,23 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
             </div>
 
             {/* Reconciliation Table */}
-            <div className="overflow-x-auto max-h-80 rounded-xl border bg-card shadow-inner">
-              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
-                <thead className="sticky top-0 z-20 bg-muted/90 backdrop-blur-xs border-b font-semibold text-[11px] uppercase text-muted-foreground">
+            <div
+              className={`overflow-x-auto ${
+                isPreviewFullScreen ? 'max-h-[64vh]' : 'max-h-[50vh]'
+              } rounded-xl border bg-card shadow-inner`}
+            >
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-xs border-b font-semibold text-[11px] uppercase text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 border-r text-center w-8">#</th>
-                    <th className="px-3 py-2 border-r">Guest Name</th>
-                    <th className="px-3 py-2 border-r">Check-In</th>
-                    <th className="px-3 py-2 border-r">Room</th>
-                    <th className="px-3 py-2 border-r">Channel</th>
-                    <th className="px-3 py-2 border-r text-right">Guest Charge</th>
-                    <th className="px-3 py-2 border-r text-right">Host Payout</th>
-                    <th className="px-3 py-2 border-r">Bank Credited</th>
-                    <th className="px-3 py-2 text-center">Import Status</th>
+                    <th className="px-3 py-2.5 border-r text-center w-10">#</th>
+                    <th className="px-3 py-2.5 border-r min-w-[130px]">Guest Name</th>
+                    <th className="px-3 py-2.5 border-r w-24">Check-In</th>
+                    <th className="px-3 py-2.5 border-r w-24 sm:w-28">Room</th>
+                    <th className="px-3 py-2.5 border-r w-20">Channel</th>
+                    <th className="px-3 py-2.5 border-r text-right w-24">Guest Charge</th>
+                    <th className="px-3 py-2.5 border-r text-right w-24">Host Payout</th>
+                    <th className="px-3 py-2.5 border-r w-28">Bank Credited</th>
+                    <th className="px-3 py-2.5 text-center min-w-[140px]">Import Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
