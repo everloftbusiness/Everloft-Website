@@ -62,7 +62,7 @@ export function SyncProgressOverlay({
   const elapsedText = formatElapsedTimeDisplay(state.elapsedSeconds);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-xl bg-card border border-purple-500/30 shadow-2xl rounded-2xl p-6 space-y-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
         {/* Subtle Ambient Background Glow */}
         <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />

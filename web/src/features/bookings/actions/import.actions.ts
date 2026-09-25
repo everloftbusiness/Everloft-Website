@@ -266,6 +266,7 @@ export async function importBookingsAction(
 
       const validatedInput = bookingSchema.parse(bookingPayload);
       const bookingId = await saveBooking(validatedInput);
+      await finalizeBooking(bookingId);
 
       const paymentAmount = isDirect ? r.guestTotal : r.hostTotal;
       if (r.amountCreditedBank && paymentAmount > 0) {
@@ -284,7 +285,6 @@ export async function importBookingsAction(
         await recordPayment(validatedPayment);
       }
 
-      await finalizeBooking(bookingId);
       importedCount++;
     } catch (err) {
       // Sanitized log without guest PII
