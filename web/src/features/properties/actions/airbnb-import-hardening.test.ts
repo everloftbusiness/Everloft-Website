@@ -44,7 +44,15 @@ vi.mock("@/lib/supabase/server", () => ({
           is: () => ({ count: 0 }),
         }),
       }),
-      update: () => ({ eq: async () => ({ error: null }), neq: async () => ({ error: null }) }),
+      update: () => {
+        const chain = {
+          error: null,
+          eq: () => chain,
+          neq: () => chain,
+          then: (resolve: (val: unknown) => unknown) => resolve({ error: null }),
+        };
+        return chain;
+      },
       upsert: async () => ({ error: null }),
       delete: () => ({ eq: async () => ({ error: null }) }),
       insert: () => ({
@@ -90,7 +98,7 @@ describe("Airbnb Property Import Hardening & Concurrency Controls", () => {
     expect(res.error).toBe("Sign in required.");
   });
 
-  it("limits photo processing to MAX_AIRBNB_PHOTOS (20 photos) and runs bounded concurrency", async () => {
+  it("processes all listing photos up to MAX_AIRBNB_PHOTOS (120 photos) with bounded concurrency", async () => {
     mockGetDashboardSession.mockResolvedValueOnce({
       userId: "user-admin",
       role: "super_admin",
@@ -112,7 +120,7 @@ describe("Airbnb Property Import Hardening & Concurrency Controls", () => {
       const res = await importAirbnbPropertyAction("https://www.airbnb.co.in/rooms/1127955898193951447");
       expect(res.success).toBe(true);
       expect(res.propertyId).toBe("prop-draft-123");
-      expect(res.importedPhotosCount).toBeLessThanOrEqual(20);
+      expect(res.importedPhotosCount).toBe(30);
     } finally {
       global.fetch = originalFetch;
     }

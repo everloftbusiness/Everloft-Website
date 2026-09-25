@@ -11,8 +11,8 @@ import { createFileRecord } from "@/lib/storage/file-service";
 import { randomUUID } from "crypto";
 import { fetchTrustedUrl, isTrustedHttpsUrl } from "@/lib/security/trusted-fetch";
 
-const MAX_AIRBNB_PHOTOS = 20;
-const PHOTO_CONCURRENCY_LIMIT = 3;
+export const MAX_AIRBNB_PHOTOS = 120;
+export const PHOTO_CONCURRENCY_LIMIT = 6;
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB limit per photo
 const AIRBNB_IMAGE_HOSTS = new Set(["a0.muscache.com"]);
 
@@ -218,10 +218,17 @@ export async function importAirbnbPropertyAction(
       }
     }
 
-    // 8. Bounded Photos Import (Max 20 photos, worker-pool concurrency 3, AbortController timeouts)
+    // 8. High-Capacity Photos Import (Extract all listing photos up to 120, worker-pool concurrency 6, internal Sharp WebP compression)
     let importedPhotosCount = 0;
     if (extracted.photos && extracted.photos.length > 0) {
       const photosToProcess = extracted.photos.slice(0, MAX_AIRBNB_PHOTOS);
+
+      const { count: existingCount } = await supabase
+        .from("property_photos")
+        .select("id", { count: "exact", head: true })
+        .eq("property_id", propertyId)
+        .is("deleted_at", null);
+      const baseSortOrder = existingCount || 0;
 
       await runWithConcurrency(photosToProcess, PHOTO_CONCURRENCY_LIMIT, async (photo, idx) => {
         try {
@@ -317,6 +324,7 @@ export async function importAirbnbPropertyAction(
                   body: buffer,
                   contentType: "image/jpeg",
                   makePublic: true,
+                  generateDerivatives: isCover,
                 });
 
                 bucket = uploaded.bucket;
@@ -348,16 +356,10 @@ export async function importAirbnbPropertyAction(
             metadata,
           });
 
-          const { count: existingCount } = await supabase
-            .from("property_photos")
-            .select("id", { count: "exact", head: true })
-            .eq("property_id", propertyId)
-            .is("deleted_at", null);
-
           const { data: newPhotoId, error: rpcError } = await supabase.rpc("create_property_photo", {
             p_property_id: propertyId,
             p_file_id: fileRow.id,
-            p_sort_order: (existingCount || 0) + idx,
+            p_sort_order: baseSortOrder + idx,
           });
 
           if (rpcError) {

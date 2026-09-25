@@ -54,12 +54,12 @@ describe("Airbnb Import Hardening & Concurrency Limit Tests", () => {
     expect(maxActiveObserved).toBe(3);
   });
 
-  it("2. enforces photo slicing to a maximum of 20 photos", () => {
-    const photos = Array.from({ length: 35 }, (_, i) => ({ url: `https://example.com/photo_${i}.jpg` }));
-    const MAX_AIRBNB_PHOTOS = 20;
+  it("2. enforces high-capacity photo slicing up to MAX_AIRBNB_PHOTOS (120 photos)", () => {
+    const photos = Array.from({ length: 150 }, (_, i) => ({ url: `https://example.com/photo_${i}.jpg` }));
+    const MAX_AIRBNB_PHOTOS = 120;
     const photosToProcess = photos.slice(0, MAX_AIRBNB_PHOTOS);
 
-    expect(photosToProcess.length).toBe(20);
+    expect(photosToProcess.length).toBe(120);
   });
 
   it("3. verifies timeout is cleared in finally block even on fetch failure", async () => {

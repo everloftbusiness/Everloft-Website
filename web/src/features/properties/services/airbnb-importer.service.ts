@@ -170,7 +170,7 @@ function normalizePhotoUrl(rawUrl: string): string {
   const url = rawUrl.replace(/\\u0026|&amp;/g, "&");
   if (url.includes("a0.muscache.com")) {
     const baseUrl = url.split("?")[0];
-    return `${baseUrl}?im_w=1200`;
+    return `${baseUrl}?im_w=1920`;
   }
   return url;
 }
