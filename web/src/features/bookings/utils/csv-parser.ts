@@ -22,6 +22,8 @@ export type ParsedImportRow = {
   hostTotal: number;
   amountCreditedBank: string | null;
   creditedDate: string | null;
+  column1?: string | null;
+  hostRateAdjustmentRaw?: string | null;
   note: string | null;
   isValid: boolean;
   isCancelled?: boolean;
@@ -220,6 +222,7 @@ export const SYSTEM_MAPPING_FIELDS = [
   { key: 'contactPhone', label: 'Contact Phone Number' },
   { key: 'amountCreditedBank', label: 'Amount Credited / Bank Account' },
   { key: 'creditedDate', label: 'Credited Date' },
+  { key: 'column1', label: 'Column 1 (Bank Ref / Details)' },
   { key: 'note', label: 'Note / Remarks' },
   { key: 'ignore', label: '— Ignore Column —' },
 ] as const;
@@ -321,6 +324,7 @@ export function detectHeaderColumns(csvContent: string): {
   const colContact = findCol(['contact', 'phone', 'mobile']);
   const colBank = findCol(['amount credited', 'credited to', 'bank']);
   const colCreditedDate = findCol(['credited date']);
+  const colColumn1 = findCol(['column 1', 'column1', 'bank ref', 'reference', 'ref']);
   const colNote = findCol(['note', 'notes']);
 
   const suggestedMappings: Record<number, string> = {};
@@ -342,6 +346,7 @@ export function detectHeaderColumns(csvContent: string): {
   if (colContact !== -1) suggestedMappings[colContact] = 'contactPhone';
   if (colBank !== -1) suggestedMappings[colBank] = 'amountCreditedBank';
   if (colCreditedDate !== -1) suggestedMappings[colCreditedDate] = 'creditedDate';
+  if (colColumn1 !== -1) suggestedMappings[colColumn1] = 'column1';
   if (colNote !== -1) suggestedMappings[colNote] = 'note';
 
   return { headerIndex, headers, suggestedMappings };
@@ -390,6 +395,7 @@ export function parseGoogleSheetCsv(
   const colContact = getColForField('contactPhone');
   const colBank = getColForField('amountCreditedBank');
   const colCreditedDate = getColForField('creditedDate');
+  const colColumn1 = getColForField('column1');
   const colNote = getColForField('note');
 
   const parsed: ParsedImportRow[] = [];
@@ -447,6 +453,8 @@ export function parseGoogleSheetCsv(
     const contactPhone = colContact !== -1 && r[colContact] ? r[colContact] : null;
     const amountCreditedBank = colBank !== -1 && r[colBank] ? r[colBank] : null;
     const creditedDate = colCreditedDate !== -1 && r[colCreditedDate] ? parseDate(r[colCreditedDate]) : null;
+    const column1 = colColumn1 !== -1 && r[colColumn1] ? r[colColumn1] : null;
+    const hostRateAdjustmentRaw = colHostRateAdj !== -1 && r[colHostRateAdj] !== undefined && r[colHostRateAdj] !== '' ? String(r[colHostRateAdj]) : null;
     const note = colNote !== -1 && r[colNote] ? r[colNote] : null;
 
     const customFieldsMap: Record<string, string | number> = {};
@@ -496,6 +504,8 @@ export function parseGoogleSheetCsv(
       hostTotal,
       amountCreditedBank,
       creditedDate,
+      column1,
+      hostRateAdjustmentRaw,
       note,
       isValid,
       isCancelled: isCancel,

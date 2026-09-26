@@ -1547,17 +1547,53 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
               } rounded-xl border bg-card shadow-inner`}
             >
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-xs border-b font-semibold text-[11px] uppercase text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2.5 border-r text-center w-10">#</th>
-                    <th className="px-3 py-2.5 border-r min-w-[130px]">Guest Name</th>
-                    <th className="px-3 py-2.5 border-r w-24">Check-In</th>
-                    <th className="px-3 py-2.5 border-r w-24 sm:w-28">Room</th>
-                    <th className="px-3 py-2.5 border-r w-20">Channel</th>
-                    <th className="px-3 py-2.5 border-r text-right w-24">Guest Charge</th>
-                    <th className="px-3 py-2.5 border-r text-right w-24">Host Payout</th>
-                    <th className="px-3 py-2.5 border-r w-28">Bank Credited</th>
-                    <th className="px-3 py-2.5 text-center min-w-[140px]">Import Status</th>
+                <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-xs border-b">
+                  {/* Top Tier: Category Group Banners */}
+                  <tr className="border-b divide-x divide-border/60">
+                    <th colSpan={4} className="px-3 py-1.5 text-center bg-muted/90 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Reservation Details
+                    </th>
+                    <th colSpan={5} className="px-3 py-1.5 text-center bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 text-[11px] font-extrabold tracking-wide uppercase border-x border-emerald-500/30">
+                      🟢 Guest Paid
+                    </th>
+                    <th colSpan={6} className="px-3 py-1.5 text-center bg-purple-500/15 text-purple-800 dark:text-purple-200 text-[11px] font-extrabold tracking-wide uppercase border-x border-purple-500/30">
+                      🟣 Host Payout
+                    </th>
+                    <th colSpan={4} className="px-3 py-1.5 text-center bg-muted/90 text-[10px] font-bold tracking-wider text-muted-foreground uppercase border-x">
+                      Settlement & Notes
+                    </th>
+                    <th rowSpan={2} className="px-3 py-2 text-center bg-muted/95 text-[10px] font-bold tracking-wider text-muted-foreground uppercase min-w-[140px]">
+                      Import Status
+                    </th>
+                  </tr>
+
+                  {/* Bottom Tier: All 18 Granular Sheet Columns */}
+                  <tr className="border-b text-[10px] uppercase font-semibold text-muted-foreground divide-x divide-border/60">
+                    <th className="px-2.5 py-2 text-center w-10 sticky left-0 z-30 bg-muted/95 backdrop-blur-xs">#</th>
+                    <th className="px-2.5 py-2 w-24">Date</th>
+                    <th className="px-3 py-2 min-w-[140px] sticky left-10 z-30 bg-muted/95 backdrop-blur-xs shadow-xs">Guest Name</th>
+                    <th className="px-2.5 py-2 w-20">Site</th>
+
+                    {/* GUEST PAID GROUP */}
+                    <th className="px-2.5 py-2 text-right bg-emerald-500/5 text-emerald-700 dark:text-emerald-300">Base Fair</th>
+                    <th className="px-2 py-2 text-center w-12 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300">Days</th>
+                    <th className="px-2.5 py-2 text-right bg-emerald-500/5 text-emerald-700 dark:text-emerald-300">Taxes / %</th>
+                    <th className="px-2.5 py-2 text-right bg-emerald-500/5 text-emerald-700 dark:text-emerald-300">Services Chg</th>
+                    <th className="px-2.5 py-2 text-right bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-bold">Total Amount</th>
+
+                    {/* HOST PAYOUT GROUP */}
+                    <th className="px-2.5 py-2 text-right bg-purple-500/5 text-purple-700 dark:text-purple-300">Base Fair 2</th>
+                    <th className="px-2.5 py-2 text-right bg-purple-500/5 text-purple-700 dark:text-purple-300">Rate Adj.</th>
+                    <th className="px-2.5 py-2 text-right bg-purple-500/5 text-purple-700 dark:text-purple-300">Service Fee</th>
+                    <th className="px-2.5 py-2 text-right bg-purple-500/5 text-purple-700 dark:text-purple-300">Tax / TDS</th>
+                    <th className="px-2.5 py-2 text-right bg-purple-500/5 text-purple-700 dark:text-purple-300">Add&apos;l Income</th>
+                    <th className="px-2.5 py-2 text-right bg-purple-500/10 text-purple-800 dark:text-purple-200 font-bold">Total Payout</th>
+
+                    {/* SETTLEMENT & NOTES */}
+                    <th className="px-2.5 py-2 w-24">Contact</th>
+                    <th className="px-2.5 py-2 w-24">Amount Credited</th>
+                    <th className="px-2.5 py-2 w-24">Column 1</th>
+                    <th className="px-3 py-2 min-w-[120px]">Note</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -1577,37 +1613,140 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                       const isDuplicate = analysis?.status === 'duplicate';
                       const isInvalid = !r.isValid || analysis?.status === 'invalid';
 
+                      const rowBgClass = isInvalid
+                        ? 'bg-rose-500/10 hover:bg-rose-500/15'
+                        : isDuplicate
+                        ? 'bg-amber-500/10 hover:bg-amber-500/15'
+                        : 'hover:bg-muted/30';
+
+                      const stickyBgClass = isInvalid
+                        ? 'bg-rose-50/90 dark:bg-rose-950/50'
+                        : isDuplicate
+                        ? 'bg-amber-50/90 dark:bg-amber-950/50'
+                        : 'bg-card';
+
                       return (
                         <tr
                           key={idx}
-                          className={
-                            isInvalid
-                              ? 'bg-rose-500/5'
-                              : isDuplicate
-                              ? 'bg-amber-500/10 hover:bg-amber-500/15'
-                              : 'hover:bg-muted/30'
-                          }
+                          className={`${rowBgClass} transition-colors divide-x divide-border/40`}
                         >
-                          <td className="px-3 py-2 border-r text-muted-foreground text-center font-mono">{r.rawLineIndex}</td>
-                          <td className="px-3 py-2 border-r">
-                            <span className="font-semibold text-foreground">{r.guestName}</span>
-                            {r.reconciliationNote && (
-                              <span className="block text-[10px] font-medium text-blue-600 dark:text-blue-400">
-                                ⚡ {r.reconciliationNote}
-                              </span>
-                            )}
+                          {/* 1. # */}
+                          <td className={`px-2.5 py-2 text-center text-muted-foreground font-mono sticky left-0 z-10 ${stickyBgClass}`}>
+                            {r.rawLineIndex}
                           </td>
-                          <td className="px-3 py-2 border-r font-mono text-muted-foreground">{r.checkInDate}</td>
-                          <td className="px-3 py-2 border-r">
-                            <span className="font-mono bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[11px] font-bold">
-                              {r.roomLabel || 'Whole Villa'}
+
+                          {/* 2. Date */}
+                          <td className="px-2.5 py-2 font-mono whitespace-nowrap text-muted-foreground">
+                            {r.checkInDate}
+                          </td>
+
+                          {/* 3. Guest Name */}
+                          <td className={`px-3 py-2 font-medium text-foreground sticky left-10 z-10 ${stickyBgClass} shadow-xs`}>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-foreground whitespace-nowrap">{r.guestName}</span>
+                              {r.roomLabel && r.roomLabel !== 'Whole Villa' && (
+                                <span className="text-[10px] text-purple-600 dark:text-purple-400 font-mono">
+                                  {r.roomLabel}
+                                </span>
+                              )}
+                              {r.reconciliationNote && (
+                                <span className="text-[9px] text-blue-600 dark:text-blue-400 truncate max-w-[130px]" title={r.reconciliationNote}>
+                                  ⚡ {r.reconciliationNote}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 4. Site */}
+                          <td className="px-2.5 py-2 whitespace-nowrap">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+                              {r.source}
                             </span>
                           </td>
-                          <td className="px-3 py-2 border-r">{r.source}</td>
-                          <td className="px-3 py-2 border-r text-right font-mono font-medium">{money(r.guestTotal, 'INR')}</td>
-                          <td className="px-3 py-2 border-r text-right font-mono font-medium text-emerald-600 dark:text-emerald-400">{money(r.hostTotal, 'INR')}</td>
-                          <td className="px-3 py-2 border-r text-muted-foreground">{r.amountCreditedBank || '—'}</td>
-                          <td className="px-3 py-2 text-center min-w-[170px]">
+
+                          {/* 5. Guest Base Fair */}
+                          <td className="px-2.5 py-2 text-right font-mono text-muted-foreground bg-emerald-500/[0.02] whitespace-nowrap">
+                            {r.guestBase ? money(r.guestBase, 'INR') : '—'}
+                          </td>
+
+                          {/* 6. Number of days */}
+                          <td className="px-2 py-2 text-center font-mono font-medium text-foreground bg-emerald-500/[0.02]">
+                            {r.nights}
+                          </td>
+
+                          {/* 7. Taxes / Percentage */}
+                          <td className="px-2.5 py-2 text-right font-mono text-muted-foreground bg-emerald-500/[0.02] whitespace-nowrap">
+                            {r.guestTaxes ? money(r.guestTaxes, 'INR') : '—'}
+                          </td>
+
+                          {/* 8. Services charge / Percentage */}
+                          <td className="px-2.5 py-2 text-right font-mono text-muted-foreground bg-emerald-500/[0.02] whitespace-nowrap">
+                            {r.guestServiceCharge ? money(r.guestServiceCharge, 'INR') : '—'}
+                          </td>
+
+                          {/* 9. Total Amount (Guest Paid) */}
+                          <td className="px-2.5 py-2 text-right font-mono font-bold text-foreground bg-emerald-500/10 whitespace-nowrap">
+                            {money(r.guestTotal, 'INR')}
+                          </td>
+
+                          {/* 10. Base fair 2 */}
+                          <td className="px-2.5 py-2 text-right font-mono text-muted-foreground bg-purple-500/[0.02] whitespace-nowrap">
+                            {r.hostBase ? money(r.hostBase, 'INR') : '—'}
+                          </td>
+
+                          {/* 11. rate adjustment */}
+                          <td className="px-2.5 py-2 text-right font-mono text-muted-foreground bg-purple-500/[0.02] whitespace-nowrap">
+                            {r.hostRateAdjustmentRaw || (r.hostRateAdjustment ? money(r.hostRateAdjustment, 'INR') : '—')}
+                          </td>
+
+                          {/* 12. Service fee / Percentage */}
+                          <td className="px-2.5 py-2 text-right font-mono bg-purple-500/[0.02] text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                            {r.hostServiceFee ? `-${money(r.hostServiceFee, 'INR')}` : '—'}
+                          </td>
+
+                          {/* 13. Tax / Percentage */}
+                          <td className="px-2.5 py-2 text-right font-mono bg-purple-500/[0.02] text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                            {r.hostTaxes ? `-${money(r.hostTaxes, 'INR')}` : '—'}
+                          </td>
+
+                          {/* 14. Additional Income */}
+                          <td className="px-2.5 py-2 text-right font-mono bg-purple-500/[0.02] text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {r.hostAdditionalIncome ? `+${money(r.hostAdditionalIncome, 'INR')}` : '—'}
+                          </td>
+
+                          {/* 15. Total (Host Payout) */}
+                          <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-purple-500/10 whitespace-nowrap">
+                            {money(r.hostTotal, 'INR')}
+                          </td>
+
+                          {/* 16. Contact */}
+                          <td className="px-2.5 py-2 font-mono text-muted-foreground whitespace-nowrap">
+                            {r.contactPhone || '—'}
+                          </td>
+
+                          {/* 17. Amount Credited */}
+                          <td className="px-2.5 py-2 font-medium text-foreground whitespace-nowrap">
+                            {r.amountCreditedBank ? (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                                {r.amountCreditedBank}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+
+                          {/* 18. Column 1 */}
+                          <td className="px-2.5 py-2 font-mono text-muted-foreground whitespace-nowrap">
+                            {r.column1 || (r.customFields?.['Column 1'] ? String(r.customFields['Column 1']) : '—')}
+                          </td>
+
+                          {/* 19. Note */}
+                          <td className="px-3 py-2 text-muted-foreground min-w-[120px] max-w-[200px] truncate" title={r.note || ''}>
+                            {r.note || '—'}
+                          </td>
+
+                          {/* 20. Import Status */}
+                          <td className="px-3 py-2 text-center min-w-[150px]">
                             {isInvalid ? (
                               <div className="flex flex-col items-center">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-600 border border-rose-500/30">
