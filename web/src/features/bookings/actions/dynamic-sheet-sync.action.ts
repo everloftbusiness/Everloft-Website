@@ -229,6 +229,23 @@ export async function syncSinglePropertyTabAction({
       };
     }
 
+    const isGuideSheet = rawRows.some((r) =>
+      Object.values(r).some((v) =>
+        typeof v === 'string' && (v.includes('Workbook Guide') || v.includes('Airbnb Property Management - Workbook Guide'))
+      )
+    );
+    if (isGuideSheet && !tabName.toLowerCase().includes('guide')) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        message: `Tab '${tabName}' does not exist in Google Sheet (Workbook defaulted to Guide). Please use a valid tab like 'Pinnacle Income' or 'GreenVista Income'.`,
+        timestamp,
+      };
+    }
+
     const keys = Object.keys(rawRows[0] || {});
     const csvLines = [
       keys.join(','),
@@ -379,6 +396,22 @@ export async function fetchTabRowsForInteractiveSyncAction({
         tabType,
         success: false,
         message: `Tab '${tabName}' is empty or contains no readable data.`,
+      };
+    }
+
+    const isGuideSheet = rawRows.some((r) =>
+      Object.values(r).some((v) =>
+        typeof v === 'string' && (v.includes('Workbook Guide') || v.includes('Airbnb Property Management - Workbook Guide'))
+      )
+    );
+    if (isGuideSheet && !tabName.toLowerCase().includes('guide')) {
+      return {
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        success: false,
+        message: `Tab '${tabName}' does not exist in Google Sheet (Workbook defaulted to Guide). Please use a valid tab like 'Pinnacle Income' or 'GreenVista Income'.`,
       };
     }
 
@@ -580,6 +613,22 @@ export async function previewGoogleSheetTabAction({
         tabName,
         tabType,
         message: `Tab '${tabName}' is empty or contains no readable data.`,
+      };
+    }
+
+    const isGuideSheet = rawRows.some((r) =>
+      Object.values(r).some((v) =>
+        typeof v === 'string' && (v.includes('Workbook Guide') || v.includes('Airbnb Property Management - Workbook Guide'))
+      )
+    );
+    if (isGuideSheet && !tabName.toLowerCase().includes('guide')) {
+      return {
+        success: false,
+        propertyId,
+        propertyName,
+        tabName,
+        tabType,
+        message: `Tab '${tabName}' does not exist in this Google Sheet (Google Sheets defaulted to the Workbook Guide). Please check the tab name spelling (e.g. 'Pinnacle Income' or 'GreenVista Income').`,
       };
     }
 

@@ -70,13 +70,29 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
 
   // Per-property tab mappings state
   const [mappings, setMappings] = useState<PropertyMapping[]>(() =>
-    properties.map((p) => {
-      const isPinnacle = p.name.toLowerCase().includes('pinnacle');
+    properties.map((p, idx) => {
+      const lower = p.name.toLowerCase();
+      const isPinnacle =
+        lower.includes('pinnacle') ||
+        lower.includes('electronic city') ||
+        lower.includes('balcony views') ||
+        lower.includes('stylish 3bhk') ||
+        idx === 0;
+      const isGreenVista = lower.includes('greenvista') || lower.includes('vista') || lower.includes('resort');
+
       return {
         propertyId: p.id,
         propertyName: p.name,
-        incomeTab: isPinnacle ? 'Pinnacle Income' : `${p.name} Income`,
-        expenseTab: isPinnacle ? 'Pinnacle Expenses' : `${p.name} Expenses`,
+        incomeTab: isPinnacle
+          ? 'Pinnacle Income'
+          : isGreenVista
+          ? 'GreenVista Income'
+          : `${p.name} Income`,
+        expenseTab: isPinnacle
+          ? 'Pinnacle Expenses'
+          : isGreenVista
+          ? 'GreenVista Expenses'
+          : `${p.name} Expenses`,
       };
     })
   );
@@ -94,7 +110,33 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
         if (savedUrl) setSpreadsheetUrl(savedUrl);
 
         const savedMappings = localStorage.getItem('everloft_property_sheet_mappings');
-        if (savedMappings) setMappings(JSON.parse(savedMappings));
+        if (savedMappings) {
+          try {
+            const parsed = JSON.parse(savedMappings) as PropertyMapping[];
+            // Auto-heal any mappings where incomeTab was incorrectly set to the non-existent long name
+            const healed = parsed.map((m) => {
+              const lower = (m.propertyName || '').toLowerCase();
+              const incomeLower = (m.incomeTab || '').toLowerCase();
+              if (
+                incomeLower.includes('stylish 3bhk') ||
+                incomeLower.includes('electronic city') ||
+                incomeLower.includes('balcony views') ||
+                (lower.includes('electronic city') && !m.incomeTab.includes('Pinnacle'))
+              ) {
+                return {
+                  ...m,
+                  incomeTab: 'Pinnacle Income',
+                  expenseTab: 'Pinnacle Expenses',
+                };
+              }
+              return m;
+            });
+            setMappings(healed);
+            localStorage.setItem('everloft_property_sheet_mappings', JSON.stringify(healed));
+          } catch (e) {
+            console.error('Failed to parse saved mappings:', e);
+          }
+        }
 
         const savedTabTimes = localStorage.getItem('everloft_google_sheet_last_sync_times');
         if (savedTabTimes) setLastSyncedTimes(JSON.parse(savedTabTimes));
@@ -1010,6 +1052,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                         <div className="flex items-center gap-1.5">
                           <input
                             type="text"
+                            list="sheet-income-tab-suggestions"
                             value={mapItem.incomeTab}
                             placeholder="e.g. Pinnacle Income"
                             onChange={(e) => handleTabNameChange(p.id, 'incomeTab', e.target.value)}
@@ -1064,6 +1107,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                         <div className="flex items-center gap-1.5">
                           <input
                             type="text"
+                            list="sheet-expense-tab-suggestions"
                             value={mapItem.expenseTab}
                             placeholder="e.g. Pinnacle Expenses"
                             onChange={(e) => handleTabNameChange(p.id, 'expenseTab', e.target.value)}
@@ -1151,6 +1195,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
+                                list="sheet-income-tab-suggestions"
                                 value={mapItem.incomeTab}
                                 placeholder="e.g. Pinnacle Income"
                                 onChange={(e) => handleTabNameChange(p.id, 'incomeTab', e.target.value)}
@@ -1214,6 +1259,7 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
+                                list="sheet-expense-tab-suggestions"
                                 value={mapItem.expenseTab}
                                 placeholder="e.g. Pinnacle Expenses"
                                 onChange={(e) => handleTabNameChange(p.id, 'expenseTab', e.target.value)}
@@ -1637,6 +1683,18 @@ export function GoogleSheetSyncModal({ properties }: { properties: PropertyOptio
           onDismiss={() => setSyncProgress(null)}
         />
       )}
+
+      {/* Sheet Tab Auto-complete Suggestions */}
+      <datalist id="sheet-income-tab-suggestions">
+        <option value="Pinnacle Income" />
+        <option value="GreenVista Income" />
+        <option value="Common Income" />
+      </datalist>
+      <datalist id="sheet-expense-tab-suggestions">
+        <option value="Pinnacle Expenses" />
+        <option value="GreenVista Expenses" />
+        <option value="Common Expenses" />
+      </datalist>
     </>
   );
 }
