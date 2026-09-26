@@ -41,6 +41,20 @@ export type BookingRow = {
     created_at: string;
     updated_at: string;
     finalized_at: string | null;
+    // Granular Guest Ledger
+    guest_base_fare?: number;
+    guest_taxes?: number;
+    guest_service_charge?: number;
+    // Granular Host Ledger
+    host_base_fare?: number;
+    host_rate_adjustment?: number;
+    host_rate_adjustment_raw?: string;
+    host_service_fee?: number;
+    host_taxes?: number;
+    host_additional_income?: number;
+    // Granular Settlement & Operations
+    amount_credited_bank?: string;
+    column_1?: string;
 };
 export type PaymentRow = {
     id: string;
@@ -69,4 +83,43 @@ export type PropertyOption = {
   default_units?: string[];
 };
 export type RegisterFilters = Record<string, string | undefined>;
-export const SORT_FIELDS = ['check_in_date', 'check_out_date', 'booking_date', 'reservation_code', 'guest_name', 'property_name', 'unit_label', 'source', 'external_booking_ref', 'nights', 'adults', 'children', 'currency', 'status', 'financial_status', 'guest_total', 'host_total', 'guest_received', 'host_received', 'deposit_held', 'payout_balance', 'email', 'phone', 'country', 'created_at','collection_mode','guest_balance'] as const;
+export const SORT_FIELDS = [
+  'check_in_date',
+  'check_out_date',
+  'booking_date',
+  'reservation_code',
+  'guest_name',
+  'property_name',
+  'unit_label',
+  'source',
+  'external_booking_ref',
+  'nights',
+  'adults',
+  'children',
+  'currency',
+  'status',
+  'financial_status',
+  'guest_total',
+  'host_total',
+  'guest_received',
+  'host_received',
+  'deposit_held',
+  'payout_balance',
+  'email',
+  'phone',
+  'country',
+  'created_at',
+  'collection_mode',
+  'guest_balance',
+  'guest_base_fare',
+  'guest_taxes',
+  'guest_service_charge',
+  'host_base_fare',
+  'host_rate_adjustment',
+  'host_service_fee',
+  'host_taxes',
+  'host_additional_income',
+  'amount_credited_bank',
+  'column_1',
+] as const;
+

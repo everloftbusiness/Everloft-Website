@@ -43,54 +43,86 @@ import { CsvImportModal } from './csv-import-modal';
 import { GoogleSheetSyncModal } from './google-sheet-sync-modal';
 import { FormattedDateTime } from '@/components/ui/formatted-date-time';
 
-type GroupType = 'stay' | 'guest' | 'host';
+type GroupType = 'stay' | 'guest' | 'host' | 'settlement';
 
 const columns: {
-  key: typeof SORT_FIELDS[number];
+  key: typeof SORT_FIELDS[number] | 'notes';
   label: string;
   financial?: boolean;
   group: GroupType;
 }[] = [
-  // Stay Particulars
+  // 1. Reservation Details (Stay Particulars)
   { key: 'reservation_code', label: 'Booking', group: 'stay' },
+  { key: 'check_in_date', label: 'Date', group: 'stay' },
   { key: 'guest_name', label: 'Guest Name', group: 'stay' },
+  { key: 'unit_label', label: 'Room / Unit', group: 'stay' },
+  { key: 'source', label: 'Site', group: 'stay' },
   { key: 'property_name', label: 'Property', group: 'stay' },
-  { key: 'unit_label', label: 'Unit', group: 'stay' },
-  { key: 'check_in_date', label: 'Check-in', group: 'stay' },
   { key: 'check_out_date', label: 'Check-out', group: 'stay' },
-  { key: 'nights', label: 'Nights', group: 'stay' },
-  { key: 'source', label: 'Channel', group: 'stay' },
   { key: 'status', label: 'Stay status', group: 'stay' },
   { key: 'financial_status', label: 'Breakdown', group: 'stay' },
 
-  // Guest Charges (Left Ledger)
-  { key: 'guest_total', label: 'Total Charges', financial: true, group: 'guest' },
+  // 2. 🟢 Guest Paid Ledger
+  { key: 'guest_base_fare', label: 'Base Fair', financial: true, group: 'guest' },
+  { key: 'nights', label: 'Days', group: 'guest' },
+  { key: 'guest_taxes', label: 'Taxes / %', financial: true, group: 'guest' },
+  { key: 'guest_service_charge', label: 'Services Chg', financial: true, group: 'guest' },
+  { key: 'guest_total', label: 'Total Amount', financial: true, group: 'guest' },
   { key: 'guest_received', label: 'Direct Collections', financial: true, group: 'guest' },
   { key: 'guest_balance', label: 'Remaining Balance', financial: true, group: 'guest' },
 
-  // Host Payout & Bank Settlement (Right Ledger)
-  { key: 'host_total', label: 'Expected Payout', financial: true, group: 'host' },
+  // 3. 🟣 Host Payout Ledger
+  { key: 'host_base_fare', label: 'Base Fair 2', financial: true, group: 'host' },
+  { key: 'host_rate_adjustment', label: 'Rate Adj.', financial: true, group: 'host' },
+  { key: 'host_service_fee', label: 'Service Fee', financial: true, group: 'host' },
+  { key: 'host_taxes', label: 'Tax / TDS', financial: true, group: 'host' },
+  { key: 'host_additional_income', label: "Add'l Income", financial: true, group: 'host' },
+  { key: 'host_total', label: 'Total Payout', financial: true, group: 'host' },
   { key: 'host_received', label: 'Payout Received', financial: true, group: 'host' },
   { key: 'payout_balance', label: 'Payout Difference', financial: true, group: 'host' },
   { key: 'collection_mode', label: 'Collection Mode', group: 'host' },
   { key: 'deposit_held', label: 'Deposit Held', financial: true, group: 'host' },
 
-  // Optional Toggleable Columns
+  // 4. Settlement & Operations
+  { key: 'phone', label: 'Contact', group: 'settlement' },
+  { key: 'amount_credited_bank', label: 'Amount Credited', group: 'settlement' },
+  { key: 'column_1', label: 'Column 1', group: 'settlement' },
+  { key: 'notes' as any, label: 'Note', group: 'settlement' },
+  { key: 'external_booking_ref', label: 'Platform Ref', group: 'settlement' },
+  { key: 'email', label: 'Email', group: 'settlement' },
+  { key: 'country', label: 'Country', group: 'settlement' },
   { key: 'currency', label: 'Currency', group: 'stay' },
   { key: 'adults', label: 'Adults', group: 'stay' },
   { key: 'children', label: 'Children', group: 'stay' },
   { key: 'booking_date', label: 'Booking date', group: 'stay' },
-  { key: 'external_booking_ref', label: 'Platform reference', group: 'stay' },
-  { key: 'email', label: 'Email', group: 'stay' },
-  { key: 'phone', label: 'Phone', group: 'stay' },
-  { key: 'country', label: 'Country', group: 'stay' },
-  { key: 'created_at', label: 'Created', group: 'stay' },
+  { key: 'created_at', label: 'Created', group: 'settlement' },
 ];
 
-const defaults = [
+export const SHEET_LEDGER_COLUMNS = [
+  'reservation_code',
+  'check_in_date',
+  'guest_name',
+  'source',
+  'guest_base_fare',
+  'nights',
+  'guest_taxes',
+  'guest_service_charge',
+  'guest_total',
+  'host_base_fare',
+  'host_rate_adjustment',
+  'host_service_fee',
+  'host_taxes',
+  'host_additional_income',
+  'host_total',
+  'phone',
+  'amount_credited_bank',
+  'column_1',
+  'notes',
+];
+
+export const COMPACT_PMS_COLUMNS = [
   'reservation_code',
   'guest_name',
-  'property_name',
   'unit_label',
   'check_in_date',
   'check_out_date',
@@ -100,8 +132,10 @@ const defaults = [
   'host_total',
   'host_received',
   'payout_balance',
-  'guest_balance',
 ];
+
+const defaults = SHEET_LEDGER_COLUMNS;
+
 
 export function BookingRegister({
   rows,
@@ -211,6 +245,7 @@ export function BookingRegister({
   const stayCols = shown.filter((c) => c.group === 'stay');
   const guestCols = shown.filter((c) => c.group === 'guest');
   const hostCols = shown.filter((c) => c.group === 'host');
+  const settlementCols = shown.filter((c) => c.group === 'settlement');
 
   // Compute Aggregate Totals for Summary Metrics
   const activeCurrency = filters.currency || rows[0]?.currency || 'INR';
@@ -479,20 +514,55 @@ export function BookingRegister({
         </form>
       )}
 
-      {/* 5. Column Visibility Panel */}
+      {/* 5. Column Visibility Panel with Smart Presets */}
       {columnsOpen && (
-        <fieldset className="rounded-xl border border-border/60 bg-card p-4 shadow-xs space-y-3">
-          <legend className="px-2 text-xs font-semibold uppercase tracking-wider text-foreground">
-            Visible columns
-          </legend>
-          <div className="grid gap-4 sm:grid-cols-3">
+        <fieldset className="rounded-xl border border-border/60 bg-card p-4 shadow-xs space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-foreground">
+              Visible Columns & Ledger Views
+            </legend>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase">Presets:</span>
+              <button
+                type="button"
+                onClick={() => setVisible(SHEET_LEDGER_COLUMNS)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-all ${
+                  visible.length === SHEET_LEDGER_COLUMNS.length && SHEET_LEDGER_COLUMNS.every((k) => visible.includes(k))
+                    ? 'bg-purple-500/15 border-purple-500/30 text-purple-700 dark:text-purple-300 shadow-2xs'
+                    : 'bg-muted/50 border-border hover:bg-muted text-foreground'
+                }`}
+              >
+                📋 Google Sheet Ledger (18 Cols)
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisible(COMPACT_PMS_COLUMNS)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-all ${
+                  visible.length === COMPACT_PMS_COLUMNS.length && COMPACT_PMS_COLUMNS.every((k) => visible.includes(k))
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300 shadow-2xs'
+                    : 'bg-muted/50 border-border hover:bg-muted text-foreground'
+                }`}
+              >
+                ⚡ Standard PMS View
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisible(columns.map((c) => c.key))}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-muted/50 hover:bg-muted text-foreground transition-colors"
+              >
+                🔍 Select All
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="mb-2 text-xs font-semibold text-blue-600 dark:text-blue-400">Stay Details</p>
+              <p className="mb-2 text-xs font-semibold text-blue-600 dark:text-blue-400">Reservation Details</p>
               <div className="space-y-1.5">
                 {columns
                   .filter((c) => c.group === 'stay')
                   .map((c) => (
-                    <label className="flex items-center gap-2 text-xs text-foreground" key={c.key}>
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer" key={c.key}>
                       <input
                         type="checkbox"
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -508,17 +578,17 @@ export function BookingRegister({
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                Guest Billing Ledger
+              <p className="mb-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                🟢 Guest Paid Ledger
               </p>
               <div className="space-y-1.5">
                 {columns
                   .filter((c) => c.group === 'guest')
                   .map((c) => (
-                    <label className="flex items-center gap-2 text-xs text-foreground" key={c.key}>
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer" key={c.key}>
                       <input
                         type="checkbox"
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         checked={visible.includes(c.key)}
                         onChange={(e) =>
                           setVisible((v) => (e.target.checked ? [...v, c.key] : v.filter((k) => k !== c.key)))
@@ -531,17 +601,40 @@ export function BookingRegister({
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                Host Settlement Ledger
+              <p className="mb-2 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                🟣 Host Payout Ledger
               </p>
               <div className="space-y-1.5">
                 {columns
                   .filter((c) => c.group === 'host')
                   .map((c) => (
-                    <label className="flex items-center gap-2 text-xs text-foreground" key={c.key}>
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer" key={c.key}>
                       <input
                         type="checkbox"
-                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        checked={visible.includes(c.key)}
+                        onChange={(e) =>
+                          setVisible((v) => (e.target.checked ? [...v, c.key] : v.filter((k) => k !== c.key)))
+                        }
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                Settlement & Operations
+              </p>
+              <div className="space-y-1.5">
+                {columns
+                  .filter((c) => c.group === 'settlement')
+                  .map((c) => (
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer" key={c.key}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
                         checked={visible.includes(c.key)}
                         onChange={(e) =>
                           setVisible((v) => (e.target.checked ? [...v, c.key] : v.filter((k) => k !== c.key)))
@@ -558,88 +651,115 @@ export function BookingRegister({
 
       {/* 6. Dual-Tier Grouped Table View */}
       <div className="overflow-x-auto rounded-xl border border-border/60 bg-card shadow-xs">
-        <table className="w-full whitespace-nowrap text-left text-xs">
+        <table className="w-full whitespace-nowrap text-left text-xs border-collapse">
           {/* Top Tier Section Header Row */}
-          <thead className="border-b bg-muted/70 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            <tr>
+          <thead className="sticky top-0 z-20 border-b bg-muted/95 backdrop-blur-xs text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <tr className="border-b divide-x divide-border/60">
               {stayCols.length > 0 && (
                 <th
                   colSpan={stayCols.length}
-                  className="border-r px-4 py-2 text-blue-700 dark:text-blue-300 bg-blue-500/5 text-left"
+                  className="px-3 py-2 text-center bg-muted/90 text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5 text-blue-500" /> Stay Details
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-blue-500" /> Reservation Details
                   </div>
                 </th>
               )}
               {guestCols.length > 0 && (
                 <th
                   colSpan={guestCols.length}
-                  className="border-r px-4 py-2 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 text-right"
+                  className="px-3 py-2 text-center bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 text-[11px] font-extrabold tracking-wide uppercase border-x border-emerald-500/30"
                 >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-indigo-500" /> Guest Billing Ledger
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> 🟢 Guest Paid
                   </div>
                 </th>
               )}
               {hostCols.length > 0 && (
                 <th
                   colSpan={hostCols.length}
-                  className="px-4 py-2 text-emerald-700 dark:text-emerald-300 bg-emerald-500/5 text-right"
+                  className="px-3 py-2 text-center bg-purple-500/15 text-purple-800 dark:text-purple-200 text-[11px] font-extrabold tracking-wide uppercase border-x border-purple-500/30"
                 >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Banknote className="h-3.5 w-3.5 text-emerald-500" /> Host Settlement Ledger
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Banknote className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" /> 🟣 Host Payout
+                  </div>
+                </th>
+              )}
+              {settlementCols.length > 0 && (
+                <th
+                  colSpan={settlementCols.length}
+                  className="px-3 py-2 text-center bg-muted/90 text-[10px] font-bold tracking-wider text-muted-foreground uppercase border-x"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5 text-sky-500" /> Settlement & Notes
                   </div>
                 </th>
               )}
             </tr>
 
             {/* Individual Sub-Column Headers */}
-            <tr className="border-t bg-muted/40 text-foreground font-medium">
-              {shown.map((c) => (
-                <th
-                  key={c.key}
-                  className={`px-4 py-2.5 ${c.financial ? 'text-right font-semibold' : 'text-left'}`}
-                  aria-sort={
-                    filters.sort === c.key
-                      ? filters.direction === 'asc'
-                        ? 'ascending'
-                        : 'descending'
-                      : 'none'
-                  }
-                >
-                  <Link
-                    className="inline-flex items-center gap-1 hover:text-blue-600 transition-colors"
-                    href={url({
-                      sort: c.key,
-                      direction: filters.sort === c.key && filters.direction === 'asc' ? 'desc' : 'asc',
-                      page: '1',
-                    })}
+            <tr className="border-t bg-muted/40 text-foreground font-medium divide-x divide-border/40">
+              {shown.map((c) => {
+                const isStickyCode = c.key === 'reservation_code';
+                const isStickyGuest = c.key === 'guest_name';
+                const isGuestCol = c.group === 'guest';
+                const isHostCol = c.group === 'host';
+
+                const thBg = isStickyCode
+                  ? 'sticky left-0 z-30 bg-muted/95 backdrop-blur-xs'
+                  : isStickyGuest
+                  ? 'sticky left-24 z-30 bg-muted/95 backdrop-blur-xs shadow-xs'
+                  : isGuestCol
+                  ? 'bg-emerald-500/5 text-emerald-800 dark:text-emerald-200'
+                  : isHostCol
+                  ? 'bg-purple-500/5 text-purple-800 dark:text-purple-200'
+                  : '';
+
+                return (
+                  <th
+                    key={c.key}
+                    className={`px-3 py-2.5 ${thBg} ${c.financial ? 'text-right font-semibold' : c.key === 'nights' ? 'text-center font-semibold' : 'text-left'}`}
+                    aria-sort={
+                      filters.sort === c.key
+                        ? filters.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
                   >
-                    {c.label}
-                    {filters.sort === c.key ? (
-                      filters.direction === 'asc' ? (
-                        ' ↑'
+                    <Link
+                      className="inline-flex items-center gap-1 hover:text-blue-600 transition-colors"
+                      href={url({
+                        sort: c.key,
+                        direction: filters.sort === c.key && filters.direction === 'asc' ? 'desc' : 'asc',
+                        page: '1',
+                      })}
+                    >
+                      {c.label}
+                      {filters.sort === c.key ? (
+                        filters.direction === 'asc' ? (
+                          ' ↑'
+                        ) : (
+                          ' ↓'
+                        )
                       ) : (
-                        ' ↓'
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </Link>
-                </th>
-              ))}
+                        <ArrowUpDown className="h-3 w-3 opacity-30" />
+                      )}
+                    </Link>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
           <tbody className="divide-y divide-border/60">
             {rows.map((r) => (
-              <tr key={r.id} className="group hover:bg-muted/40 transition-colors">
+              <tr key={r.id} className="group hover:bg-muted/40 transition-colors divide-x divide-border/30">
                 {shown.map((c) => {
-                  // Custom Cell Rendering
+                  // 1. Reservation Code (Sticky Left 0)
                   if (c.key === 'reservation_code') {
                     return (
-                      <td className="px-4 py-3 font-mono font-semibold text-blue-600 dark:text-blue-400" key={c.key}>
+                      <td className="px-3 py-2.5 font-mono font-semibold text-blue-600 dark:text-blue-400 sticky left-0 z-10 bg-card group-hover:bg-muted/50 transition-colors" key={c.key}>
                         <div className="flex items-center gap-1.5">
                           <button
                             title="Quick preview drawer"
@@ -655,7 +775,7 @@ export function BookingRegister({
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                          <Link className="hover:underline" href={`/dashboard/bookings/${r.id}`}>
+                          <Link className="hover:underline font-mono" href={`/dashboard/bookings/${r.id}`}>
                             {r.reservation_code}
                           </Link>
                         </div>
@@ -663,19 +783,37 @@ export function BookingRegister({
                     );
                   }
 
-                  if (c.key === 'guest_name') {
+                  // 2. Date
+                  if (c.key === 'check_in_date') {
                     return (
-                      <td className="px-4 py-3 font-medium text-foreground" key={c.key}>
-                        <Link className="hover:text-blue-600 hover:underline" href={`/dashboard/bookings/${r.id}`}>
-                          {r.guest_name}
-                        </Link>
+                      <td className="px-3 py-2.5 font-mono whitespace-nowrap text-muted-foreground" key={c.key}>
+                        {r.check_in_date}
                       </td>
                     );
                   }
 
+                  // 3. Guest Name (Sticky Left 24)
+                  if (c.key === 'guest_name') {
+                    return (
+                      <td className="px-3 py-2.5 font-medium text-foreground sticky left-24 z-10 bg-card group-hover:bg-muted/50 transition-colors shadow-xs" key={c.key}>
+                        <div className="flex flex-col">
+                          <Link className="hover:text-blue-600 hover:underline font-semibold whitespace-nowrap" href={`/dashboard/bookings/${r.id}`}>
+                            {r.guest_name}
+                          </Link>
+                          {r.unit_label && r.unit_label !== 'Whole Villa' && (
+                            <span className="text-[10px] text-purple-600 dark:text-purple-400 font-mono">
+                              Room {r.unit_label}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  }
+
+                  // 4. Room / Unit Label
                   if (c.key === 'unit_label') {
                     return (
-                      <td className="px-4 py-3" key={c.key}>
+                      <td className="px-3 py-2.5" key={c.key}>
                         {r.unit_label ? (
                           <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-purple-700 dark:text-purple-300 border border-purple-500/20">
                             Room {r.unit_label}
@@ -687,6 +825,7 @@ export function BookingRegister({
                     );
                   }
 
+                  // 5. Site / Source Channel
                   if (c.key === 'source') {
                     const src = (r.source || '').toLowerCase();
                     const isAirbnb = src.includes('airbnb');
@@ -694,7 +833,7 @@ export function BookingRegister({
                     const isBookingCom = src.includes('booking');
 
                     return (
-                      <td className="px-4 py-3" key={c.key}>
+                      <td className="px-3 py-2.5 whitespace-nowrap" key={c.key}>
                         <span
                           className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${
                             isAirbnb
@@ -712,10 +851,142 @@ export function BookingRegister({
                     );
                   }
 
+                  // 6. Number of Days / Nights
+                  if (c.key === 'nights') {
+                    return (
+                      <td className="px-2 py-2.5 text-center font-mono font-medium text-foreground bg-emerald-500/[0.02]" key={c.key}>
+                        {r.nights}
+                      </td>
+                    );
+                  }
+
+                  // 7. Granular Guest Paid: Base Fair, Taxes, Service Charge
+                  if (c.key === 'guest_base_fare' || c.key === 'guest_taxes' || c.key === 'guest_service_charge') {
+                    const val = r[c.key as keyof BookingRow];
+                    const numVal = val !== undefined && val !== null ? Number(val) : null;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono text-muted-foreground bg-emerald-500/[0.02] whitespace-nowrap" key={c.key}>
+                        {numVal ? money(numVal, r.currency) : '—'}
+                      </td>
+                    );
+                  }
+
+                  // 8. Guest Total Amount
+                  if (c.key === 'guest_total') {
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-foreground bg-emerald-500/10 whitespace-nowrap" key={c.key}>
+                        {money(r.guest_total, r.currency)}
+                      </td>
+                    );
+                  }
+
+                  // 9. Host Base Fair 2
+                  if (c.key === 'host_base_fare') {
+                    const val = r.host_base_fare;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono text-muted-foreground bg-purple-500/[0.02] whitespace-nowrap" key={c.key}>
+                        {val ? money(val, r.currency) : '—'}
+                      </td>
+                    );
+                  }
+
+                  // 10. Host Rate Adjustment
+                  if (c.key === 'host_rate_adjustment') {
+                    const val = r.host_rate_adjustment;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono text-muted-foreground bg-purple-500/[0.02] whitespace-nowrap" key={c.key}>
+                        {r.host_rate_adjustment_raw || (val ? money(val, r.currency) : '—')}
+                      </td>
+                    );
+                  }
+
+                  // 11. Host Service Fee
+                  if (c.key === 'host_service_fee') {
+                    const val = r.host_service_fee;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono bg-purple-500/[0.02] text-rose-600 dark:text-rose-400 whitespace-nowrap" key={c.key}>
+                        {val ? `-${money(val, r.currency)}` : '—'}
+                      </td>
+                    );
+                  }
+
+                  // 12. Host Taxes / TDS
+                  if (c.key === 'host_taxes') {
+                    const val = r.host_taxes;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono bg-purple-500/[0.02] text-rose-600 dark:text-rose-400 whitespace-nowrap" key={c.key}>
+                        {val ? `-${money(val, r.currency)}` : '—'}
+                      </td>
+                    );
+                  }
+
+                  // 13. Host Additional Income
+                  if (c.key === 'host_additional_income') {
+                    const val = r.host_additional_income;
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono bg-purple-500/[0.02] text-emerald-600 dark:text-emerald-400 whitespace-nowrap" key={c.key}>
+                        {val ? `+${money(val, r.currency)}` : '—'}
+                      </td>
+                    );
+                  }
+
+                  // 14. Host Total Payout
+                  if (c.key === 'host_total') {
+                    return (
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-purple-800 dark:text-purple-200 bg-purple-500/10 whitespace-nowrap" key={c.key}>
+                        {money(r.host_total, r.currency)}
+                      </td>
+                    );
+                  }
+
+                  // 15. Amount Credited (Bank)
+                  if (c.key === 'amount_credited_bank') {
+                    return (
+                      <td className="px-3 py-2.5 font-medium whitespace-nowrap" key={c.key}>
+                        {r.amount_credited_bank ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                            {r.amount_credited_bank}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    );
+                  }
+
+                  // 16. Column 1
+                  if (c.key === 'column_1') {
+                    return (
+                      <td className="px-3 py-2.5 font-mono text-muted-foreground whitespace-nowrap" key={c.key}>
+                        {r.column_1 || '—'}
+                      </td>
+                    );
+                  }
+
+                  // 17. Contact Phone
+                  if (c.key === 'phone') {
+                    return (
+                      <td className="px-3 py-2.5 font-mono text-muted-foreground whitespace-nowrap" key={c.key}>
+                        {r.phone || '—'}
+                      </td>
+                    );
+                  }
+
+                  // 18. Notes
+                  if (c.key === 'notes') {
+                    const noteText = r.notes ? r.notes.replace(/\s*\(Imported\)/gi, '') : '';
+                    return (
+                      <td className="px-3 py-2.5 text-muted-foreground min-w-[120px] max-w-[200px] truncate" title={r.notes || ''} key={c.key}>
+                        {noteText || '—'}
+                      </td>
+                    );
+                  }
+
+                  // 19. Financial Status
                   if (c.key === 'financial_status') {
                     const isDraft = r.financial_status === 'draft';
                     return (
-                      <td className="px-4 py-3" key={c.key}>
+                      <td className="px-3 py-2.5" key={c.key}>
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
                             isDraft
@@ -730,17 +1001,19 @@ export function BookingRegister({
                     );
                   }
 
+                  // 20. Stay Status
                   if (c.key === 'status') {
                     return (
-                      <td className="px-4 py-3 capitalize text-muted-foreground" key={c.key}>
+                      <td className="px-3 py-2.5 capitalize text-muted-foreground" key={c.key}>
                         {r.status.replaceAll('_', ' ')}
                       </td>
                     );
                   }
 
+                  // 21. Collection Mode
                   if (c.key === 'collection_mode') {
                     return (
-                      <td className="px-4 py-3" key={c.key}>
+                      <td className="px-3 py-2.5" key={c.key}>
                         <span
                           className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${
                             r.collection_mode === 'direct'
@@ -754,23 +1027,25 @@ export function BookingRegister({
                     );
                   }
 
+                  // 22. Created At
                   if (c.key === 'created_at') {
                     return (
-                      <td className="px-4 py-3 text-muted-foreground" key={c.key}>
+                      <td className="px-3 py-2.5 text-muted-foreground" key={c.key}>
                         <FormattedDateTime date={r.created_at} />
                       </td>
                     );
                   }
 
+                  // 23. Other Financial Columns (payout_balance, guest_received, etc.)
                   if (c.financial) {
                     const val = r[c.key as keyof BookingRow];
-                    const numVal = val === null ? null : Number(val);
+                    const numVal = val === null || val === undefined ? null : Number(val);
                     const isBalanceCol = c.key === 'payout_balance' || c.key === 'guest_balance';
                     const hasBalance = numVal !== null && numVal > 0;
 
                     return (
                       <td
-                        className={`px-4 py-3 text-right tabular-nums font-mono ${
+                        className={`px-3 py-2.5 text-right tabular-nums font-mono ${
                           isBalanceCol && hasBalance
                             ? 'font-semibold text-amber-600 dark:text-amber-400'
                             : 'text-foreground'
@@ -783,7 +1058,7 @@ export function BookingRegister({
                   }
 
                   return (
-                    <td className="px-4 py-3 text-muted-foreground" key={c.key}>
+                    <td className="px-3 py-2.5 text-muted-foreground" key={c.key}>
                       {String(r[c.key as keyof BookingRow] ?? '—').replaceAll('_', ' ')}
                     </td>
                   );
@@ -792,6 +1067,7 @@ export function BookingRegister({
             ))}
           </tbody>
         </table>
+
 
         {!rows.length && (
           <div className="p-12 text-center">
@@ -848,102 +1124,148 @@ export function BookingRegister({
             </div>
 
             {/* Quick Stay Specs */}
-            <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/40 p-3 text-xs">
+            <div className="grid grid-cols-2 gap-2.5 rounded-lg border bg-muted/40 p-3 text-xs">
               <div>
-                <span className="text-muted-foreground">Stay Dates:</span>
-                <p className="font-medium text-foreground">
-                  {drawerRow.check_in_date} → {drawerRow.check_out_date} ({drawerRow.nights} nights)
+                <span className="text-[11px] text-muted-foreground">Stay Dates:</span>
+                <p className="font-semibold text-foreground">
+                  {drawerRow.check_in_date} → {drawerRow.check_out_date} ({drawerRow.nights} days)
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground">Channel / Ref:</span>
-                <p className="font-medium text-foreground">
-                  {drawerRow.source} {drawerRow.external_booking_ref ? `(${drawerRow.external_booking_ref})` : ''}
+                <span className="text-[11px] text-muted-foreground">Site / Channel:</span>
+                <p className="font-semibold text-foreground">
+                  {drawerRow.source}
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground">Financial Status:</span>
-                <p className="font-medium capitalize text-foreground">{drawerRow.financial_status}</p>
+                <span className="text-[11px] text-muted-foreground">Contact:</span>
+                <p className="font-mono text-foreground">{drawerRow.phone || drawerRow.email || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Collection Mode:</span>
-                <p className="font-medium capitalize text-foreground">{drawerRow.collection_mode}</p>
+                <span className="text-[11px] text-muted-foreground">Amount Credited (Bank):</span>
+                <p className="font-semibold text-purple-700 dark:text-purple-300">
+                  {drawerRow.amount_credited_bank || '—'}
+                </p>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground">Column 1:</span>
+                <p className="font-mono text-foreground">{drawerRow.column_1 || drawerRow.external_booking_ref || '—'}</p>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground">Note:</span>
+                <p className="text-foreground truncate" title={drawerRow.notes || ''}>
+                  {drawerRow.notes ? drawerRow.notes.replace(/\s*\(Imported\)/gi, '') : '—'}
+                </p>
               </div>
             </div>
 
             {/* Financial Breakdown Preview */}
             {isPendingDrawer ? (
-              <div className="p-8 text-center text-xs text-muted-foreground">Loading itemized lines...</div>
+              <div className="p-8 text-center text-xs text-muted-foreground">Loading itemized ledger lines...</div>
             ) : drawerDetails ? (
-              <div className="space-y-5">
-                {/* Guest Charges Breakdown */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                      Guest Charges Breakdown
+              <div className="space-y-4">
+                {/* 🟢 Guest Paid Breakdown */}
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.02] p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      🟢 Guest Paid Ledger
                     </h3>
-                    <span className="font-mono font-bold text-sm">
+                    <span className="font-mono font-extrabold text-sm text-emerald-900 dark:text-emerald-200">
                       {money(drawerRow.guest_total, drawerRow.currency)}
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    {drawerDetails.lines
-                      .filter((l) => l.side === 'guest')
-                      .map((l, idx) => (
-                        <div className="flex justify-between text-muted-foreground" key={idx}>
-                          <span>
-                            {l.label} <span className="text-[10px] opacity-70">({l.category})</span>
-                          </span>
-                          <span className="font-mono text-foreground">
-                            {money(Number(l.amount), drawerRow.currency)}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="space-y-2 text-xs">
+                    {drawerDetails.lines.filter((l) => l.side === 'guest').length === 0 ? (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Total Charge</span>
+                        <span className="font-mono font-medium text-foreground">{money(drawerRow.guest_total, drawerRow.currency)}</span>
+                      </div>
+                    ) : (
+                      drawerDetails.lines
+                        .filter((l) => l.side === 'guest')
+                        .map((l, idx) => (
+                          <div className="flex justify-between text-muted-foreground" key={idx}>
+                            <span>
+                              {l.label} <span className="text-[10px] opacity-70">({l.category.replaceAll('_', ' ')})</span>
+                            </span>
+                            <span className="font-mono font-medium text-foreground">
+                              {money(Number(l.amount), drawerRow.currency)}
+                            </span>
+                          </div>
+                        ))
+                    )}
+                    {drawerRow.guest_received > 0 && (
+                      <div className="flex justify-between text-xs border-t border-emerald-500/20 pt-1.5 font-medium text-emerald-700 dark:text-emerald-300">
+                        <span>Direct Collections Received</span>
+                        <span className="font-mono">{money(drawerRow.guest_received, drawerRow.currency)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Host Payout Breakdown */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                      Host Payout Breakdown
+                {/* 🟣 Host Payout Breakdown */}
+                <div className="rounded-xl border border-purple-500/30 bg-purple-500/[0.02] p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+                      🟣 Host Payout Ledger
                     </h3>
-                    <span className="font-mono font-bold text-sm">
+                    <span className="font-mono font-extrabold text-sm text-purple-900 dark:text-purple-200">
                       {money(drawerRow.host_total, drawerRow.currency)}
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    {drawerDetails.lines
-                      .filter((l) => l.side === 'host')
-                      .map((l, idx) => (
-                        <div className="flex justify-between text-muted-foreground" key={idx}>
-                          <span>
-                            {l.label} <span className="text-[10px] opacity-70">({l.category})</span>
-                          </span>
-                          <span className="font-mono text-foreground">
-                            {money(Number(l.amount), drawerRow.currency)}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="space-y-2 text-xs">
+                    {drawerDetails.lines.filter((l) => l.side === 'host').length === 0 ? (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Net Host Payout</span>
+                        <span className="font-mono font-medium text-foreground">{money(drawerRow.host_total, drawerRow.currency)}</span>
+                      </div>
+                    ) : (
+                      drawerDetails.lines
+                        .filter((l) => l.side === 'host')
+                        .map((l, idx) => {
+                          const amt = Number(l.amount);
+                          const isDeduction = amt < 0 || l.category === 'host_service_fee' || (l.category === 'tax' && amt < 0);
+                          return (
+                            <div className="flex justify-between text-muted-foreground" key={idx}>
+                              <span>
+                                {l.label} <span className="text-[10px] opacity-70">({l.category.replaceAll('_', ' ')})</span>
+                              </span>
+                              <span className={`font-mono font-medium ${isDeduction ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+                                {isDeduction ? `-${money(Math.abs(amt), drawerRow.currency)}` : money(amt, drawerRow.currency)}
+                              </span>
+                            </div>
+                          );
+                        })
+                    )}
+                    <div className="flex justify-between text-xs border-t border-purple-500/20 pt-2 font-medium">
+                      <span className="text-muted-foreground">Payout Received in Bank:</span>
+                      <span className="font-mono font-semibold text-foreground">{money(drawerRow.host_received, drawerRow.currency)}</span>
+                    </div>
+                    {drawerRow.payout_balance !== 0 && (
+                      <div className="flex justify-between text-xs font-medium text-amber-600 dark:text-amber-400">
+                        <span>Payout Difference / Shortfall:</span>
+                        <span className="font-mono font-bold">{money(drawerRow.payout_balance, drawerRow.currency)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Bank Payments & Settlements Log */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                    Bank Credit & Receipts Log
+                <div className="rounded-xl border border-border/70 bg-card p-4 space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5 text-sky-500" /> Bank Credit & Settlement History
                   </h3>
                   {drawerDetails.payments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No bank payments recorded yet.</p>
+                    <p className="text-xs text-muted-foreground italic">No bank transactions recorded yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {drawerDetails.payments.map((p) => (
                         <div
                           key={p.id}
-                          className="rounded border bg-muted/30 p-2.5 text-xs space-y-1"
+                          className="rounded-lg border bg-muted/40 p-2.5 text-xs space-y-1"
                         >
                           <div className="flex justify-between font-medium">
-                            <span className="text-emerald-600 dark:text-emerald-400">
+                            <span className="text-purple-700 dark:text-purple-300 font-semibold">
                               {p.account_label || 'Bank Account'} ({p.payment_method})
                             </span>
                             <span className="font-mono font-bold">{money(p.amount, p.currency)}</span>
@@ -959,6 +1281,7 @@ export function BookingRegister({
                 </div>
               </div>
             ) : null}
+
 
             {/* Footer Action */}
             <div className="border-t pt-4 flex gap-3">

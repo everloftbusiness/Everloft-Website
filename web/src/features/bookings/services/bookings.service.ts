@@ -116,6 +116,14 @@ export async function searchGuests(search: string) {
     fail(error);
     return data ?? [];
 }
+const DB_VIEW_COLUMNS: readonly string[] = [
+    'check_in_date', 'check_out_date', 'booking_date', 'reservation_code',
+    'guest_name', 'property_name', 'unit_label', 'source', 'external_booking_ref',
+    'nights', 'adults', 'children', 'currency', 'status', 'financial_status',
+    'guest_total', 'host_total', 'guest_received', 'host_received', 'deposit_held',
+    'payout_balance', 'email', 'phone', 'country', 'created_at', 'collection_mode', 'guest_balance'
+];
+
 export async function listBookings(filters: RegisterFilters, exportRows = false) {
     await requireRegisterAccess();
     const db = await client();
@@ -139,11 +147,103 @@ export async function listBookings(filters: RegisterFilters, exportRows = false)
     const term = (filters.q ?? '').replace(/[%_,().]/g, ' ').trim().slice(0, 100);
     if (term)
         query = query.or(`guest_name.ilike.%${term}%,reservation_code.ilike.%${term}%,phone.ilike.%${term}%,external_booking_ref.ilike.%${term}%,source.ilike.%${term}%`);
-    const sort = SORT_FIELDS.find(s => s === filters.sort) ?? 'check_in_date';
-    query = query.order(sort, { ascending: filters.direction === 'asc', nullsFirst: false }).order('id');
+    
+    const requestedSort = filters.sort;
+    const canSortDb = requestedSort && DB_VIEW_COLUMNS.includes(requestedSort);
+    const dbSort = canSortDb ? requestedSort : 'check_in_date';
+    query = query.order(dbSort, { ascending: filters.direction === 'asc', nullsFirst: false }).order('id');
+    
     const { data, error, count } = await query.range(exportRows ? 0 : (page - 1) * size, exportRows ? size - 1 : page * size - 1);
     fail(error);
-    return { rows: data ?? [], total: count ?? 0, page };
+    
+    const rows = (data ?? []) as BookingRow[];
+    const bookingIds = rows.map((r) => r.id).filter(Boolean);
+
+    if (bookingIds.length > 0) {
+        try {
+            const [linesRes, txRes] = await Promise.all([
+                db.from('booking_financial_lines').select('booking_id, side, category, label, amount').in('booking_id', bookingIds),
+                db.from('transactions').select('related_entity_id, amount, account_label, status, direction').in('related_entity_id', bookingIds).eq('status', 'completed'),
+            ]);
+
+            const linesByBooking = new Map<string, Array<{ side: string; category: string; label: string; amount: number }>>();
+            if (linesRes.data) {
+                for (const l of linesRes.data) {
+                    const list = linesByBooking.get(l.booking_id) || [];
+                    list.push({ side: l.side, category: l.category, label: l.label, amount: Number(l.amount) || 0 });
+                    linesByBooking.set(l.booking_id, list);
+                }
+            }
+
+            const txByBooking = new Map<string, Array<{ amount: number; account_label: string }>>();
+            if (txRes.data) {
+                for (const t of txRes.data) {
+                    const list = txByBooking.get(t.related_entity_id) || [];
+                    list.push({ amount: Number(t.amount) || 0, account_label: t.account_label });
+                    txByBooking.set(t.related_entity_id, list);
+                }
+            }
+
+            for (const r of rows) {
+                const lines = linesByBooking.get(r.id) || [];
+                const txs = txByBooking.get(r.id) || [];
+
+                // Guest lines extraction
+                const guestBase = lines.filter((l) => l.side === 'guest' && l.category === 'accommodation').reduce((s, l) => s + l.amount, 0);
+                const guestTax = lines.filter((l) => l.side === 'guest' && l.category === 'tax').reduce((s, l) => s + l.amount, 0);
+                const guestFee = lines.filter((l) => l.side === 'guest' && l.category === 'guest_service_fee').reduce((s, l) => s + l.amount, 0);
+
+                // Host lines extraction
+                const hostBase = lines.filter((l) => l.side === 'host' && l.category === 'accommodation').reduce((s, l) => s + l.amount, 0);
+                const hostRateAdj = lines.filter((l) => l.side === 'host' && l.category === 'rate_adjustment').reduce((s, l) => s + l.amount, 0);
+                const hostFee = lines.filter((l) => l.side === 'host' && l.category === 'host_service_fee').reduce((s, l) => s + Math.abs(l.amount), 0);
+                const hostTax = lines.filter((l) => l.side === 'host' && l.category === 'tax').reduce((s, l) => s + Math.abs(l.amount), 0);
+                const hostAddl = lines.filter((l) => l.side === 'host' && l.category === 'additional_income').reduce((s, l) => s + l.amount, 0);
+
+                r.guest_base_fare = guestBase > 0 ? guestBase : undefined;
+                r.guest_taxes = guestTax > 0 ? guestTax : undefined;
+                r.guest_service_charge = guestFee > 0 ? guestFee : undefined;
+
+                r.host_base_fare = hostBase > 0 ? hostBase : undefined;
+                r.host_rate_adjustment = hostRateAdj !== 0 ? hostRateAdj : undefined;
+                r.host_service_fee = hostFee > 0 ? hostFee : undefined;
+                r.host_taxes = hostTax > 0 ? hostTax : undefined;
+                r.host_additional_income = hostAddl > 0 ? hostAddl : undefined;
+
+                // Bank account extraction
+                if (txs.length > 0 && txs[0].account_label) {
+                    r.amount_credited_bank = txs[0].account_label;
+                } else if (r.notes) {
+                    const match = r.notes.match(/(everloft\s*-\s*kgb|kgb|hdfc|sbi|icici|axis|bank|cash|paytm)/i);
+                    if (match) {
+                        r.amount_credited_bank = match[0].toUpperCase();
+                    }
+                }
+
+                // Column 1 extraction
+                if (r.external_booking_ref && !r.external_booking_ref.startsWith('IMP-')) {
+                    r.column_1 = r.external_booking_ref;
+                }
+            }
+
+            // In-memory sort if requested column is an enriched column
+            if (requestedSort && !canSortDb) {
+                const sortKey = requestedSort as keyof BookingRow;
+                const isAsc = filters.direction === 'asc';
+                rows.sort((a, b) => {
+                    const valA = a[sortKey] ?? 0;
+                    const valB = b[sortKey] ?? 0;
+                    if (valA < valB) return isAsc ? -1 : 1;
+                    if (valA > valB) return isAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+        } catch (enrichErr) {
+            console.error('Non-blocking booking row enrichment error:', enrichErr);
+        }
+    }
+
+    return { rows, total: count ?? 0, page };
 }
 export async function getBooking(id: string) {
     await requireRegisterAccess();
@@ -160,8 +260,36 @@ export async function getBooking(id: string) {
     fail(lines.error);
     fail(payments.error);
     fail(links.error);
-    return { booking, lines: (lines.data ?? []).map(l => ({ ...l, amount: String(l.amount) })), payments: (payments.data ?? []).map(p => ({ ...p, payment_type: links.data?.find(l => l.transaction_id === p.id)?.payment_type ?? '' })) };
+
+    const parsedLines = (lines.data ?? []).map(l => ({ ...l, amount: String(l.amount) }));
+    const parsedPayments = (payments.data ?? []).map(p => ({ ...p, payment_type: links.data?.find(l => l.transaction_id === p.id)?.payment_type ?? '' }));
+
+    // Enrich booking row with granular fields
+    const b = booking as BookingRow;
+    const numLines = parsedLines.map(l => ({ ...l, amountNum: Number(l.amount) || 0 }));
+    b.guest_base_fare = numLines.filter(l => l.side === 'guest' && l.category === 'accommodation').reduce((s, l) => s + l.amountNum, 0) || undefined;
+    b.guest_taxes = numLines.filter(l => l.side === 'guest' && l.category === 'tax').reduce((s, l) => s + l.amountNum, 0) || undefined;
+    b.guest_service_charge = numLines.filter(l => l.side === 'guest' && l.category === 'guest_service_fee').reduce((s, l) => s + l.amountNum, 0) || undefined;
+
+    b.host_base_fare = numLines.filter(l => l.side === 'host' && l.category === 'accommodation').reduce((s, l) => s + l.amountNum, 0) || undefined;
+    b.host_rate_adjustment = numLines.filter(l => l.side === 'host' && l.category === 'rate_adjustment').reduce((s, l) => s + l.amountNum, 0) || undefined;
+    b.host_service_fee = numLines.filter(l => l.side === 'host' && l.category === 'host_service_fee').reduce((s, l) => s + Math.abs(l.amountNum), 0) || undefined;
+    b.host_taxes = numLines.filter(l => l.side === 'host' && l.category === 'tax').reduce((s, l) => s + Math.abs(l.amountNum), 0) || undefined;
+    b.host_additional_income = numLines.filter(l => l.side === 'host' && l.category === 'additional_income').reduce((s, l) => s + l.amountNum, 0) || undefined;
+
+    if (parsedPayments.length > 0 && parsedPayments[0].account_label) {
+        b.amount_credited_bank = parsedPayments[0].account_label;
+    } else if (b.notes) {
+        const match = b.notes.match(/(everloft\s*-\s*kgb|kgb|hdfc|sbi|icici|axis|bank|cash|paytm)/i);
+        if (match) b.amount_credited_bank = match[0].toUpperCase();
+    }
+    if (b.external_booking_ref && !b.external_booking_ref.startsWith('IMP-')) {
+        b.column_1 = b.external_booking_ref;
+    }
+
+    return { booking: b, lines: parsedLines, payments: parsedPayments };
 }
+
 export async function saveBooking(input: BookingInput) { await requireRegisterAccess(); const db = await client(); const { data, error } = await db.rpc('save_booking_record', { payload: input }); fail(error); return data!; }
 export async function finalizeBooking(id: string) { await requireRegisterAccess(); const db = await client(); const { error } = await db.rpc('finalize_booking_record', { booking_id: id }); fail(error); }
 export async function recordPayment(payload: unknown) { await requireRegisterAccess(); const db = await client(); const { error } = await db.rpc('record_booking_payment', { payload }); fail(error); }

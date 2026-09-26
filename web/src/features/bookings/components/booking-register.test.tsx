@@ -12,12 +12,13 @@ const booking = { id: 'test', reservation_code: 'EL-TEST', property_id: 'p1', pr
 describe('booking workflows', () => {
     it('keeps sorting server-addressable and exposes additional fields', () => {
         render(<BookingRegister rows={[booking]} total={1} page={1} filters={{ property: 'p1' }} properties={[{ id: 'p1', name: 'Example' }]}/>);
-        expect(screen.getByRole('link', { name: 'Expected Payout' })).toHaveAttribute('href', expect.stringContaining('sort=host_total'));
+        expect(screen.getByRole('link', { name: 'Total Payout' })).toHaveAttribute('href', expect.stringContaining('sort=host_total'));
         expect(screen.getByRole('link', { name: 'Example guest' })).toHaveAttribute('href', '/dashboard/bookings/test');
         fireEvent.click(screen.getByRole('button', { name: 'Columns' }));
-        fireEvent.click(screen.getByLabelText('Phone'));
-        expect(screen.getByRole('columnheader', { name: 'Phone' })).toBeInTheDocument();
+        fireEvent.click(screen.getByLabelText('Email'));
+        expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
     });
+
     it('requires explicit review before finalizing and hides receipts until finalized', () => {
         render(<BookingPayments booking={booking} payments={[]}/>);
         expect(screen.getByRole('button', { name: 'Finalize breakdown' })).toBeDisabled();
