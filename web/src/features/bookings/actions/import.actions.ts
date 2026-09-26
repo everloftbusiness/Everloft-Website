@@ -9,6 +9,7 @@ import type { FinancialLine } from '../types/booking.types';
 import {
   isExactBookingDuplicate,
   buildBatchDeduplicationKey,
+  isGenericUnitLabel,
   type ExistingBookingRecord,
   type IncomingBookingCandidate,
 } from '../utils/duplicate-detector';
@@ -40,19 +41,35 @@ export async function importBookingsAction(
   let importedCount = 0;
   const errors: string[] = [];
 
+  const defaultProp = defaultPropertyId ? properties.find((p) => p.id === defaultPropertyId) : null;
+
   // Pre-determine target property ID for each row to build precise query filter
   const rowPropertyIds: string[] = [];
   for (const r of rows) {
     if (!r.isValid) continue;
-    const matchedProp = properties.find(
-      (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
-    ) || properties[0];
+    let matchedProp = defaultProp;
+    if (!matchedProp && r.roomLabel && !isGenericUnitLabel(r.roomLabel)) {
+      matchedProp = properties.find((p) => p.name.toLowerCase().includes(r.roomLabel.toLowerCase()));
+    }
+    if (!matchedProp) {
+      matchedProp = properties[0];
+    }
     const targetPropertyId = matchedProp ? matchedProp.id : defaultPropertyId;
-    rowPropertyIds.push(targetPropertyId);
+    if (targetPropertyId) rowPropertyIds.push(targetPropertyId);
   }
 
   // Deduplicate property IDs in batch
   const batchPropertyIds = Array.from(new Set(rowPropertyIds.filter(Boolean)));
+
+  // Also include any sibling property IDs with matching normalized names
+  const targetNames = new Set(
+    properties.filter((p) => batchPropertyIds.includes(p.id)).map((p) => p.name.trim().toLowerCase())
+  );
+  for (const p of properties) {
+    if (targetNames.has(p.name.trim().toLowerCase()) && !batchPropertyIds.includes(p.id)) {
+      batchPropertyIds.push(p.id);
+    }
+  }
 
   // 3. Scoped duplicate check query (restricted by date window AND batch property IDs)
   const { createAdminClient } = await import('@/lib/supabase/admin');
@@ -71,8 +88,8 @@ export async function importBookingsAction(
       const chunk = batchPropertyIds.slice(i, i + CHUNK_SIZE);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = (admin as any)
-        .from('bookings')
-        .select('id, property_id, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
+        .from('booking_register')
+        .select('id, property_id, property_name, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
         .is('deleted_at', null)
         .in('property_id', chunk);
 
@@ -91,6 +108,7 @@ export async function importBookingsAction(
           existingBookings.push({
             id: item.id,
             property_id: item.property_id,
+            property_name: item.property_name,
             guest_name: item.guest_name,
             check_in_date: item.check_in_date,
             check_out_date: item.check_out_date,
@@ -141,14 +159,19 @@ export async function importBookingsAction(
     if (!r.isValid) continue;
 
     try {
-      const matchedProp = properties.find(
-        (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
-      ) || properties[0];
+      let matchedProp = defaultProp;
+      if (!matchedProp && r.roomLabel && !isGenericUnitLabel(r.roomLabel)) {
+        matchedProp = properties.find((p) => p.name.toLowerCase().includes(r.roomLabel.toLowerCase()));
+      }
+      if (!matchedProp) {
+        matchedProp = properties[0];
+      }
 
       const targetPropertyId = matchedProp ? matchedProp.id : defaultPropertyId;
 
       const candidate: IncomingBookingCandidate = {
         propertyId: targetPropertyId,
+        propertyName: matchedProp?.name,
         guestName: r.guestName,
         checkInDate: r.checkInDate,
         unitLabel: r.roomLabel,
@@ -390,21 +413,37 @@ export async function analyzeImportRowsAction(
   }
 
   const properties = await getBookingOptions();
+  const defaultProp = defaultPropertyId ? properties.find((p) => p.id === defaultPropertyId) : null;
 
   const rowPropertyMap = new Map<number, { id: string; name: string }>();
   const rowPropertyIds: string[] = [];
 
   rows.forEach((r) => {
     if (!r.isValid) return;
-    const matchedProp = properties.find(
-      (p) => p.name.includes(r.roomLabel) || p.id === defaultPropertyId
-    ) || properties[0];
-    const targetProp = matchedProp ? { id: matchedProp.id, name: matchedProp.name } : { id: defaultPropertyId, name: 'Default Property' };
+    let matchedProp = defaultProp;
+    if (!matchedProp && r.roomLabel && !isGenericUnitLabel(r.roomLabel)) {
+      matchedProp = properties.find((p) => p.name.toLowerCase().includes(r.roomLabel.toLowerCase()));
+    }
+    if (!matchedProp) {
+      matchedProp = properties[0];
+    }
+    const targetProp = matchedProp ? { id: matchedProp.id, name: matchedProp.name } : { id: defaultPropertyId || '', name: 'Default Property' };
     rowPropertyMap.set(r.rawLineIndex, targetProp);
     rowPropertyIds.push(targetProp.id);
   });
 
   const batchPropertyIds = Array.from(new Set(rowPropertyIds.filter(Boolean)));
+
+  // Also include any sibling property IDs with matching normalized names
+  const targetNames = new Set(
+    properties.filter((p) => batchPropertyIds.includes(p.id)).map((p) => p.name.trim().toLowerCase())
+  );
+  for (const p of properties) {
+    if (targetNames.has(p.name.trim().toLowerCase()) && !batchPropertyIds.includes(p.id)) {
+      batchPropertyIds.push(p.id);
+    }
+  }
+
   const validCheckInDates = rows.filter((r) => r.isValid && r.checkInDate).map((r) => r.checkInDate);
   const minDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a < b ? a : b)) : null;
   const maxDate = validCheckInDates.length > 0 ? validCheckInDates.reduce((a, b) => (a > b ? a : b)) : null;
@@ -420,8 +459,8 @@ export async function analyzeImportRowsAction(
       const chunk = batchPropertyIds.slice(i, i + CHUNK_SIZE);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = (admin as any)
-        .from('bookings')
-        .select('id, property_id, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
+        .from('booking_register')
+        .select('id, property_id, property_name, guest_name, check_in_date, check_out_date, unit_label, guest_total, host_total, notes')
         .is('deleted_at', null)
         .in('property_id', chunk);
 
@@ -440,6 +479,7 @@ export async function analyzeImportRowsAction(
           existingBookings.push({
             id: item.id,
             property_id: item.property_id,
+            property_name: item.property_name,
             guest_name: item.guest_name,
             check_in_date: item.check_in_date,
             check_out_date: item.check_out_date,
@@ -509,6 +549,7 @@ export async function analyzeImportRowsAction(
 
     const candidate: IncomingBookingCandidate = {
       propertyId: propInfo.id,
+      propertyName: propInfo.name,
       guestName: r.guestName,
       checkInDate: r.checkInDate,
       unitLabel: r.roomLabel,

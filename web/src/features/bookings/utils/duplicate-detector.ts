@@ -18,6 +18,7 @@
 export type ExistingBookingRecord = {
   id?: string;
   property_id: string;
+  property_name?: string | null;
   guest_name: string | null;
   check_in_date: string;
   check_out_date?: string | null;
@@ -30,6 +31,7 @@ export type ExistingBookingRecord = {
 
 export type IncomingBookingCandidate = {
   propertyId: string;
+  propertyName?: string | null;
   guestName: string;
   checkInDate: string;
   unitLabel?: string | null;
@@ -68,7 +70,7 @@ export function isGenericUnitLabel(label: string): boolean {
  * Builds a deterministic hash key for detecting identical duplicate rows within the same batch/sheet
  */
 export function buildBatchDeduplicationKey(row: IncomingBookingCandidate): string {
-  const normProp = row.propertyId || '';
+  const normProp = normalizeString(row.propertyName) || row.propertyId || '';
   const normGuest = normalizeString(row.guestName);
   const normDate = row.checkInDate || '';
   const normUnit = isGenericUnitLabel(row.unitLabel || '') ? '' : normalizeString(row.unitLabel);
@@ -90,8 +92,13 @@ export function isExactBookingDuplicate(
   incoming: IncomingBookingCandidate,
   existing: ExistingBookingRecord
 ): boolean {
-  // 1. Property ID must match
-  if (existing.property_id !== incoming.propertyId) {
+  // 1. Property ID or normalized Property Name must match
+  const propMatches =
+    existing.property_id === incoming.propertyId ||
+    (Boolean(existing.property_name && incoming.propertyName) &&
+      normalizeString(existing.property_name) === normalizeString(incoming.propertyName));
+
+  if (!propMatches) {
     return false;
   }
 
